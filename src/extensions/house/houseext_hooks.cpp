@@ -29,15 +29,23 @@
 #include "houseext_init.h"
 #include "vinifera_globals.h"
 #include "tibsun_globals.h"
+#include "tibsun_inline.h"
 #include "building.h"
 #include "house.h"
 #include "housetype.h"
+#include "building.h"
+#include "unit.h"
+#include "infantry.h"
 #include "technotype.h"
 #include "super.h"
 #include "factory.h"
 #include "techno.h"
 #include "unittype.h"
 #include "unittypeext.h"
+#include "extension.h"
+#include "techno.h"
+#include "super.h"
+#include "scenario.h"
 #include "mouse.h"
 #include "fatal.h"
 #include "debughandler.h"
@@ -62,6 +70,7 @@ static class HouseClassExt final : public HouseClass
 public:
     ProdFailType _Begin_Production(RTTIType type, int id, bool resume);
     ProdFailType _Abandon_Production(RTTIType type, int id);
+    bool _AI_Target_MultiMissile(SuperClass* super);
 };
 
 
@@ -528,6 +537,97 @@ DECLARE_PATCH(_HouseClass_Enable_SWs_Check_For_Building_Power)
 
 
 /**
+ *  Helper function. Returns the value of an object for super-weapon targeting.
+ */
+int SuperTargeting_Evaluate_Object(HouseClass* house, HouseClass* enemy, TechnoClass* techno)
+{
+    int threat = -1;
+
+    if (techno->Owning_House() == enemy) {
+
+        if (techno->Cloak == CLOAKED || (techno->What_Am_I() == RTTI_BUILDING && reinterpret_cast<BuildingClass*>(techno)->TranslucencyLevel == 0xF)) {
+            threat = Scen->RandomNumber(0, 100);
+        }
+        else {
+            Cell targetcell = Coord_Cell(techno->Center_Coord());
+            threat = Map.Cell_Threat(targetcell, house);
+        }
+    }
+
+    return threat;
+}
+
+
+/**
+ *  #issue-700
+ *
+ *  Custom implementation of the multi-missile super weapon AI targeting.
+ *  This is functionally identical to the original game's function
+ *  at 0x004CA4A0 aside from also considering vehicles as potential targets.
+ *  The original function only evaluated buildings.
+ *
+ *  Author: Rampastring
+ */
+bool Vinifera_HouseClass_AI_Target_MultiMissile(HouseClass* this_ptr, SuperClass* super)
+{
+    if (this_ptr->Enemy == HOUSE_NONE) {
+        return false;
+    }
+
+    ObjectClass* besttarget = nullptr;
+    int          highestthreat = -1;
+    HouseClass* enemyhouse = Houses[this_ptr->Enemy];
+
+    for (int i = 0; i < Buildings.Count(); i++) {
+        BuildingClass* target = Buildings[i];
+        int threat = SuperTargeting_Evaluate_Object(this_ptr, enemyhouse, target);
+
+        if (threat > highestthreat) {
+            highestthreat = threat;
+            besttarget = target;
+        }
+    }
+
+    // AI improvement: also go through enemy units and infantry
+    for (int i = 0; i < Units.Count(); i++) {
+        UnitClass* target = Units[i];
+        int threat = SuperTargeting_Evaluate_Object(this_ptr, enemyhouse, target);
+
+        if (threat > highestthreat) {
+            highestthreat = threat;
+            besttarget = target;
+        }
+    }
+
+    for (int i = 0; i < Infantry.Count(); i++) {
+        InfantryClass* target = Infantry[i];
+        int threat = SuperTargeting_Evaluate_Object(this_ptr, enemyhouse, target);
+
+        if (threat > highestthreat) {
+            highestthreat = threat;
+            besttarget = target;
+        }
+    }
+
+    if (besttarget) {
+        Coordinate center = besttarget->Center_Coord();
+        Cell targetcell = Coord_Cell(center);
+        int superid = this_ptr->SuperWeapon.ID(super);
+        bool result = this_ptr->SuperWeapon[superid]->Discharged(this_ptr == PlayerPtr, targetcell);
+        return result;
+    }
+
+    return false;
+}
+
+
+bool HouseClassExt::_AI_Target_MultiMissile(SuperClass* super)
+{
+    return Vinifera_HouseClass_AI_Target_MultiMissile(this, super);
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void HouseClassExtension_Hooks()
@@ -545,6 +645,6 @@ void HouseClassExtension_Hooks()
 
     Patch_Jump(0x004CB777, &_HouseClass_ShouldDisableCameo_BuildLimit_Fix);
     Patch_Jump(0x004BC187, &_HouseClass_Can_Build_BuildLimit_Handle_Vehicle_Transform);
-
     Patch_Jump(0x004CB6C1, &_HouseClass_Enable_SWs_Check_For_Building_Power);
+    Patch_Jump(0x004CA4A0, &HouseClassExt::_AI_Target_MultiMissile);
 }
