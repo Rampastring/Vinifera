@@ -35,6 +35,8 @@
 #include "building.h"
 #include "buildingtype.h"
 #include "buildingtypeext.h"
+#include "unit.h";
+#include "unitext.h"
 #include "technotype.h"
 #include "technotypeext.h"
 #include "aircraft.h"
@@ -796,6 +798,33 @@ DECLARE_PATCH(_BuildingClass_Receive_Message_Only_Allow_Dockable_Harvester_Patch
 
 
 /**
+ *  #issue-203
+ *
+ *  Assigns the last docked building of a spawned free unit on
+ *  building placement complete (the "grand opening").
+ *  This allows harvesters to know which refinery they spawned from.
+ *
+ *  @author: Rampastring
+ */
+DECLARE_PATCH(_BuildingClass_Grand_Opening_Assign_FreeUnit_LastDockedBuilding_Patch)
+{
+    GET_REGISTER_STATIC(BuildingClass*, this_ptr, esi);
+    GET_REGISTER_STATIC(UnitClass*, unit, edi);
+    static UnitClassExtension* unitext;
+
+    unitext = Extension::Fetch<UnitClassExtension>(unit);
+    unitext->LastDockedBuilding = this_ptr;
+
+    /**
+     *  Continue the FreeUnit down-placing process.
+     */
+    _asm { movsx   eax, bp }
+    _asm { movsx   ecx, bx }
+    JMP_REG(edx, 0x0042E5FB);
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void BuildingClassExtension_Hooks()
@@ -820,4 +849,5 @@ void BuildingClassExtension_Hooks()
     Patch_Jump(0x00426A7E, &_BuildingClass_Receive_Message_Only_Allow_Dockable_Harvester_Patch);
     Patch_Jump(0x00439D10, &BuildingClassExt::_Can_Have_Rally_Point);
     Patch_Jump(0x0042D9A0, &BuildingClassExt::_Update_Buildables);
+    Patch_Jump(0x0042E5F5, &_BuildingClass_Grand_Opening_Assign_FreeUnit_LastDockedBuilding_Patch);
 }
