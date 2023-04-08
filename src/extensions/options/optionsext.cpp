@@ -44,7 +44,8 @@
  */
 OptionsClassExtension::OptionsClassExtension(const OptionsClass *this_ptr) :
     GlobalExtensionClass(this_ptr),
-    SortDefensesAsLast(true)
+    SortDefensesAsLast(true),
+    FilterBandBoxSelection(true)
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::OptionsClassExtension - 0x%08X\n", (uintptr_t)(This()));
 }
@@ -155,7 +156,9 @@ void OptionsClassExtension::Load_Settings()
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::Load_Settings - 0x%08X\n", (uintptr_t)(This()));
     
-    RawFileClass file("SUN.INI");
+    // Rampastring: DTA uses Settings.ini rather than SUN.ini
+    RawFileClass file("Settings.ini");
+
     CCINIClass sun_ini;
 
     if (file.Is_Available()) {
@@ -163,6 +166,7 @@ void OptionsClassExtension::Load_Settings()
         sun_ini.Load(file, false);
 
         SortDefensesAsLast = sun_ini.Get_Bool("Options", "SortDefensesAsLast", SortDefensesAsLast);
+        FilterBandBoxSelection = sun_ini.Get_Bool("Options", "FilterBandBoxSelection", FilterBandBoxSelection);
     }
 
     /**
@@ -198,7 +202,8 @@ void OptionsClassExtension::Load_Init_Settings()
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::Load_Settings - 0x%08X\n", (uintptr_t)(This()));
     
-    RawFileClass file("SUN.INI");
+    // Rampastring: DTA uses Settings.ini rather than SUN.ini
+    RawFileClass file("Settings.ini");
 }
 
 
@@ -211,7 +216,8 @@ void OptionsClassExtension::Save_Settings()
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::Save_Settings - 0x%08X\n", (uintptr_t)(This()));
     
-    RawFileClass file("SUN.INI");
+    // Rampastring: DTA uses Settings.ini rather than SUN.ini
+    RawFileClass file("Settings.ini");
 
     /**
      *  Save hardcoded modifier keys to Keyboard.ini.
