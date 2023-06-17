@@ -80,7 +80,8 @@ RulesClassExtension::RulesClassExtension(const RulesClass *this_ptr) :
     IsShowSuperWeaponTimers(true),
     IceStrength(0),
     WeedPipIndex(1),
-    MaxFreeRefineryDistanceBias(16)
+    MaxFreeRefineryDistanceBias(16),
+    BuildingFlameSpawnBlockFrames(0)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
 
@@ -211,6 +212,7 @@ void RulesClassExtension::Compute_CRC(WWCRCEngine &crc) const
     crc(IsShowSuperWeaponTimers);
     crc(IceStrength);
     crc(MaxFreeRefineryDistanceBias);
+    crc(BuildingFlameSpawnBlockFrames);
 }
 
 
@@ -632,6 +634,7 @@ bool RulesClassExtension::CombatDamage(CCINIClass & ini)
     }
 
     IceStrength = ini.Get_Int(COMBATDAMAGE, "IceStrength", IceStrength);
+    BuildingFlameSpawnBlockFrames = ini.Get_Int(COMBATDAMAGE, "BuildingFlameSpawnBlockFrames", BuildingFlameSpawnBlockFrames);
 
     return true;
 }
