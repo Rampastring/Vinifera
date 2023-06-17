@@ -184,4 +184,10 @@ class RulesClassExtension final : public GlobalExtensionClass<RulesClass>
          *  The number of frames that a newly elite unit will flash for.
          */
         int EliteFlashTimer;
+
+        /**
+         *  Defines for how many frames buildings do not get flames spawned on them on
+         *  damage state change after once catching fire.
+         */
+        int BuildingFlameSpawnBlockFrames;
 };
