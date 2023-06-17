@@ -194,4 +194,10 @@ public:
     VocType PlaceBeaconSound;
     VoxType PlaceBeaconVoice;
     VoxType DetectBeaconVoice;
+
+    /**
+     *  Defines for how many frames buildings do not get flames spawned on them on
+     *  damage state change after once catching fire.
+     */
+    int BuildingFlameSpawnBlockFrames;
 };

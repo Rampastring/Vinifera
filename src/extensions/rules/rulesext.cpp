@@ -103,7 +103,8 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     MaxBeacons(-1),
     PlaceBeaconSound(VOC_NONE),
     PlaceBeaconVoice(VOX_NONE),
-    DetectBeaconVoice(VOX_NONE)
+    DetectBeaconVoice(VOX_NONE),
+    BuildingFlameSpawnBlockFrames(0)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
 
@@ -238,6 +239,7 @@ void RulesClassExtension::Object_CRC(CRCEngine &crc) const
     crc(IsRecheckPrerequisites);
     crc(IsMultiMCV);
     crc(AINavalYardAdjacency);
+    crc(BuildingFlameSpawnBlockFrames);
 }
 
 
@@ -740,6 +742,7 @@ bool RulesClassExtension::CombatDamage(CCINIClass & ini)
     }
 
     IceStrength = ini.Get_Int(COMBATDAMAGE, "IceStrength", IceStrength);
+    BuildingFlameSpawnBlockFrames = ini.Get_Int(COMBATDAMAGE, "BuildingFlameSpawnBlockFrames", BuildingFlameSpawnBlockFrames);
 
     return true;
 }

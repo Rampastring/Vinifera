@@ -59,6 +59,7 @@
 #include "unit.h"
 #include "unittype.h"
 #include "rules.h"
+#include "rulesext.h"
 #include "voc.h"
 #include "iomap.h"
 #include "spritecollection.h"
@@ -2364,6 +2365,51 @@ DECLARE_PATCH(_BuildingClass_Load_SwizzleLightSource_Patch)
 
 
 /**
+ *  DTA-specific patch. Prevents buildings from catching flames
+ *  when rapidly switching between yellow and green
+ *  damage states.
+ *
+ *  @author: Rampastring
+ */
+DECLARE_PATCH(_BuildingClass_Take_Damage_Prevent_Cumulative_Flame_Spawn_Patch)
+{
+    GET_REGISTER_STATIC(Coordinate *, coord, eax);
+    GET_REGISTER_STATIC(BuildingClass *, this_ptr, esi);
+    static BuildingClassExtension *buildingext;
+
+    /**
+     *  Stolen bytes / code.
+     */
+    Static_Sound(Rule->BlowupSound, *coord);
+
+    /**
+     *  Actual functionality of the hack.
+     *  Do not spawn flames on the building if flames were spawned
+     *  on it too recently.
+     */
+    buildingext = Extension::Fetch<BuildingClassExtension>(this_ptr);
+    if (Frame < buildingext->LastFlameSpawnFrame + RuleExtension->BuildingFlameSpawnBlockFrames) {
+        goto past_flame_spawn;
+    }
+
+    buildingext->LastFlameSpawnFrame = Frame;
+
+    /**
+     *  Continue into applying building flames.
+     */
+original_code:
+    _asm { mov  ebx, 7FFFh }
+    JMP(0x0042B6E4);
+
+    /**
+     *  Skip the game's code block for spawning flames on buildings.
+     */
+past_flame_spawn:
+    JMP(0x0042B684);
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void BuildingClassExtension_Hooks()
@@ -2419,4 +2465,5 @@ void BuildingClassExtension_Hooks()
     Patch_Jump(0x0043AFC0, &BuildingClassExt::_Fetch_Super_Weapon2);
     Patch_Jump(0x004381F8, &_BuildingClass_Load_SwizzleLightSource_Patch);
     Patch_Jump(0x004268C0, &BuildingClassExt::_Receive_Message);
+    Patch_Jump(0x0042B6CC, &_BuildingClass_Take_Damage_Prevent_Cumulative_Flame_Spawn_Patch);
 }
