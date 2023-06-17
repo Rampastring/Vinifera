@@ -127,4 +127,10 @@ class RulesClassExtension final : public GlobalExtensionClass<RulesClass>
          *  Should the game assume there is more than one MCV (that factions don't share their MCV?)
          */
         bool IsMultiMCV;
+
+        /**
+         *  Defines for how many frames buildings do not get flames spawned on them on
+         *  damage state change after once catching fire.
+         */
+        int BuildingFlameSpawnBlockFrames;
 };
