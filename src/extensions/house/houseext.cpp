@@ -44,7 +44,8 @@
 HouseClassExtension::HouseClassExtension(const HouseClass *this_ptr) :
     AbstractClassExtension(this_ptr),
     TiberiumStorage(Tiberiums.Count()),
-    WeedStorage(Tiberiums.Count())
+    WeedStorage(Tiberiums.Count()),
+    StrengthenDestroyedCost(0)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("HouseClassExtension::HouseClassExtension - 0x%08X\n", (uintptr_t)(This()));
 
@@ -186,6 +187,8 @@ void HouseClassExtension::Detach(TARGET target, bool all)
 void HouseClassExtension::Compute_CRC(WWCRCEngine &crc) const
 {
     //EXT_DEBUG_TRACE("HouseClassExtension::Compute_CRC - 0x%08X\n", (uintptr_t)(This()));
+
+    crc(StrengthenDestroyedCost);
 }
 
 void HouseClassExtension::Put_Storage_Pointers()
