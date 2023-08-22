@@ -77,4 +77,6 @@ HouseClassExtension final : public AbstractClassExtension
          *  Replacement Weed storage.
          */
         VectorClass<int> WeedStorage;
+
+        int StrengthenDestroyedCost;
 };

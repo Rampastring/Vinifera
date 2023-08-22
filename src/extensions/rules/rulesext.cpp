@@ -85,7 +85,10 @@ RulesClassExtension::RulesClassExtension(const RulesClass *this_ptr) :
     MaxFreeRefineryDistanceBias(16),
     IsRecheckPrerequisites(false),
     IsMultiMCV(false),
-    BuildingFlameSpawnBlockFrames(0)
+    BuildingFlameSpawnBlockFrames(0),
+    StrengthenDestroyedValueThreshold(0),
+    StrengthenBuildingValueMultiplier(3),
+    IsStrengtheningEnabled(false)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
 
@@ -220,6 +223,9 @@ void RulesClassExtension::Object_CRC(CRCEngine &crc) const
     crc(IsRecheckPrerequisites);
     crc(IsMultiMCV);
     crc(BuildingFlameSpawnBlockFrames);
+    crc(StrengthenDestroyedValueThreshold);
+    crc(StrengthenBuildingValueMultiplier);
+    crc(IsStrengtheningEnabled);
 }
 
 
@@ -683,6 +689,9 @@ bool RulesClassExtension::CombatDamage(CCINIClass & ini)
 
     IceStrength = ini.Get_Int(COMBATDAMAGE, "IceStrength", IceStrength);
     BuildingFlameSpawnBlockFrames = ini.Get_Int(COMBATDAMAGE, "BuildingFlameSpawnBlockFrames", BuildingFlameSpawnBlockFrames);
+    StrengthenDestroyedValueThreshold = ini.Get_Int(COMBATDAMAGE, "StrengthenDestroyedValueThreshold", StrengthenDestroyedValueThreshold);
+    StrengthenBuildingValueMultiplier = ini.Get_Int(COMBATDAMAGE, "StrengthenBuildingValueMultiplier", StrengthenBuildingValueMultiplier);
+    IsStrengtheningEnabled = ini.Get_Bool(COMBATDAMAGE, "StrengtheningEnabled", IsStrengtheningEnabled);
 
     return true;
 }
