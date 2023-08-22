@@ -67,7 +67,8 @@ HouseClassExtension::HouseClassExtension(const HouseClass *this_ptr) :
     NavalFactories(0),
     NavalFactory(nullptr),
     BuildNavalUnit(UNIT_NONE),
-    SpawnWaypoint(WAYPOINT_NONE)
+    SpawnWaypoint(WAYPOINT_NONE),
+    StrengthenDestroyedCost(0)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("HouseClassExtension::HouseClassExtension - 0x%08X\n", (uintptr_t)(This()));
 
@@ -215,6 +216,8 @@ void HouseClassExtension::Detach(AbstractClass * target, bool all)
 void HouseClassExtension::Object_CRC(CRCEngine &crc) const
 {
     //EXT_DEBUG_TRACE("HouseClassExtension::Object_CRC - 0x%08X\n", (uintptr_t)(This()));
+
+    crc(StrengthenDestroyedCost);
 }
 
 

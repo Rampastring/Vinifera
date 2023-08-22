@@ -121,4 +121,6 @@ public:
      *  The waypoint at which this house was spawned.
      */
     WAYPOINT SpawnWaypoint;
+
+    int StrengthenDestroyedCost;
 };
