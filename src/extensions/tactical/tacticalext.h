@@ -79,6 +79,7 @@ public:
     void Draw_FrameStep_Overlay();
 
     void Draw_Information_Text();
+    void Draw_Strengthen_Info();
     void Draw_Super_Timers();
     void Draw_Templated_Text();
 
