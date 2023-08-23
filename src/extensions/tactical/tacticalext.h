@@ -79,6 +79,8 @@ public:
     void Draw_FrameStep_Overlay();
 
     void Draw_Information_Text();
+    void Draw_Message(int index, const char* text, ColorSchemeType color);
+    void Draw_Messages();
     void Draw_Strengthen_Info();
     void Draw_Super_Timers();
     void Draw_Templated_Text();
