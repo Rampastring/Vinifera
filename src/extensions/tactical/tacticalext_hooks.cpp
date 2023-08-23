@@ -548,6 +548,9 @@ void TacticalExtension_Hooks()
     Patch_Jump(0x006172DB, &_Tactical_Draw_Waypoint_Paths_NormaliseLineAnimation_Patch);
     Patch_Jump(0x00617327, &_Tactical_Draw_Waypoint_Paths_DrawNormalLine_Patch);
 
+    // Rampastring: Disable drawing of message list class messages
+    Patch_Byte(0x00573EAE, 0xEB); // change jz to jmp
+
     Patch_Jump(0x00616D0F, &_Tactical_Draw_Rally_Points_Draw_For_Service_Depots);
 
     Patch_Jump(0x0060F953, &_Tactical_Center_On_Location_Unfollow_Object_Patch);
