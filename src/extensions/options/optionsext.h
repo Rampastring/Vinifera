@@ -81,4 +81,9 @@ class OptionsClassExtension final : public GlobalExtensionClass<OptionsClass>
         int KeyChatToAll1;
         int KeyChatToAll2;
         int KeyChatToAllies;
+
+        /**
+         *  Are messages drawn top-left rather than bottom-left?
+         */
+        bool IsClassicMessagePosition;
 };

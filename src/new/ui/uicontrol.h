@@ -333,6 +333,11 @@ class UIControlsClass
          *  Text presets for beacons *shown as a tooltip* when holding modifier keys when placing.
          */
         std::string BeaconPreviewText[7];
+
+        /**
+         *  Horizontal left-most pixel position of the message list.
+         */
+        int MessageListPositionX;
 };
 
 extern UIControlsClass *UIControls;
