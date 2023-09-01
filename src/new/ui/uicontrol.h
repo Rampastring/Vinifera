@@ -304,6 +304,11 @@ class UIControlsClass
          *  Color to draw the NavCom queue lines' drop shadow with.
          */
         RGBStruct NavComQueueLineDropShadowColor;
+
+        /**
+         *  Horizontal left-most pixel position of the message list.
+         */
+        int MessageListPositionX;
 };
 
 extern UIControlsClass *UIControls;
