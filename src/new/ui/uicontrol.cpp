@@ -66,7 +66,8 @@ UIControlsClass::UIControlsClass() :
     UnitSpecialPipOffset(0, -8),
     InfantrySpecialPipOffset(0, -8),
     BuildingSpecialPipOffset(0, -8),
-    AircraftSpecialPipOffset(0, -8)
+    AircraftSpecialPipOffset(0, -8),
+    MessageListPositionX(50)
 {
 }
 
@@ -122,6 +123,7 @@ bool UIControlsClass::Read_INI(CCINIClass &ini)
     InfantrySpecialPipOffset = ini.Get_Point(INGAME, "InfantrySpecialPipOffset", InfantrySpecialPipOffset);
     BuildingSpecialPipOffset = ini.Get_Point(INGAME, "BuildingSpecialPipOffset", BuildingSpecialPipOffset);
     AircraftSpecialPipOffset = ini.Get_Point(INGAME, "AircraftSpecialPipOffset", AircraftSpecialPipOffset);
+    MessageListPositionX = ini.Get_Int(INGAME, "MessageListPositionX", MessageListPositionX);
 
     return true;
 }

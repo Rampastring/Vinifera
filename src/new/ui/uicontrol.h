@@ -158,6 +158,11 @@ class UIControlsClass
         TPoint2D<int> InfantrySpecialPipOffset;
         TPoint2D<int> BuildingSpecialPipOffset;
         TPoint2D<int> AircraftSpecialPipOffset;
+
+        /**
+         *  Horizontal left-most pixel position of the message list.
+         */
+        int MessageListPositionX;
 };
 
 extern UIControlsClass *UIControls;
