@@ -95,7 +95,8 @@ UIControlsClass::UIControlsClass() :
     IsNavComQueueLineDropShadow(false),
     IsNavComQueueLineThick(false),
     NavComQueueLineColor{ 74, 77, 255 }, // COLOR_LTBLUE
-    NavComQueueLineDropShadowColor{ 0, 0, 0 }
+    NavComQueueLineDropShadowColor{ 0, 0, 0 },
+    MessageListPositionX(50)
 {
     BandBoxTintColors.Add(RGBStruct{ 0, 0, 0 });
     BandBoxTintColors.Add(RGBStruct{ 255, 255, 255 });
@@ -190,6 +191,8 @@ bool UIControlsClass::Read_INI(CCINIClass &ini)
     IsNavComQueueLineThick = ini.Get_Bool(INGAME, "NavComQueueLineThick", IsNavComQueueLineThick);
     NavComQueueLineColor = ini.Get_RGB(INGAME, "NavComQueueLineColor", NavComQueueLineColor);
     NavComQueueLineDropShadowColor = ini.Get_RGB(INGAME, "NavComQueueLineDropShadowColor", NavComQueueLineDropShadowColor);
+
+    MessageListPositionX = ini.Get_Int(INGAME, "MessageListPositionX", MessageListPositionX);
 
     return true;
 }
