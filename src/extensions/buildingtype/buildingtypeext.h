@@ -111,4 +111,9 @@ BuildingTypeClassExtension final : public TechnoTypeClassExtension
          *  The percent chance for an engineer to exit this building as its crew.
          */
         int EngineerChance;
+
+        /**
+         *  Should the Advanced AI ignore prerequisites when considering whether it can build this building?
+         */
+        bool IsAdvancedAIIgnoresPrerequisites;
 };

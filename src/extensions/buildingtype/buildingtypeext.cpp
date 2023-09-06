@@ -51,7 +51,8 @@ BuildingTypeClassExtension::BuildingTypeClassExtension(const BuildingTypeClass *
     IsStartupCashOneTime(false),
     IsResetBudgetOnCapture(false),
     IsEligibleForAllyBuilding(false),
-    EngineerChance(0)
+    EngineerChance(0),
+    IsAdvancedAIIgnoresPrerequisites(false)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("BuildingTypeClassExtension::BuildingTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 
@@ -211,7 +212,8 @@ bool BuildingTypeClassExtension::Read_INI(CCINIClass &ini)
     IsResetBudgetOnCapture = ini.Get_Bool(ini_name, "ProduceCashResetOnCapture", IsResetBudgetOnCapture);
 
     IsEligibleForAllyBuilding = ini.Get_Bool(ini_name, "EligibleForAllyBuilding", IsEligibleForAllyBuilding);
-
+    IsAdvancedAIIgnoresPrerequisites = ini.Get_Bool(ini_name, "AdvancedAIIgnoresPrerequisites", IsAdvancedAIIgnoresPrerequisites);
+    
     IsInitialized = true;
 
     return true;

@@ -86,7 +86,11 @@ RulesClassExtension::RulesClassExtension(const RulesClass *this_ptr) :
     BuildingFlameSpawnBlockFrames(0),
     StrengthenDestroyedValueThreshold(0),
     StrengthenBuildingValueMultiplier(3),
-    IsStrengtheningEnabled(false)
+    IsStrengtheningEnabled(false),
+    IsUseAdvancedAI(false),
+    IsAdvancedAIMultiConYard(false),
+    AdvancedAIMaxExpansionDistance(150),
+    AdvancedAIMinimumRefineryCount(2)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
 
@@ -340,6 +344,7 @@ void RulesClassExtension::Process(CCINIClass &ini)
      * 
      *  #NOTE: These must be performed last!
      */
+    AI(ini);
     General(ini);
     MPlayer(ini);
     AudioVisual(ini);
@@ -586,6 +591,28 @@ bool RulesClassExtension::Objects(CCINIClass &ini)
     for (int index = 0; index < RocketTypes.Count(); ++index) {
         RocketTypes[index]->Read_INI(ini);
     }
+
+    return true;
+}
+
+
+/**
+ *  Process AI-related game rules.
+ *
+ *  @author: Rampastring
+ */
+bool RulesClassExtension::AI(CCINIClass &ini)
+{
+    static char const* const AI = "AI";
+
+    if (!ini.Is_Present(AI)) {
+        return false;
+    }
+
+    IsUseAdvancedAI = ini.Get_Bool(AI, "UseAdvancedAI", IsUseAdvancedAI);
+    IsAdvancedAIMultiConYard = ini.Get_Bool(AI, "AdvancedAIMultiConYard", IsAdvancedAIMultiConYard);
+    AdvancedAIMaxExpansionDistance = ini.Get_Int(AI, "AdvancedAIMaxExpansionDistance", AdvancedAIMaxExpansionDistance);
+    AdvancedAIMinimumRefineryCount = ini.Get_Int(AI, "AdvancedAIMinimumRefineryCount", AdvancedAIMinimumRefineryCount);
 
     return true;
 }
