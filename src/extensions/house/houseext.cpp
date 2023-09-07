@@ -47,7 +47,8 @@ HouseClassExtension::HouseClassExtension(const HouseClass *this_ptr) :
     WeedStorage(Tiberiums.Count()),
     StrengthenDestroyedCost(0),
     NextExpansionPointLocation(0, 0),
-    ShouldBuildRefinery(false)
+    ShouldBuildRefinery(false),
+    HasBuiltFirstBarracks(false)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("HouseClassExtension::HouseClassExtension - 0x%08X\n", (uintptr_t)(This()));
 
