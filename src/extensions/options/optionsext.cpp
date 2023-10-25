@@ -150,7 +150,7 @@ void OptionsClassExtension::Compute_CRC(WWCRCEngine &crc) const
 /**
  *  Fetches the extension data from the INI database.  
  *  
- *  @author: CCHyper
+ *  @author: CCHyper, modified by Rampastring
  */
 void OptionsClassExtension::Load_Settings()
 {
@@ -167,6 +167,7 @@ void OptionsClassExtension::Load_Settings()
 
         SortDefensesAsLast = sun_ini.Get_Bool("Options", "SortDefensesAsLast", SortDefensesAsLast);
         FilterBandBoxSelection = sun_ini.Get_Bool("Options", "FilterBandBoxSelection", FilterBandBoxSelection);
+        IsClassicMessagePosition = sun_ini.Get_Bool("Options", "ClassicMessageListPosition", IsClassicMessagePosition);
     }
 
     /**
