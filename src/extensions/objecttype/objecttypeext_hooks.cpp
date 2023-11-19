@@ -28,12 +28,17 @@
 #include "objecttypeext_hooks.h"
 #include "objecttypeext.h"
 #include "objecttype.h"
+#include "building.h"
+#include "buildingtype.h"
+#include "unittype.h"
+#include "unittypeext.h"
 #include "theatertype.h"
 #include "vinifera_globals.h"
 #include "tibsun_globals.h"
 #include "house.h"
 #include "housetype.h"
 #include "scenario.h"
+#include "extension.h"
 #include "wstring.h"
 #include "fatal.h"
 #include "debughandler.h"
@@ -247,6 +252,66 @@ void ObjectTypeClassExt::_Clear_Voxel_Indexes()
     StaticBuffer.CurrentBufferPtr = StaticBuffer.BufferPtr;
 }
 
+/**
+ *  Prevents regular war factories from building ships and naval yards
+ *  from building vehicles.
+ *
+ *  @author: Rampastring
+ */
+DECLARE_PATCH(_ObjectTypeClass__Who_Can_Build_Me_Naval_Yard_Patch)
+{
+    GET_REGISTER_STATIC(BuildingClass*, building, esi);
+    GET_REGISTER_STATIC(ObjectTypeClass*, this_ptr, edi);
+    static UnitTypeClass* unittype;
+    static UnitTypeClassExtension* unittypeext;
+
+    /**
+     *  Stolen bytes / code.
+     *  If the building is being sold, skip it.
+     */
+    if (building->Get_Mission() == MISSION_DECONSTRUCTION || building->MissionQueue == MISSION_DECONSTRUCTION) {
+        goto skip_building;
+    }
+
+    /**
+     *  Check if we are a vehicle (UnitType).
+     *  If so, check if we are a naval unit.
+     *
+     *  If yes, we should only allow us to be built from buildings that are water-bound.
+     *
+     *  If we are instead a non-naval vehicle, then do not allow building
+     *  us from naval-bound buildings.
+     */
+    if (this_ptr->What_Am_I() == RTTI_UNITTYPE) {
+
+        unittype = reinterpret_cast<UnitTypeClass*>(this_ptr);
+        unittypeext = Extension::Fetch<UnitTypeClassExtension>(unittype);
+
+        if (unittypeext->IsNaval) {
+            if (building->Class->Speed != SPEED_FLOAT) {
+                goto skip_building;
+            }
+        } else {
+            if (building->Class->Speed == SPEED_FLOAT) {
+                goto skip_building;
+            }
+        }
+    }
+
+    /**
+     *  Allow the building through our checks and
+     *  continue the original game's legality checks.
+     */
+continue_checks:
+    JMP(0x00587BB9);
+
+    /**
+     *  Go to the next building in the loop.
+     */
+skip_building:
+    JMP(0x00587C46);
+}
+
 
 /**
  *  Main function for patching the hooks.
@@ -258,4 +323,5 @@ void ObjectTypeClassExtension_Hooks()
     Patch_Jump(0x0058891D, &_ObjectTypeClass_Load_Theater_Art_Assign_Theater_Name_Theater_Patch);
     Patch_Jump(0x00587C80, &ObjectTypeClassExt::_Fetch_Voxel_Image);
     Patch_Jump(0x00589030, &ObjectTypeClassExt::_Clear_Voxel_Indexes);
+    Patch_Jump(0x00587B9C, &_ObjectTypeClass__Who_Can_Build_Me_Naval_Yard_Patch);
 }
