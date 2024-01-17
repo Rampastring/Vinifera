@@ -31,7 +31,8 @@
 #include "vinifera_globals.h"
 #include "tibsun_globals.h"
 #include "tibsun_functions.h"
-#include "tag.h"
+#include "bullettype.h"
+#include "bullettypeext.h"
 #include "technotype.h"
 #include "technotypeext.h"
 #include "warheadtype.h"
@@ -1099,6 +1100,34 @@ set_mission_delay_and_return:
 
 
 /**
+ *  Patch that allows units with weapons with projectiles with ROT > 0
+ *  to more strictly face their target before firing.
+ */
+DECLARE_PATCH(_UnitClass_Can_Fire_Check_Target_Facing)
+{
+    // Stolen bytes / code
+    _asm { push ebp }
+    _asm { push edx }
+    _asm { push eax }
+
+    static int rot;
+    static BulletTypeClassExtension* bullettypeext;
+    GET_REGISTER_STATIC(BulletTypeClass*, bullettype, ecx);
+
+    bullettypeext = Extension::Fetch<BulletTypeClassExtension>(bullettype);
+    if (bullettypeext->FaceTargetToFire) {
+        rot = 0;
+    } else {
+        rot = bullettype->ROT;
+    }
+
+    _asm { mov ebx, dword ptr ds:rot }
+    _asm { pop eax }
+    JMP_REG(ecx, 0x00656FF3);
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void UnitClassExtension_Hooks()
@@ -1124,4 +1153,9 @@ void UnitClassExtension_Hooks()
     Patch_Jump(0x00654EEE, &_UnitClass_Mission_Harvest_FINDHOME_Find_Nearest_Refinery_Patch);
     //Patch_Jump(0x0065054F, &_UnitClass_Enter_Idle_Mode_Block_Harvesting_On_Bridge_Patch); // Removed, keeping code for reference.
     //Patch_Jump(0x00654AB0, &_UnitClass_Mission_Harvest_Block_Harvesting_On_Bridge_Patch); // Removed, keeping code for reference.
+    Patch_Jump(0x00656FEB, &_UnitClass_Can_Fire_Check_Target_Facing);
+
+    // Require more precision when units face their targets
+    Patch_Byte(0x00656FF9 + 2, 0x04);
+    Patch_Byte(0x00656FFC + 2, 0x04);
 }
