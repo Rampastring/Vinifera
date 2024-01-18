@@ -1533,4 +1533,8 @@ void UnitClassExtension_Hooks()
     Patch_Jump(0x006571E0, &UnitClassExt::_Approach_Target);
 
     Patch_Byte(0x00658961, 0xEB); // Allow pre-placed units to have missions in multiplayer, change JZ to JMP
+
+    // Require more precision when units face their targets
+    Patch_Byte(0x00656FF9 + 2, 0x02);
+    Patch_Byte(0x00656FFC + 2, 0x02);
 }
