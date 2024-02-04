@@ -36,6 +36,7 @@
 #include "unit.h"
 #include "unittype.h"
 #include "unittypeext.h"
+#include "team.h"
 #include "technotype.h"
 #include "technotypeext.h"
 #include "weapontype.h"
@@ -70,6 +71,7 @@ public:
     LONG STDMETHODCALLTYPE _Landing_Altitude();
     LONG STDMETHODCALLTYPE _Landing_Altitude_Thunk();
     RadioMessageType _Receive_Message(RadioClass * from, RadioMessageType message, long& param);
+    int _Mission_Retreat();
 };
 
 
@@ -265,7 +267,7 @@ ActionType AircraftClassExt::_What_Action(ObjectClass const* target, bool disall
                 action = ACTION_NO_DEPLOY;
             }
         }
-        
+
     }
 
     /**
@@ -318,6 +320,18 @@ ActionType AircraftClassExt::_What_Action(ObjectClass const* target, bool disall
     }
 
     return action;
+}
+
+
+/*
+ *  Hack to make aircraft also use the FootClass version of MISSION_RETREAT
+ *  instead of a null function.
+ *
+ *  @author: Rampastring
+ */
+int AircraftClassExt::_Mission_Retreat()
+{
+    return FootClass::Mission_Retreat();
 }
 
 
@@ -817,6 +831,59 @@ DECLARE_PATCH(_AircraftClass_AI_Carryall_Facing_Patch)
     JMP(0x004093DE);
 }
 
+/**
+ *  Special hack to make paradrop aircraft exit the map if they are loaners
+ *  and have dropped off all of their cargo.
+ *
+ *  @author: Rampastring
+ */
+void Check_For_Paradrop_Aircraft(AircraftClass* aircraft, AircraftClassExtension* aircraftext)
+{
+    if (aircraftext->IsParadropReinforcement) {
+
+        // If the aircraft has only 1 ammo, then return it to full ammo.
+        // This causes it to retry paradropping until it is successful.
+        if (aircraft->Ammo == 1 && !aircraftext->IsParadropAmmoReplenished) {
+            aircraft->Ammo = aircraft->Class->MaxAmmo;
+            aircraftext->IsParadropAmmoReplenished = true;
+        }
+
+        // Force the aircraft to retreat (exit map) if it has no more passengers or it has no ammo for trying to paradrop them.
+        if (aircraft->Class->Max_Passengers() > 0 &&
+            (!aircraft->Cargo.Is_Something_Attached() || aircraft->Ammo == 0)
+            && aircraft->Mission != MISSION_RETREAT)
+        {
+            aircraft->Assign_Mission(MISSION_RETREAT);
+            aircraft->Commence();
+        }
+    }
+}
+
+
+DECLARE_PATCH(_AircraftClass_AI_Hook_Patch)
+{
+    GET_REGISTER_STATIC(AircraftClass*, this_ptr, ebp);
+    static AircraftClassExtension *aircraftext;
+
+    aircraftext = Extension::Fetch<AircraftClassExtension>(this_ptr);
+    Check_For_Paradrop_Aircraft(this_ptr, aircraftext);
+
+    /**
+     *  Stolen bytes / code.
+     *  Process FootClass AI logic, jump out if we are
+     *  not active afterwards.
+     */
+    this_ptr->FootClass::AI();
+    if (!this_ptr->IsActive) {
+        JMP_REG(ebx, 0x004093DE);
+    }
+
+    /**
+     *  Continue function execution.
+     */
+    JMP(0x0040918A);
+}
+
 
 /**
  *  Main function for patching the hooks.
@@ -858,4 +925,7 @@ void AircraftClassExtension_Hooks()
     Patch_Jump(0x0040C8A0, &AircraftClassExt::_Receive_Message);
 
     Patch_Jump(0x00409366, &_AircraftClass_AI_Carryall_Facing_Patch);
+
+    Patch_Jump(0x00409910, &AircraftClassExt::_Mission_Retreat);
+    Patch_Jump(0x0040917A, &_AircraftClass_AI_Hook_Patch);
 }
