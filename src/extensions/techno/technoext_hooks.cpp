@@ -1801,4 +1801,5 @@ void TechnoClassExtension_Hooks()
     Patch_Jump(0x006396D1, &_TechnoClass_Railgun_Damage_Apply_Damage_Modifier_Patch);
     Patch_Jump(0x0063381A, &_TechnoClass_Record_The_Kill_Strengthen_Killer_Patch);
     Patch_Jump(0x00637B83, &_TechnoClass_Draw_Pips_No_Medic_Indicator_In_Shroud_Patch);
+    Patch_Jump(0x00633745, (uintptr_t)0x00633762); // Do not trigger "Discovered by Player" when an object is destroyed
 }
