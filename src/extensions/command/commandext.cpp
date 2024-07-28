@@ -1424,10 +1424,6 @@ const char *DumpHeapCRCCommandClass::Get_Description() const
 
 bool DumpHeapCRCCommandClass::Process()
 {
-    if (!Session.Singleplayer_Game()) {
-        return false;
-    }
-
     DEBUG_INFO("\nAbout to dump heap CRC's...\n\n");
 
     LOG_CRC(UnitClass, Units);
