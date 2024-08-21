@@ -70,7 +70,9 @@ TechnoTypeClassExtension::TechnoTypeClassExtension(const TechnoTypeClass *this_p
     CameoImageSurface(nullptr),
     SortCameoAsBaseDefense(false),
     Description(""),
-    BuildTimeCost(0)
+    BuildTimeCost(0),
+    RequiredHouses(-1),
+    ForbiddenHouses(-1)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("TechnoTypeClassExtension::TechnoTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
@@ -284,6 +286,8 @@ bool TechnoTypeClassExtension::Read_INI(CCINIClass &ini)
     }
 
     SortCameoAsBaseDefense = ini.Get_Bool(ini_name, "SortCameoAsBaseDefense", SortCameoAsBaseDefense);
+    RequiredHouses = ini.Get_Owners(ini_name, "RequiredHouses", RequiredHouses);
+    ForbiddenHouses = ini.Get_Owners(ini_name, "ForbiddenHouses", ForbiddenHouses);
 
     return true;
 }
