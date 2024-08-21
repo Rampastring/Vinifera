@@ -69,6 +69,7 @@
 #include "fatal.h"
 #include "asserthandler.h"
 #include "debughandler.h"
+#include "infantrytype.h"
 
 #include "hooker.h"
 #include "hooker_macros.h"
@@ -110,6 +111,41 @@ bool BuildingClassExt::_Can_Have_Rally_Point()
 
 
 /**
+ *  Comparison function for sorting sidebar icons (BuildTypes)
+ *
+ *  @author: Rampastring
+ */
+int __cdecl BuildType_Comparison(const void* p1, const void* p2)
+{
+    SidebarClass::StripClass::BuildType* bt1 = (SidebarClass::StripClass::BuildType*)p1;
+    SidebarClass::StripClass::BuildType* bt2 = (SidebarClass::StripClass::BuildType*)p2;
+
+    if (bt1->BuildableType == bt2->BuildableType)
+        return bt1->BuildableID - bt2->BuildableID;
+
+    if (bt1->BuildableType == RTTI_INFANTRYTYPE)
+        return -1;
+
+    if (bt2->BuildableType == RTTI_INFANTRYTYPE)
+        return 1;
+
+    if (bt1->BuildableType == RTTI_UNITTYPE)
+        return -1;
+
+    if (bt2->BuildableType == RTTI_UNITTYPE)
+        return 1;
+
+    if (bt1->BuildableType == RTTI_AIRCRAFTTYPE)
+        return -1;
+
+    if (bt2->BuildableType == RTTI_AIRCRAFTTYPE)
+        return 1;
+
+    return 0;
+}
+
+
+/**
  *  Makes the game check whether you can actually build the object before adding it to the sidebar,
  *  preventing grayed out cameos (except for build limited types)
  *
@@ -126,41 +162,49 @@ void BuildingClassExt::_Update_Buildables()
         case RTTI_AIRCRAFTTYPE:
             for (int i = 0; i < AircraftTypes.Count(); i++)
             {
-                if (PlayerPtr->Can_Build(AircraftTypes[i], false, true) && AircraftTypes[i]->Who_Can_Build_Me(true, false, false, PlayerPtr) != nullptr)
+                if (PlayerPtr->Can_Build(AircraftTypes[i], false, true) && AircraftTypes[i]->Who_Can_Build_Me(true, true, true, PlayerPtr) != nullptr)
                 {
                     Map.Add(RTTI_AIRCRAFTTYPE, i);
                 }
             }
+
+            qsort(&Map.Column[1].Buildables, Map.Column[1].BuildableCount, sizeof(SidebarClass::StripClass::BuildType), &BuildType_Comparison);
             break;
 
         case RTTI_BUILDINGTYPE:
             for (int i = 0; i < BuildingTypes.Count(); i++)
             {
-                if (PlayerPtr->Can_Build(BuildingTypes[i], false, true) && BuildingTypes[i]->Who_Can_Build_Me(true, false, false, PlayerPtr) != nullptr)
+                if (PlayerPtr->Can_Build(BuildingTypes[i], false, true) && BuildingTypes[i]->Who_Can_Build_Me(true, true, true, PlayerPtr) != nullptr)
                 {
                     Map.Add(RTTI_BUILDINGTYPE, i);
                 }
             }
+
+            qsort(&Map.Column[0].Buildables, Map.Column[0].BuildableCount, sizeof(SidebarClass::StripClass::BuildType), &BuildType_Comparison);
             break;
 
         case RTTI_INFANTRYTYPE:
             for (int i = 0; i < InfantryTypes.Count(); i++)
             {
-                if (PlayerPtr->Can_Build(InfantryTypes[i], false, true) && InfantryTypes[i]->Who_Can_Build_Me(true, false, false, PlayerPtr) != nullptr)
+                if (PlayerPtr->Can_Build(InfantryTypes[i], false, true) && InfantryTypes[i]->Who_Can_Build_Me(true, true, true, PlayerPtr) != nullptr)
                 {
                     Map.Add(RTTI_INFANTRYTYPE, i);
                 }
             }
+
+            qsort(&Map.Column[1].Buildables, Map.Column[1].BuildableCount, sizeof(SidebarClass::StripClass::BuildType), &BuildType_Comparison);
             break;
 
         case RTTI_UNITTYPE:
             for (int i = 0; i < UnitTypes.Count(); i++)
             {
-                if (PlayerPtr->Can_Build(UnitTypes[i], false, true) && UnitTypes[i]->Who_Can_Build_Me(true, false, false, PlayerPtr) != nullptr)
+                if (PlayerPtr->Can_Build(UnitTypes[i], false, true) && UnitTypes[i]->Who_Can_Build_Me(true, true, true, PlayerPtr) != nullptr)
                 {
                     Map.Add(RTTI_UNITTYPE, i);
                 }
             }
+
+            qsort(&Map.Column[1].Buildables, Map.Column[1].BuildableCount, sizeof(SidebarClass::StripClass::BuildType), &BuildType_Comparison);
             break;
 
         default:
@@ -2154,4 +2198,6 @@ void BuildingClassExtension_Hooks()
     Patch_Jump(0x0042EF9D, &_BuildingClass_What_Action_Allow_Rally_Point_For_Naval_Yard_Patch);
 
     Patch_Jump(0x0042C624, &_BuildingClass_Assign_Target_No_Deconstruction_With_Null_UndeploysInto);
+
+    Patch_Jump(0x0042D9A0, &BuildingClassFake::_Update_Buildables);
 }
