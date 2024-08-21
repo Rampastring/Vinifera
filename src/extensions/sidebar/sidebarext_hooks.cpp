@@ -2181,6 +2181,9 @@ void SidebarClassExtension_Hooks()
     // Change jle to jl to allow rendering tooltips that are exactly as wide as the sidebar
     Patch_Byte(0x0044E605 + 1, 0x8C);
 
+    // Patch the argument to HouseClass::Can_Build in SidebarClass::StripClass::Recalc so that prerequisites are checked
+    Patch_Byte(0x005F5762, false);
+
     /**
      *  Legacy patches for the old sidebar.
      */

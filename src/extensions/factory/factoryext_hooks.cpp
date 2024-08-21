@@ -35,13 +35,12 @@
 #include "asserthandler.h"
 #include "extension_globals.h"
 #include "factoryext_init.h"
+#include "techno.h"
 #include "technotype.h"
-
 #include "hooker.h"
 #include "hooker_macros.h"
 #include "mouse.h"
 #include "sidebarext.h"
-#include "techno.h"
 
 
  /**
@@ -156,7 +155,7 @@ bool FactoryClassExt::_Start(bool suspend)
  */
 void FactoryClassExt::_AI()
 {
-    //_Sanitize_Queue();
+    _Sanitize_Queue();
 
     if (!IsSuspended && (Object != nullptr || SpecialItem))
     {
