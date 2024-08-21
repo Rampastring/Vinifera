@@ -324,4 +324,5 @@ void ObjectTypeClassExtension_Hooks()
     Patch_Jump(0x00587C80, &ObjectTypeClassExt::_Fetch_Voxel_Image);
     Patch_Jump(0x00589030, &ObjectTypeClassExt::_Clear_Voxel_Indexes);
     Patch_Jump(0x00587B9C, &_ObjectTypeClass__Who_Can_Build_Me_Naval_Yard_Patch);
+    Patch_Jump(0x00587BFA, 0x00587C0B); // Skip checking the owner of the MCV when building buildings in ObjectTypeClass::Who_Can_Build_Me
 }
