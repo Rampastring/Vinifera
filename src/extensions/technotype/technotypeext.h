@@ -158,4 +158,26 @@ class TechnoTypeClassExtension : public ObjectTypeClassExtension
          *  Pointer to the cameo image surface.
          */
         BSurface *CameoImageSurface;
+
+        /**
+         *  Optional override for the cost that is used for determining the techno's build time.
+         */
+        int BuildTimeCost;
+
+        /**
+         *  Bitfield of houses that can build this type.
+         *  If `RequiredHouses != -1`, only these houses can build it.
+         */
+        long RequiredHouses;
+
+        /**
+         *  Bitfield of houses that cannot build this type.
+         *  If `ForbiddenHouses != -1`, these houses cannot build it under any circumstances.
+         */
+        long ForbiddenHouses;
+
+        /**
+         *  Description for the extended sidebar tooltip.
+         */
+        char Description[200];
 };

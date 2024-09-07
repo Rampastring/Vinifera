@@ -64,4 +64,25 @@ AircraftClassExtension final : public FootClassExtension
         virtual RTTIType What_Am_I() const override { return RTTI_AIRCRAFT; }
 
     public:
+        /**
+         *  If this aircraft was spawned from a techno's weapon, this
+         *  field records who spawned us. If this is not null, and if 
+         *  we run out of ammo or we have no target anymore,
+         *  we should attempt to head back towards it.
+         */
+        TechnoClass *Spawner;
+
+        /**
+         *  If this aircraft is a reinforcement unit created for purposes of paradropping,
+         *  this flag is set to true.
+         */
+        bool IsParadropReinforcement;
+
+        /**
+         *  Paradropping aircraft get their ammo set to maximum to allow them to retry
+         *  the paradropping in case they do not manage to paradrop all infantry at once.
+         *  But this replenishment must only happen once to avoid potential endless circling
+         *  above the paradrop point.
+         */
+        bool IsParadropAmmoReplenished;
 };

@@ -467,7 +467,7 @@ bool Vinifera_Get_All(IStream *pStm, bool load_net)
     if (!Vinifera_Load_Header(pStm)) {
         DEBUG_ERROR("\t***** FAILED!\n");
         ShowCursor(TRUE);
-        MessageBoxA(MainWindow, "Failed to load Vinifera save-file header!\n", "Vinifera", MB_OK|MB_ICONEXCLAMATION);
+        MessageBoxA(MainWindow, "Failed to load Vinifera save-file header!\r\n\r\nAre you trying to load a save from an older version of DTA?\r\n\r\nLoading saves from previous versions is not supported.", "Vinifera", MB_OK|MB_ICONEXCLAMATION);
         Vinifera_Generate_Mini_Dump();
         Fatal("Failed to load Vinifera save-file header!\n");
         return false;
@@ -532,7 +532,14 @@ bool Vinifera_Get_All(IStream *pStm, bool load_net)
     Addon_407190(Scen->RequiredAddOn);
 
     DEBUG_INFO("About to call Prep_For_Side()...\n");
-    if (!Prep_For_Side(Scen->IsGDI ? SIDE_GDI : SIDE_NOD)) {
+    // if (!Prep_For_Side(Scen->IsGDI ? SIDE_GDI : SIDE_NOD)) {
+    //     DEBUG_ERROR("Prep_For_Side() failed!\n");
+    //     return false;
+    // }
+
+    // Port over ts-patches hack to allow support for
+    // loading sidebar MIX files of additional sides.
+    if (!Prep_For_Side((SideType)Scen->IsGDI)) {
         DEBUG_ERROR("Prep_For_Side() failed!\n");
         return false;
     }
@@ -566,7 +573,14 @@ bool Vinifera_Get_All(IStream *pStm, bool load_net)
     Rule->Load(pStm);
 
     DEBUG_INFO("About to call Prep_Speech_For_Side()...\n");
-    if (!Prep_Speech_For_Side(Scen->IsGDI ? SIDE_GDI : SIDE_NOD)) {
+    // if (!Prep_Speech_For_Side(Scen->IsGDI ? SIDE_GDI : SIDE_NOD)) {
+    //     DEBUG_ERROR("Prep_Speech_For_Side() failed!\n");
+    //     return false;
+    // }
+
+    // Port over ts-patches hack to allow support for
+    // loading sidebar MIX files of additional sides.
+    if (!Prep_Speech_For_Side((SideType)Scen->IsGDI)) {
         DEBUG_ERROR("Prep_Speech_For_Side() failed!\n");
         return false;
     }

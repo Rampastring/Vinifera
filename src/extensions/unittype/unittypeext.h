@@ -86,4 +86,20 @@ UnitTypeClassExtension final : public TechnoTypeClassExtension
          *  The number of image frames for each of the idle animation sequences.
          */
         unsigned IdleFrames;
+
+        /**
+         *  The unit type that this unit is meant to transform into upon deploying, if any.
+         */
+        const UnitTypeClass *TransformsInto;
+
+        /**
+         *  If set, transforming to another unit will require this unit to have full charge.
+         */
+        bool IsTransformRequiresFullCharge;
+
+        /**
+         *  If set, this unit is considered to be a naval unit, meaning it can only be
+         *  produced from water-bound factory buildings.
+         */
+        bool IsNaval;
 };

@@ -30,6 +30,7 @@
 #include "ccini.h"
 #include "tibsun_globals.h"
 #include "extension.h"
+#include "vinifera_saveload.h"
 #include "asserthandler.h"
 #include "debughandler.h"
 
@@ -45,7 +46,10 @@ UnitTypeClassExtension::UnitTypeClassExtension(const UnitTypeClass *this_ptr) :
     StartTurretFrame(-1),
     TurretFacings(32),		// Must default to 32 as all Tiberian Sun units have 32 facings for turrets.,
     StartIdleFrame(0),
-    IdleFrames(0)
+    IdleFrames(0),
+    TransformsInto(nullptr),
+    IsTransformRequiresFullCharge(false),
+    IsNaval(false)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("UnitTypeClassExtension::UnitTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 
@@ -113,6 +117,8 @@ HRESULT UnitTypeClassExtension::Load(IStream *pStm)
 
     new (this) UnitTypeClassExtension(NoInitClass());
     
+    VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP(TransformsInto, "TransformsInto");
+
     return hr;
 }
 
@@ -191,6 +197,10 @@ bool UnitTypeClassExtension::Read_INI(CCINIClass &ini)
     //}
 
     IsTotable = ini.Get_Bool(ini_name, "Totable", IsTotable);
+    TransformsInto = ini.Get_Unit(ini_name, "TransformsInto", TransformsInto);
+    IsTransformRequiresFullCharge = ini.Get_Bool(ini_name, "TransformRequiresFullCharge", IsTransformRequiresFullCharge);
+
+    IsNaval = ini.Get_Bool(ini_name, "Naval", IsNaval);
 
     StartTurretFrame = ArtINI.Get_Int(graphic_name, "StartTurretFrame", StartTurretFrame);
     TurretFacings = ArtINI.Get_Int(graphic_name, "TurretFacings", TurretFacings);
@@ -203,6 +213,6 @@ bool UnitTypeClassExtension::Read_INI(CCINIClass &ini)
 
     StartIdleFrame = ArtINI.Get_Int(graphic_name, "StartIdleFrame", StartIdleFrame);
     IdleFrames = ArtINI.Get_Int(graphic_name, "IdleFrames", IdleFrames);
-    
+
     return true;
 }

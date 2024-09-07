@@ -521,10 +521,10 @@ bool Vinifera_Prep_For_Side(SideType side)
         SideMixFiles.Delete(i);
     }
 
-    if (Addon_Enabled(ADDON_ANY) == ADDON_FIRESTORM) {
+    //if (Addon_Enabled(ADDON_ANY) == ADDON_FIRESTORM) {
 
-        for (int i = 99; i >= 0; --i) {
-            std::snprintf(buffer, sizeof(buffer), "E%02dSC%02d.MIX", i, sidenum);
+    //    for (int i = 99; i >= 0; --i) {
+            std::snprintf(buffer, sizeof(buffer), "SIDECD%02d.MIX", sidenum);
             if (CCFileClass(buffer).Is_Available()) {
                 mix = new MFCC(buffer, &FastKey);
                 ASSERT(mix);
@@ -539,9 +539,9 @@ bool Vinifera_Prep_For_Side(SideType side)
                 ExpansionMixFiles.Add(mix);
                 DEBUG_INFO(" %s\n", buffer);
             }
-        }
+    //    }
 
-    }
+    //}
 
     std::snprintf(buffer, sizeof(buffer), "SIDEC%02d.MIX", sidenum);
     if (CCFileClass(buffer).Is_Available()) {
@@ -571,7 +571,8 @@ bool Vinifera_Prep_For_Side(SideType side)
 
     if (Session.Type == GAME_NORMAL) {
         if (Addon_Enabled(ADDON_ANY) == ADDON_FIRESTORM) {
-            std::snprintf(buffer, sizeof(buffer), "E%02dSCD%02d.MIX", Get_Required_Addon(), sidenum);
+            // Ported over ts-patches hack to load SIDECD%02d.MIX instead of E%02dSC%02d.mix
+            std::snprintf(buffer, sizeof(buffer), "SIDECD%02d.MIX", sidenum);
         } else {
             std::snprintf(buffer, sizeof(buffer), "SIDECD%02d.MIX", sidenum);
         }
@@ -986,6 +987,32 @@ void GameInit_Hooks()
     Patch_Jump(0x004E4120, &Vinifera_Init_Secondary_Mixfiles);
     Patch_Jump(0x004E7EB0, &Vinifera_Prep_For_Side);
     Patch_Jump(0x00686190, &Vinifera_Create_Main_Window);
+
+    /**
+     *  Load side MIX files properly for additional sides while initializing
+     *  the scenario.
+     *
+     *  Ported over from ts-patches by Rampastring, original author unknown.
+     */
+    // @SET 0x005DD798, {mov cl, byte [0x007E2500]}
+    Patch_Dword(0x005DD798, 0x25000D8A);
+    Patch_Word(0x005DD79C, 0x007E);
+    // @CLEAR 0x005DD79E, 0x90, 0x005DD7A2
+    Patch_Byte_Range(0x005DD79E, 0x90, 4);
+
+    /**
+     *  Load speech MIX files properly for additional sides while
+     *  initializing the scenario.
+     *
+     *  Ported over from ts-patches by Rampastring, original author unknown.
+     */
+    // @SET 0x005DD822, {xor ecx, ecx}
+    Patch_Word(0x005DD822, 0xC931);
+    // @CLEAR 0x005DD824, 0x90, 0x005DD828
+    Patch_Byte_Range(0x005DD824, 0x90, 4);
+    // @SET 0x005DD82B, {mov cl, byte [0x007E2500]}
+    Patch_Dword(0x005DD82B, 0x25000D8A);
+    Patch_Word(0x005DD82F, 0x007E);
 
     /**
      *  #issue-110

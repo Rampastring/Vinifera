@@ -48,7 +48,7 @@ TechnoTypeClassExtension::TechnoTypeClassExtension(const TechnoTypeClass *this_p
     ObjectTypeClassExtension(this_ptr),
     CloakSound(VOC_NONE),
     UncloakSound(VOC_NONE),
-    IsShakeScreen(false),
+    IsShakeScreen(true),
     IsImmuneToEMP(false),
     IsCanPassiveAcquire(true),
     IsCanRetaliate(true),
@@ -66,8 +66,13 @@ TechnoTypeClassExtension::TechnoTypeClassExtension(const TechnoTypeClass *this_p
     VoiceDeploy(),
     VoiceHarvest(),
     IdleRate(0),
-    CameoImageSurface(nullptr)
+    CameoImageSurface(nullptr),
+    BuildTimeCost(0),
+    RequiredHouses(-1),
+    ForbiddenHouses(-1)
 {
+    Description[0] = '\0';
+
     //if (this_ptr) EXT_DEBUG_TRACE("TechnoTypeClassExtension::TechnoTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
 
@@ -262,6 +267,10 @@ bool TechnoTypeClassExtension::Read_INI(CCINIClass &ini)
     VoiceEnter = ini.Get_VocTypes(ini_name, "VoiceEnter", VoiceEnter);
     VoiceDeploy = ini.Get_VocTypes(ini_name, "VoiceDeploy", VoiceDeploy);
     VoiceHarvest = ini.Get_VocTypes(ini_name, "VoiceHarvest", VoiceHarvest);
+    BuildTimeCost = ini.Get_Int(ini_name, "BuildTimeCost", BuildTimeCost);
+
+    if (ini.Is_Present(ini_name, "Description"))
+        ini.Get_String(ini_name, "Description", Description, ARRAY_SIZE(Description));
 
     IdleRate = ini.Get_Int(ini_name, "IdleRate", IdleRate);
     IdleRate = ArtINI.Get_Int(graphic_name, "IdleRate", IdleRate);
@@ -273,6 +282,9 @@ bool TechnoTypeClassExtension::Read_INI(CCINIClass &ini)
     if (imagesurface) {
         CameoImageSurface = imagesurface;
     }
+
+    RequiredHouses = ini.Get_Owners(ini_name, "RequiredHouses", RequiredHouses);
+    ForbiddenHouses = ini.Get_Owners(ini_name, "ForbiddenHouses", ForbiddenHouses);
 
     return true;
 }

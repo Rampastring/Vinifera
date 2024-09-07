@@ -46,7 +46,10 @@
 #include "bulletext_hooks.h"
 #include "bullettypeext_hooks.h"
 #include "campaignext_hooks.h"
+#include "cargoext_hooks.h"
 #include "cellext_hooks.h"
+#include "creditext_hooks.h"
+#include "eventext_hooks.h"
 #include "factoryext_hooks.h"
 #include "houseext_hooks.h"
 #include "housetypeext_hooks.h"
@@ -122,6 +125,7 @@
 #include "msglistext_hooks.h"
 #include "txtlabelext_hooks.h"
 #include "tooltipext_hooks.h"
+#include "textprintext_hooks.h"
 
 #include "combatext_hooks.h"
 #include "dropshipext_hooks.h"
@@ -129,6 +133,7 @@
 #include "mapseedext_hooks.h"
 #include "multiscoreext_hooks.h"
 #include "multimissionext_hooks.h"
+#include "scoreclassext_hooks.h"
 
 #include "skirmishdlg_hooks.h"
 
@@ -179,7 +184,10 @@ void Extension_Hooks()
     BulletClassExtension_Hooks();
     BulletTypeClassExtension_Hooks();
     CampaignClassExtension_Hooks();
+    CargoClassExtension_Hooks();
     CellClassExtension_Hooks();
+    CreditClassExtension_Hooks();
+    EventClassExtension_Hooks();
     FactoryClassExtension_Hooks();
     HouseClassExtension_Hooks();
     HouseTypeClassExtension_Hooks();
@@ -214,7 +222,7 @@ void Extension_Hooks()
     //TagClassExtension_Hooks();                            // Not yet implemented
     //TagTypeClassExtension_Hooks();                        // Not yet implemented
     TiberiumClassExtension_Hooks();
-    //TActionClassExtension_Hooks();                        // Not yet implemented
+    TActionClassExtension_Hooks();                        // Not yet implemented
     //TEventClassExtension_Hooks();                         // Not yet implemented
     WeaponTypeClassExtension_Hooks();
     WarheadTypeClassExtension_Hooks();
@@ -261,12 +269,14 @@ void Extension_Hooks()
     MessageListClassExtension_Hooks();
     TextLabelClassExtension_Hooks();
     ToolTipManagerExtension_Hooks();
+    TextPrintExtension_Hooks();
 
     CombatExtension_Hooks();
     DropshipExtension_Hooks();
     EndGameExtension_Hooks();
     MapSeedClassExtension_Hooks();
     MultiScoreExtension_Hooks();
+    ScoreClassExtension_Hooks();
     MultiMissionExtension_Hooks();
 
     /**

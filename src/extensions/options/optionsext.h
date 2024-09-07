@@ -64,4 +64,14 @@ class OptionsClassExtension final : public GlobalExtensionClass<OptionsClass>
         void Set();
 
     public:
+
+        /**
+         *  Are harvesters and MCVs excluded from a band-box selection that includes combat units?
+         */
+        bool FilterBandBoxSelection;
+
+        /**
+         *  Are messages drawn top-left rather than bottom-left?
+         */
+        bool IsClassicMessagePosition;
 };

@@ -42,7 +42,8 @@
  *  @author: CCHyper
  */
 OptionsClassExtension::OptionsClassExtension(const OptionsClass *this_ptr) :
-    GlobalExtensionClass(this_ptr)
+    GlobalExtensionClass(this_ptr),
+    FilterBandBoxSelection(true)
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::OptionsClassExtension - 0x%08X\n", (uintptr_t)(This()));
 }
@@ -147,13 +148,23 @@ void OptionsClassExtension::Compute_CRC(WWCRCEngine &crc) const
 /**
  *  Fetches the extension data from the INI database.  
  *  
- *  @author: CCHyper
+ *  @author: CCHyper, modified by Rampastring
  */
 void OptionsClassExtension::Load_Settings()
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::Load_Settings - 0x%08X\n", (uintptr_t)(This()));
     
-    RawFileClass file("SUN.INI");
+    // Rampastring: DTA uses Settings.ini rather than SUN.ini
+    RawFileClass file("Settings.ini");
+    CCINIClass sun_ini;
+
+    if (file.Is_Available()) {
+
+        sun_ini.Load(file, false);
+
+        FilterBandBoxSelection = sun_ini.Get_Bool("Options", "FilterBandBoxSelection", FilterBandBoxSelection);
+        IsClassicMessagePosition = sun_ini.Get_Bool("Options", "ClassicMessageListPosition", IsClassicMessagePosition);
+    }
 }
 
 
@@ -166,7 +177,8 @@ void OptionsClassExtension::Load_Init_Settings()
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::Load_Settings - 0x%08X\n", (uintptr_t)(This()));
     
-    RawFileClass file("SUN.INI");
+    // Rampastring: DTA uses Settings.ini rather than SUN.ini
+    RawFileClass file("Settings.ini");
 }
 
 
@@ -179,7 +191,8 @@ void OptionsClassExtension::Save_Settings()
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::Save_Settings - 0x%08X\n", (uintptr_t)(This()));
     
-    RawFileClass file("SUN.INI");
+    // Rampastring: DTA uses Settings.ini rather than SUN.ini
+    RawFileClass file("Settings.ini");
 }
 
 

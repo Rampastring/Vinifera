@@ -29,14 +29,17 @@
 #include "aircraftext_init.h"
 #include "aircraft.h"
 #include "aircrafttype.h"
+#include "aircraftext.h"
 #include "aircrafttypeext.h"
 #include "object.h"
 #include "target.h"
 #include "unit.h"
 #include "unittype.h"
 #include "unittypeext.h"
+#include "team.h"
 #include "technotype.h"
 #include "technotypeext.h"
+#include "tibsun_inline.h"
 #include "extension.h"
 #include "voc.h"
 #include "fatal.h"
@@ -47,17 +50,43 @@
 #include "hooker_macros.h"
 
 
+ /**
+  *  A fake class for implementing new member functions which allow
+  *  access to the "this" pointer of the intended class.
+  *
+  *  @note: This must not contain a constructor or deconstructor!
+  *  @note: All functions must be prefixed with "_" to prevent accidental virtualization.
+  */
+static class AircraftClassExt final : public AircraftClass
+{
+public:
+    int _Mission_Retreat();
+};
+
+
+/**
+ *  Hack to make aircraft also use the FootClass version of MISSION_RETREAT
+ *  instead of a null function.
+ *
+ *  @author: Rampastring
+ */
+int AircraftClassExt::_Mission_Retreat() 
+{
+    return FootClass::Mission_Retreat();
+}
+
+
 /**
  *  #issue-996
- * 
+ *
  *  Implements IsCurleyShuffle for AircraftTypes.
- * 
+ *
  *  @author: CCHyper
  */
 DECLARE_PATCH(_AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TARGET0_Can_Fire_FIRE_FACING_Patch)
 {
-    GET_REGISTER_STATIC(AircraftClass *, this_ptr, esi);
-    static AircraftTypeClassExtension *class_ext;
+    GET_REGISTER_STATIC(AircraftClass*, this_ptr, esi);
+    static AircraftTypeClassExtension* class_ext;
     static bool is_curley_shuffle;
 
     class_ext = Extension::Fetch<AircraftTypeClassExtension>(this_ptr->Class);
@@ -71,8 +100,8 @@ DECLARE_PATCH(_AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TARGET0_Can_
 
 DECLARE_PATCH(_AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TARGET2_Can_Fire_FIRE_OK_Patch)
 {
-    GET_REGISTER_STATIC(AircraftClass *, this_ptr, esi);
-    static AircraftTypeClassExtension * class_ext;
+    GET_REGISTER_STATIC(AircraftClass*, this_ptr, esi);
+    static AircraftTypeClassExtension* class_ext;
     static bool is_curley_shuffle;
 
     class_ext = Extension::Fetch<AircraftTypeClassExtension>(this_ptr->Class);
@@ -85,8 +114,8 @@ DECLARE_PATCH(_AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TARGET2_Can_
 
 DECLARE_PATCH(_AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TARGET2_Can_Fire_FIRE_FACING_Patch)
 {
-    GET_REGISTER_STATIC(AircraftClass *, this_ptr, esi);
-    static AircraftTypeClassExtension * class_ext;
+    GET_REGISTER_STATIC(AircraftClass*, this_ptr, esi);
+    static AircraftTypeClassExtension* class_ext;
     static bool is_curley_shuffle;
 
     class_ext = Extension::Fetch<AircraftTypeClassExtension>(this_ptr->Class);
@@ -99,8 +128,8 @@ DECLARE_PATCH(_AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TARGET2_Can_
 
 DECLARE_PATCH(_AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TARGET2_Can_Fire_DEFAULT_Patch)
 {
-    GET_REGISTER_STATIC(AircraftClass *, this_ptr, esi);
-    static AircraftTypeClassExtension *class_ext;
+    GET_REGISTER_STATIC(AircraftClass*, this_ptr, esi);
+    static AircraftTypeClassExtension* class_ext;
     static bool is_curley_shuffle;
 
     class_ext = Extension::Fetch<AircraftTypeClassExtension>(this_ptr->Class);
@@ -316,6 +345,128 @@ DECLARE_PATCH(_AircraftClass_Init_IsCloakable_BugFix_Patch)
 
 
 /**
+ *  Updates logic for aircraft spawned by weapons.
+ *  Returns true if the spawned aircraft should be removed afterwards,
+ *  otherwise false.
+ *
+ *  @author: Rampastring
+ */
+bool Spawned_Check_Destruction(AircraftClass *aircraft, AircraftClassExtension *aircraftext) 
+{
+    if (aircraftext->Spawner == nullptr) {
+        return false;
+    }
+
+    /**
+     *  If our TarCom is null, our original target has died.
+     *  Try targeting something else that is nearby,
+     *  unless we've already decided to head back to the spawner.
+     */
+    if (aircraft->TarCom == nullptr && aircraft->NavCom != aircraftext->Spawner) {
+        aircraft->Target_Something_Nearby(aircraft->Center_Coord(), THREAT_AREA);
+    }
+
+    /**
+     *  If our TarCom is still null or we're run out of ammo, return to 
+     *  whoever spawned us. Once we're close enough, we should be erased from the map.
+     */
+    if (aircraft->TarCom == nullptr || aircraft->Ammo == 0) {
+        
+        if (aircraft->NavCom != aircraftext->Spawner) {
+            aircraft->Assign_Destination(aircraftext->Spawner);
+            aircraft->Assign_Mission(MISSION_MOVE);
+            aircraft->Commence();
+        }
+
+        if (::Distance(aircraft->Center_Coord(), aircraftext->Spawner->Center_Coord()) < CELL_LEPTON_W)
+            return true;
+    }
+
+    return false;
+}
+
+
+/**
+ *  Checks if a weapon-spawned aircraft is out of ammo or whether its target has died.
+ *  If so, makes it return into its spawner.
+ *
+ *  @author: Rampastring
+ */
+bool AircraftClass_AI_Return_To_Spawner_Patch(AircraftClass* aircraft, AircraftClassExtension *aircraftext)
+{
+    if (aircraftext->Spawner != nullptr) {
+
+        /**
+         *  If we are close enough to our owner, delete us and return true
+         *  to signal to the challer that we were deleted.
+         */
+        if (Spawned_Check_Destruction(aircraft, aircraftext)) {
+            aircraft->entry_E4();
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+/**
+ *  Special hack to make paradrop aircraft exit the map if they are loaners
+ *  and have dropped off all of their cargo.
+ *
+ *  @author: Rampastring
+ */
+void Check_For_Paradrop_Aircraft(AircraftClass* aircraft, AircraftClassExtension* aircraftext)
+{
+    if (aircraftext->IsParadropReinforcement) {
+
+        // If the aircraft has only 1 ammo, then return it to full ammo.
+        // This causes it to retry paradropping until it is successful.
+        if (aircraft->Ammo == 1 && !aircraftext->IsParadropAmmoReplenished) {
+            aircraft->Ammo = aircraft->Class->MaxAmmo;
+            aircraftext->IsParadropAmmoReplenished = true;
+        }
+
+        // Force the aircraft to retreat (exit map) if it has no more passengers.
+        if (aircraft->Class->Max_Passengers() > 0 && !aircraft->Cargo.Is_Something_Attached() && aircraft->Mission == MISSION_ATTACK)
+        {
+            aircraft->Assign_Mission(MISSION_RETREAT);
+            aircraft->Commence();
+        }
+    }
+}
+
+
+DECLARE_PATCH(_AircraftClass_AI_Hook_Patch)
+{
+    GET_REGISTER_STATIC(AircraftClass*, this_ptr, ebp);
+    static AircraftClassExtension *aircraftext;
+    
+    aircraftext = Extension::Fetch<AircraftClassExtension>(this_ptr);
+    if (AircraftClass_AI_Return_To_Spawner_Patch(this_ptr, aircraftext)) {
+        JMP_REG(ebx, 0x004093DE); // Aircraft was deleted, jump out
+    }
+
+    Check_For_Paradrop_Aircraft(this_ptr, aircraftext);
+
+    /**
+     *  Stolen bytes / code.
+     *  Process FootClass AI logic, jump out if we are
+     *  not active afterwards.
+     */
+    this_ptr->FootClass::AI();
+    if (!this_ptr->IsActive) {
+        JMP_REG(ebx, 0x004093DE);
+    }
+
+    /**
+     *  Continue function execution.
+     */
+    JMP(0x0040918A);
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void AircraftClassExtension_Hooks()
@@ -333,4 +484,10 @@ void AircraftClassExtension_Hooks()
     Patch_Jump(0x0040C054, &_AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TARGET2_Can_Fire_FIRE_OK_Patch);
     Patch_Jump(0x0040BF9D, &_AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TARGET2_Can_Fire_FIRE_FACING_Patch);
     Patch_Jump(0x0040C0AC, &_AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TARGET2_Can_Fire_DEFAULT_Patch);
+    Patch_Jump(0x0040917A, &_AircraftClass_AI_Hook_Patch);
+    Patch_Jump(0x00409910, &AircraftClassExt::_Mission_Retreat);
+
+    // Fix bug where aircraft are unable to attack targets in shroud in campaign games
+    // and instead get stuck in mid-air
+    Patch_Jump(0x0040D0C5, (uintptr_t)0x0040D0EA);
 }
