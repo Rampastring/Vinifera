@@ -1365,6 +1365,7 @@ void ScenarioClassExtension::Create_Units(bool official)
             // Spectators need to be handled at some point?
             if (chosen_spawn != SPAWN_RANDOM)
             {
+                chosen_spawn = std::clamp(chosen_spawn, 0, 7);
                 if (!taken[chosen_spawn])
                 {
                     centroid = waypts[chosen_spawn];
@@ -1439,10 +1440,6 @@ void ScenarioClassExtension::Create_Units(bool official)
                 taken[best] = true;
                 numtaken++;
             }
-        }
-        else
-        {
-            centroid = waypts[Spawner::GetConfig()->Houses[hptr->Class->ID].SpawnLocation];
         }
 
         /**
