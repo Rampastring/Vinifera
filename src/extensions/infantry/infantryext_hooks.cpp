@@ -578,39 +578,6 @@ DECLARE_PATCH(_InfantryClass_Per_Cell_Process_Tiberium_Damage_Patch)
     JMP(0x004D3F7D);
 }
 
-
-/**
- *  #issue-1080
- *
- *  Fixes an out-of-bounds DoControls read when an infantry is "doing nothing".
- *
- *  @author: Rampastring
- */
-void _Set_Infantry_Facing_After_Doing_Check_For_Do_Nothing(InfantryClass* this_ptr)
-{
-    if (this_ptr->Doing == DO_NOTHING) {
-        return;
-    }
-
-    FacingType facing = this_ptr->Class->DoControls[this_ptr->Doing].Finish;
-    if (facing == FACING_NONE) {
-        return;
-    }
-
-    DirType dirtype = Facing_Dir(facing);
-    DirStruct ds = DirStruct(dirtype);
-    this_ptr->PrimaryFacing.Set(ds);
-}
-
-
-DECLARE_PATCH(_InfantryClass_Doing_AI_Fix_Invalid_Facing_Set)
-{
-    GET_REGISTER_STATIC(InfantryClass*, inf, esi);
-    _Set_Infantry_Facing_After_Doing_Check_For_Do_Nothing(inf);
-    JMP(0x004D8C14);
-}
-
-
 /**
  *  Main function for patching the hooks.
  */
@@ -620,8 +587,6 @@ void InfantryClassExtension_Hooks()
      *  Initialises the extended class.
      */
     InfantryClassExtension_Init();
-
-    Patch_Jump(0x004D8BE4, &_InfantryClass_Doing_AI_Fix_Invalid_Facing_Set);
 
     Patch_Jump(0x004D88FA, &_InfantryClass_Firing_AI_JumpJet_In_Air_Patch);
     Patch_Jump(0x004D8C83, &_InfantryClass_Doing_AI_JumpJet_Idle_Patch);

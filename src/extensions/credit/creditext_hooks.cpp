@@ -221,7 +221,7 @@ void Draw_Tooltip_Rectangle(DSurface* surface, Rect& drawrect)
     surface->Fill_Rect(drawrect, 0);
 
     if (ScenExtension->CachedToolTipColorSchemeIndex > -1) {
-        RGBClass rgb = ColorSchemes[ScenExtension->CachedToolTipColorSchemeIndex]->field_308.operator RGBClass();
+        RGBClass rgb = ColorSchemes[ScenExtension->CachedToolTipColorSchemeIndex]->HSV.operator RGBClass();
         surface->Draw_Rect(drawrect, DSurface::RGB_To_Pixel(rgb));
     }
     else {
