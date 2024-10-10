@@ -2121,84 +2121,6 @@ allow_rally_point:
 
 
 /**
- *  #issue-1049
- *
- *  The AI undeploys deployed Tick Tanks, Artillery and Juggernauts that get attacked by something
- *  that is out of their range. This is done by assigning MISSION_DECONSTRUCTION, which is used for both
- *  undeploying and selling.
- *
- *  The AI does not check whether the building actually has UndeploysInto= specified as something
- *  non-null, meaning if the building has UndeploysInto as null, the AI ends up selling the
- *  buildings.
- *
- *  This patch fixes the bug by denying the AI from assigning MISSION_DECONSTRUCTION
- *  when the building has UndeploysInto as null.
- *
- *  @author: Rampastring
- */
-DECLARE_PATCH(_BuildingClass_Assign_Target_No_Deconstruction_With_Null_UndeploysInto)
-{
-    GET_REGISTER_STATIC(BuildingClass*, this_ptr, esi);
-    static BuildingTypeClass* buildingtype;
-
-    if (this_ptr->Class->UndeploysInto == nullptr) {
-
-        /**
-         *  This building cannot undeploy. Exit the function.
-         */
-        JMP(0x0042C58C);
-    }
-
-    /**
-     *  Stolen bytes / code.
-     *  Assign MISSION_DECONSTRUCTION and exit.
-     */
-    this_ptr->Assign_Mission(MISSION_DECONSTRUCTION);
-    this_ptr->Commence();
-    JMP(0x0042C63A);
-}
-
-
-bool Is_Allowed_Harvester(BuildingClass* building, UnitClass* harvester)
-{
-    int dockcount = harvester->Class->Dock.Count();
-
-    for (int i = 0; i < dockcount; i++) {
-        if (harvester->Class->Dock[i] == building->Class) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-
-/**
- *  Fixes a bug where a harvester is able to dock to a refinery that is not
- *  listed in the value of the harvester's Dock= key.
- *
- *  @author: Rampastring
- */
-DECLARE_PATCH(_BuildingClass_Receive_Message_Only_Allow_Dockable_Harvester_Patch)
-{
-    GET_REGISTER_STATIC(BuildingClass*, this_ptr, esi);
-    GET_REGISTER_STATIC(UnitClass*, unit, edi);
-
-    if (!Is_Allowed_Harvester(this_ptr, unit)) {
-        JMP(0x0042696C); // Return RADIO_NEGATIVE
-    }
-
-    // Stolen bytes / code
-    if (!this_ptr->Cargo.Is_Something_Attached()) {
-        JMP(0x0042707B); // Return RADIO_ROGER
-    }
-
-    // Continue function execution beyond harvester-to-dock check
-    JMP(0x00426A8C);
-}
-
-
-/**
  *  Main function for patching the hooks.
  */
 void BuildingClassExtension_Hooks()
@@ -2236,8 +2158,5 @@ void BuildingClassExtension_Hooks()
     Patch_Jump(0x0042C37F, &_BuildingClass_Set_Rally_To_Point_NavalYard_Check_Patch);
     Patch_Jump(0x0042EF9D, &_BuildingClass_What_Action_Allow_Rally_Point_For_Naval_Yard_Patch);
 
-    Patch_Jump(0x0042C624, &_BuildingClass_Assign_Target_No_Deconstruction_With_Null_UndeploysInto);
-    Patch_Jump(0x00426A7E, &_BuildingClass_Receive_Message_Only_Allow_Dockable_Harvester_Patch);
-
-    Patch_Jump(0x0042D9A0, &BuildingClassFake::_Update_Buildables);
+    Patch_Jump(0x0042D9A0, &BuildingClassExt::_Update_Buildables);
 }
