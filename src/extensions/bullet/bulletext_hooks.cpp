@@ -273,7 +273,7 @@ void BulletClass_AI_Homing_Reimplementation(BulletClass* this_ptr)
     // This is probably a bad way to hopefully achieve the same.
     dirrr = v39;
 
-    FlyClass v149 = this_ptr->Fly; // should invoke copy constructor
+    TVelocity3D v149 = this_ptr->Fly; // should invoke copy constructor
 
     // Back-up our coordinate prior to calling Projectile_Motion
     Coordinate backup_coord = this_ptr->Coord;
@@ -438,7 +438,7 @@ void BulletClass_AI_Homing_Reimplementation(BulletClass* this_ptr)
             this_ptr->Set_Coord(newcoord); // why? :/
         }
 
-        bool fuse_check = false;
+        FuseResultType fuse_check = FUSE_DONT_IGNITE;
         if (this_ptr->Class->ROT > 0)
         {
             fuse_check = this_ptr->Fuse.Fuse_Checkup(our_coord);
@@ -476,7 +476,7 @@ void BulletClass_AI_Homing_Reimplementation(BulletClass* this_ptr)
         **	maintenance (usually nothing). Otherwise, explode and then
         **	delete the bullet.
         */
-        if (!is_forced_to_explode && (this_ptr->Class->IsDropping || !fuse_check))
+        if (!is_forced_to_explode && (this_ptr->Class->IsDropping || fuse_check == FUSE_DONT_IGNITE))
         {
             /*
             **	Certain projectiles lose strength when they travel.

@@ -114,41 +114,6 @@ bool BuildingClassExt::_Can_Have_Rally_Point()
 
 
 /**
- *  Comparison function for sorting sidebar icons (BuildTypes)
- *
- *  @author: Rampastring
- */
-int __cdecl BuildType_Comparison(const void* p1, const void* p2)
-{
-    SidebarClass::StripClass::BuildType* bt1 = (SidebarClass::StripClass::BuildType*)p1;
-    SidebarClass::StripClass::BuildType* bt2 = (SidebarClass::StripClass::BuildType*)p2;
-
-    if (bt1->BuildableType == bt2->BuildableType)
-        return bt1->BuildableID - bt2->BuildableID;
-
-    if (bt1->BuildableType == RTTI_INFANTRYTYPE)
-        return -1;
-
-    if (bt2->BuildableType == RTTI_INFANTRYTYPE)
-        return 1;
-
-    if (bt1->BuildableType == RTTI_UNITTYPE)
-        return -1;
-
-    if (bt2->BuildableType == RTTI_UNITTYPE)
-        return 1;
-
-    if (bt1->BuildableType == RTTI_AIRCRAFTTYPE)
-        return -1;
-
-    if (bt2->BuildableType == RTTI_AIRCRAFTTYPE)
-        return 1;
-
-    return 0;
-}
-
-
-/**
  *  Makes the game check whether you can actually build the object before adding it to the sidebar,
  *  preventing grayed out cameos (except for build limited types)
  *
@@ -171,7 +136,6 @@ void BuildingClassExt::_Update_Buildables()
                 }
             }
 
-            qsort(&Map.Column[1].Buildables, Map.Column[1].BuildableCount, sizeof(SidebarClass::StripClass::BuildType), &BuildType_Comparison);
             break;
 
         case RTTI_BUILDINGTYPE:
@@ -183,7 +147,6 @@ void BuildingClassExt::_Update_Buildables()
                 }
             }
 
-            qsort(&Map.Column[0].Buildables, Map.Column[0].BuildableCount, sizeof(SidebarClass::StripClass::BuildType), &BuildType_Comparison);
             break;
 
         case RTTI_INFANTRYTYPE:
@@ -195,7 +158,6 @@ void BuildingClassExt::_Update_Buildables()
                 }
             }
 
-            qsort(&Map.Column[1].Buildables, Map.Column[1].BuildableCount, sizeof(SidebarClass::StripClass::BuildType), &BuildType_Comparison);
             break;
 
         case RTTI_UNITTYPE:
@@ -207,7 +169,6 @@ void BuildingClassExt::_Update_Buildables()
                 }
             }
 
-            qsort(&Map.Column[1].Buildables, Map.Column[1].BuildableCount, sizeof(SidebarClass::StripClass::BuildType), &BuildType_Comparison);
             break;
 
         default:
@@ -2321,5 +2282,4 @@ void BuildingClassExtension_Hooks()
     Patch_Byte(0x0042CE7A + 1, 0x90);
     Patch_Jump(0x0042C37F, &_BuildingClass_Set_Rally_To_Point_NavalYard_Check_Patch);
     Patch_Jump(0x0042EF9D, &_BuildingClass_What_Action_Allow_Rally_Point_For_Naval_Yard_Patch);
-    Patch_Jump(0x0042D9A0, &BuildingClassExt::_Update_Buildables);
 }

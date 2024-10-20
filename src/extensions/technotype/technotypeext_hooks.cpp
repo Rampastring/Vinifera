@@ -44,20 +44,6 @@
 #include "hooker_macros.h"
 
 
- /**
-  *  A fake class for implementing new member functions which allow
-  *  access to the "this" pointer of the intended class.
-  *
-  *  @note: This must not contain a constructor or deconstructor!
-  *  @note: All functions must be prefixed with "_" to prevent accidental virtualization.
-  */
-static class TechnoTypeClassExt final : public TechnoTypeClass
-{
-public:
-    int _Time_To_Build();
-};
-
-
 /**
  *  A fake class for implementing new member functions which allow
  *  access to the "this" pointer of the intended class.
@@ -71,6 +57,7 @@ class TechnoTypeClassExt : public TechnoTypeClass
 {
 public:
     int _Max_Pips() const;
+    int _Time_To_Build();
 };
 
 
