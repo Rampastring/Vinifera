@@ -1177,7 +1177,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
     }
 
     // Build power if necessary
-    if (!is_under_threat && Frame > 5000 && house->Power - house->Drain < 100) {
+    if (!is_under_threat && /*Frame > 5000 &&*/ house->Power - house->Drain < 100) {
         if (our_advanced_power != BUILDING_NONE) {
             DEBUG_INFO("AdvAI: Making AI build %s because it is out of power and can build an adv. power plant\n", BuildingTypes[our_advanced_power]->IniName);
             return BuildingTypes[our_advanced_power];
@@ -1449,7 +1449,7 @@ const BuildingTypeClass* AdvAI_Get_Building_To_Build(HouseClass* house)
 
     // If our power budget couldn't afford the building, then build a power plant first instead.
     // Unless it's a refinery that we're building, those are considered more critical.
-    if (buildchoice->Power < 0 && !buildchoice->IsRefinery && (house->Power - house->Drain + buildchoice->Power > house->Power)) {
+    if (buildchoice->Drain > 0 && !buildchoice->IsRefinery && (house->Drain + buildchoice->Drain > house->Power)) {
         BuildingType our_basic_power = BUILDING_NONE;
         BuildingType our_advanced_power = BUILDING_NONE;
 
