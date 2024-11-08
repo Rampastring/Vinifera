@@ -159,7 +159,7 @@ void OptionsClassExtension::Load_Settings()
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::Load_Settings - 0x%08X\n", (uintptr_t)(This()));
     
-    RawFileClass file("SUN.INI");
+    RawFileClass file("Settings.ini");
     CCINIClass sun_ini;
 
     if (file.Is_Available()) {
@@ -208,7 +208,7 @@ void OptionsClassExtension::Load_Init_Settings()
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::Load_Settings - 0x%08X\n", (uintptr_t)(This()));
     
-    RawFileClass file("SUN.INI");
+    RawFileClass file("Settings.ini");
 }
 
 
@@ -221,7 +221,7 @@ void OptionsClassExtension::Save_Settings()
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::Save_Settings - 0x%08X\n", (uintptr_t)(This()));
     
-    RawFileClass file("SUN.INI");
+    RawFileClass file("Settings.ini");
 
     /**
      *  Save keys to Keyboard.ini.
