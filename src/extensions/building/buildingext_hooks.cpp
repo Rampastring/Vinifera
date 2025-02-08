@@ -2474,10 +2474,9 @@ DECLARE_PATCH(_BuildingClass_Exit_Object_Prevent_Ship_In_Weapons_Factory)
 
         /**
          *  We are a war factory with a production anim and a ship is trying to exit us.
-         *  No continuing beyond this part. Exit the function and return -2 (refund).
+         *  No continuing beyond this part. Exit the function and return 0 (EXIT_FAILED).
          */
-
-        JMP(0x0042D77E);
+        JMP(0x0042D966);
     }
 
     /**
