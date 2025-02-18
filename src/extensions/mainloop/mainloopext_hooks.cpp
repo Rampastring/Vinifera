@@ -356,6 +356,7 @@ void _DTA_Compute_Game_CRC(void)
         Add_CRC(&GameCRC, coord.X);
         Add_CRC(&GameCRC, coord.Y);
         Add_CRC(&GameCRC, (unsigned long)(infp->PrimaryFacing.Current().Get_Raw()));
+        Add_CRC(&GameCRC, infp->Strength);
     }
 
     for (int i = 0; i < Units.Count(); i++) {
@@ -366,6 +367,7 @@ void _DTA_Compute_Game_CRC(void)
         Add_CRC(&GameCRC, coord.Y);
         Add_CRC(&GameCRC, (unsigned long)(unit->PrimaryFacing.Current().Get_Raw()));
         Add_CRC(&GameCRC, (unsigned long)(unit->SecondaryFacing.Current().Get_Raw()));
+        Add_CRC(&GameCRC, unit->Strength);
     }
 
     for (int i = 0; i < Buildings.Count(); i++) {
@@ -376,6 +378,7 @@ void _DTA_Compute_Game_CRC(void)
         Add_CRC(&GameCRC, coord.X);
         Add_CRC(&GameCRC, coord.Y);
         Add_CRC(&GameCRC, (unsigned long)(building->PrimaryFacing.Current().Get_Raw()));
+        Add_CRC(&GameCRC, building->Strength);
     }
 
     for (int i = 0; i < Aircrafts.Count(); i++) {
@@ -386,8 +389,13 @@ void _DTA_Compute_Game_CRC(void)
         Add_CRC(&GameCRC, coord.X);
         Add_CRC(&GameCRC, coord.Y);
         Add_CRC(&GameCRC, (unsigned long)(aircraft->PrimaryFacing.Current().Get_Raw()));
+        Add_CRC(&GameCRC, aircraft->Strength);
     }
 
+    // Sometimes there can be temporary discrepancies in the map or logic layers that are
+    // very hard to detect and fix with the typical MP latency.
+    // Hopefully comparing objects is enough.
+#if 0
     //------------------------------------------------------------------------
     //	Map Layers
     //------------------------------------------------------------------------
@@ -441,6 +449,7 @@ void _DTA_Compute_Game_CRC(void)
         Add_CRC(&GameCRC, coord.X);
         Add_CRC(&GameCRC, coord.Y);
     }
+#endif
 
     Add_CRC(&GameCRC, Scen->RandomNumber());
 }
