@@ -137,4 +137,9 @@ public:
      *  Determines whether this building is able to claim nearby walls pre-placed on maps as belonging to the owner's house.
      */
     bool IsWallOwner;
+    
+    /**
+     *  Should the Advanced AI ignore prerequisites when considering whether it can build this building?
+     */
+    bool IsAdvancedAIIgnoresPrerequisites;
 };

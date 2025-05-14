@@ -59,6 +59,7 @@ BuildingTypeClassExtension::BuildingTypeClassExtension(const BuildingTypeClass *
     UnderRoofDoorAnim(nullptr),
     IsExclusiveFactory(false),
     IsWallOwner(true)
+    IsAdvancedAIIgnoresPrerequisites(false)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("BuildingTypeClassExtension::BuildingTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 
@@ -227,6 +228,8 @@ bool BuildingTypeClassExtension::Read_INI(CCINIClass &ini)
 
     Fetch_Building_Normal_Image(Scen->Theater);
 
+    IsAdvancedAIIgnoresPrerequisites = ini.Get_Bool(ini_name, "AdvancedAIIgnoresPrerequisites", IsAdvancedAIIgnoresPrerequisites);
+    
     IsInitialized = true;
 
     return true;
