@@ -107,7 +107,11 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     BuildingFlameSpawnBlockFrames(0),
     StrengthenDestroyedValueThreshold(0),
     StrengthenBuildingValueMultiplier(3),
-    IsStrengtheningEnabled(false)
+    IsStrengtheningEnabled(false),
+    IsUseAdvancedAI(false),
+    IsAdvancedAIMultiConYard(false),
+    AdvancedAIMaxExpansionDistance(150),
+    AdvancedAIMinimumRefineryCount(2)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
 
@@ -129,6 +133,8 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     MaxPips.Add(5);     // PIP_PASSENGERS
     MaxPips.Add(10);    // PIP_POWER
     MaxPips.Add(8);     // PIP_CHARGE
+
+    BuildNavalYard = TypeList<BuildingTypeClass*>(0);
 }
 
 
@@ -139,7 +145,8 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
  */
 RulesClassExtension::RulesClassExtension(const NoInitClass &noinit) :
     GlobalExtensionClass(noinit),
-    MaxPips(noinit)
+    MaxPips(noinit),
+    BuildNavalYard(noinit)
 {
     //EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension(NoInitClass) - 0x%08X\n", (uintptr_t)(ThisPtr));
 }
@@ -166,6 +173,7 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
     //EXT_DEBUG_TRACE("RulesClassExtension::Load - 0x%08X\n", (uintptr_t)(This()));
 
     MaxPips.Clear();
+    BuildNavalYard.Clear();
 
     HRESULT hr = GlobalExtensionClass::Load(pStm);
     if (FAILED(hr)) {
@@ -175,6 +183,9 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
     new (this) RulesClassExtension(NoInitClass());
 
     MaxPips.Load(pStm);
+    BuildNavalYard.Load(pStm);
+
+    VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(BuildNavalYard, "BuildNavalYard");
     
     return hr;
 }
@@ -195,6 +206,7 @@ HRESULT RulesClassExtension::Save(IStream *pStm, BOOL fClearDirty)
     }
 
     MaxPips.Save(pStm);
+    BuildNavalYard.Save(pStm);
 
     return hr;
 }
@@ -246,6 +258,7 @@ void RulesClassExtension::Object_CRC(CRCEngine &crc) const
     crc(StrengthenDestroyedValueThreshold);
     crc(StrengthenBuildingValueMultiplier);
     crc(IsStrengtheningEnabled);
+    crc(BuildNavalYard.Count());
 }
 
 
@@ -382,6 +395,7 @@ void RulesClassExtension::Process(CCINIClass &ini)
      * 
      *  #NOTE: These must be performed last!
      */
+    AI(ini);
     General(ini);
     MPlayer(ini);
     AudioVisual(ini);
@@ -640,6 +654,29 @@ bool RulesClassExtension::Objects(CCINIClass &ini)
     for (int index = 0; index < ::PrerequisiteGroups.Count(); ++index) {
         ::PrerequisiteGroups[index]->Read_INI(ini);
     }
+
+    return true;
+}
+
+
+/**
+ *  Process AI-related game rules.
+ *
+ *  @author: Rampastring
+ */
+bool RulesClassExtension::AI(CCINIClass &ini)
+{
+    static char const* const AI = "AI";
+
+    if (!ini.Is_Present(AI)) {
+        return false;
+    }
+
+    IsUseAdvancedAI = ini.Get_Bool(AI, "UseAdvancedAI", IsUseAdvancedAI);
+    IsAdvancedAIMultiConYard = ini.Get_Bool(AI, "AdvancedAIMultiConYard", IsAdvancedAIMultiConYard);
+    AdvancedAIMaxExpansionDistance = ini.Get_Int(AI, "AdvancedAIMaxExpansionDistance", AdvancedAIMaxExpansionDistance);
+    AdvancedAIMinimumRefineryCount = ini.Get_Int(AI, "AdvancedAIMinimumRefineryCount", AdvancedAIMinimumRefineryCount);
+    BuildNavalYard = ini.Get_Buildings(AI, "BuildNavalYard", BuildNavalYard);
 
     return true;
 }

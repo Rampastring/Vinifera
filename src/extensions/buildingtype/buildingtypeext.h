@@ -142,4 +142,9 @@ public:
      *  If this is a gate, should it always be drawn normally, as opposed to being drawn on the ground when open?
      */
     bool IsBarGate;
+    
+    /**
+     *  Should the Advanced AI ignore prerequisites when considering whether it can build this building?
+     */
+    bool IsAdvancedAIIgnoresPrerequisites;
 };
