@@ -127,4 +127,9 @@ BuildingTypeClassExtension final : public TechnoTypeClassExtension
         const ShapeSet* RoofDeployingAnim;
         const ShapeSet* RoofDoorAnim;
         const ShapeSet* UnderRoofDoorAnim;
+
+        /**
+         *  Should the Advanced AI ignore prerequisites when considering whether it can build this building?
+         */
+        bool IsAdvancedAIIgnoresPrerequisites;
 };
