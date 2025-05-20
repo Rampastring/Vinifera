@@ -2760,4 +2760,5 @@ void BuildingClassExtension_Hooks()
     Patch_Byte(0x0042CE7A + 1, 0x90);
     Patch_Jump(0x0042C37F, &_BuildingClass_Set_Rally_To_Point_NavalYard_Check_Patch);
     Patch_Jump(0x0042EF9D, &_BuildingClass_What_Action_Allow_Rally_Point_For_Naval_Yard_Patch);
+    Patch_Byte(0x00432786 + 1, 0x00); // Change "true" to "false" in Create_Bullet call in Mission_Missile to disable combat light from nukes
 }
