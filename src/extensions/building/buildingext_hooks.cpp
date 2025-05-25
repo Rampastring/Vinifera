@@ -3385,7 +3385,7 @@ BuildingClass* Find_Best_Alternative_Factory(BuildingClass* this_ptr, FootClass*
             // if (bldg->Class != this_ptr->Class)
             //     continue;
 
-            TechnoTypeClass* technotype = exiting_object->Techno_Type_Class();
+            const TechnoTypeClass* technotype = exiting_object->Techno_Type_Class();
 
             // Check ownable, so only factories of a faction that owns the object can
             // build the object
