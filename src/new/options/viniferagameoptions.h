@@ -57,7 +57,7 @@ class ViniferaGameOptionsClass : public OptionsClass
 		BUTTON_WIDTH = 260,
 		CAPTION_Y_POS = 10,
 		BUTTON_Y = 42,
-		BUTTON_HEIGHT = 20,
+		BUTTON_HEIGHT = 30,
 		BORDER1_LEN = 144,
 		BORDER2_LEN = 32,
 		BUTTON_RESUME_Y = (200 - 30)

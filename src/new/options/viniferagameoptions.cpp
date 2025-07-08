@@ -148,6 +148,7 @@ void ViniferaGameOptionsClass::Process()
 	GadgetClass* g = buttons;
 	while (g != NULL) {
 		g->Width = std::max(maxwidth, 180);
+		g->Height = GameOptionsEnum::BUTTON_HEIGHT - 2;
 		g->X = dialogx + (GameOptionsEnum::OPTION_WIDTH - g->Width) / 2;
 		g->Y = dialogy + g->Y;
 		g = g->Get_Next();
