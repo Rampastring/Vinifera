@@ -50,8 +50,9 @@
 #include "addon.h"
 #include "ccini.h"
 #include "fatal.h"
+#include "viniferamsgbox.h"
 #include "debughandler.h"
-#include "asserthandler.h"6
+#include "asserthandler.h"
 
 #include "hooker.h"
 #include "hooker_macros.h"
@@ -287,6 +288,13 @@ static bool Main_Loop_Intercept()
             --Vinifera_Developer_FrameStepCount;
         }
 
+    }
+
+    static bool shown = false;
+    if (Frame > 500 && !shown)
+    {
+        ViniferaMessageBox().Process("Say hello to ViniferaMessageBox?", "Yes", "No", "Neither", false);
+        shown = true;
     }
 
     return ret;

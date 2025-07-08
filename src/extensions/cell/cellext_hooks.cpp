@@ -35,9 +35,11 @@
 #include "iomap.h"
 #include "techno.h"
 #include "technotype.h"
+#include "overlaytype.h"
 #include "fatal.h"
 #include "debughandler.h"
 #include "asserthandler.h"
+#include "msgbox.h"
 
 #include "hooker.h"
 #include "hooker_macros.h"
@@ -250,6 +252,23 @@ DECLARE_PATCH(_CellClass_Update_Wall_Owner_Skip_Invisible_Buildings)
 }
 
 
+DECLARE_PATCH(_CellClass_Cell_Color_Crash_Check)
+{
+	GET_REGISTER_STATIC(OverlayTypeClass*, otype, ecx);
+	static ShapeSet* shape;
+	shape = otype->Get_Image_Data();
+	if (shape == nullptr) {
+		char buffer[1024];
+		snprintf(buffer, 1024, "You noooob!!!! Null shape for OverlayType %d %s\n", (int)otype->HeapID, otype->IniName);
+		DEBUG_FATAL(buffer, (int)otype->HeapID, otype->IniName);
+		WWMessageBox().Process(buffer, 0, "OK");
+	}
+
+	_asm { mov  eax, dword ptr ds : shape };
+	JMP_REG(ecx, 0x00451D93);
+}
+
+
 /**
  *  Main function for patching the hooks.
  */
@@ -260,4 +279,5 @@ void CellClassExtension_Hooks()
 	Patch_Jump(0x00454E60, &_CellClass_Draw_Shroud_Fog_Patch);
 	Patch_Jump(0x00455130, &_CellClass_Draw_Fog_Patch);
 	Patch_Jump(0x004531E4, &_CellClass_Update_Wall_Owner_Skip_Invisible_Buildings);
+	Patch_Jump(0x00451D8D, &_CellClass_Cell_Color_Crash_Check);
 }
