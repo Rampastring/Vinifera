@@ -293,7 +293,7 @@ static bool Main_Loop_Intercept()
     static bool shown = false;
     if (Frame > 500 && !shown)
     {
-        ViniferaMessageBox().Process("Say hello to ViniferaMessageBox?", "Yes", "No", "Neither", false);
+        ViniferaMessageBox().Process("Surely this will make for a very big and multi-line dialog box that says pointless things, is pointlessly large and takes too long to read", "Yes", "No", "Neither", false);
         shown = true;
     }
 

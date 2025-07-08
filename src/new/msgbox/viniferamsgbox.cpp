@@ -39,7 +39,74 @@
 #include "wwfont.h"
 #include "drawshape.h"
 
-ViniferaMessageBox::ViniferaMessageBox(int caption) { }
+ViniferaMessageBox::ViniferaMessageBox(int caption) { Caption = caption; }
+
+void Dialog_Box(Rect rect)
+{
+	LogicSurface->Fill_Rect(rect, 100);
+
+	// Calculate dialog center points.
+	int cx = rect.X + rect.Width / 2;
+	int cy = rect.Y + rect.Height / 2;
+
+	void const* shapedata = MixFileClass::Retrieve("DD-BKGND.SHP");
+	if (shapedata != nullptr) {
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(cx - 312, cy - 192), LogicSurface->Get_Rect());
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 1, Point2D(cx, cy - 192), LogicSurface->Get_Rect());
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 2, Point2D(cx - 312, cy), LogicSurface->Get_Rect());
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 3, Point2D(cx, cy), LogicSurface->Get_Rect());
+	}
+
+	/*
+    **	Draw the side strips.
+    */
+	shapedata = MixFileClass::Retrieve("DD-EDGE.SHP");
+	if (shapedata != nullptr) {
+		for (int yy = 0; yy < rect.Height; yy += 6) {
+			Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(rect.X + 14, yy), LogicSurface->Get_Rect());
+			Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 1, Point2D(rect.X + rect.Width - (14 + 16), yy), LogicSurface->Get_Rect());
+		}
+	}
+
+	/*
+    **	Draw the border bars.
+    */
+	shapedata = MixFileClass::Retrieve("DD-LEFT.SHP");
+	if (shapedata != nullptr) {
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(rect.X, cy - 200), LogicSurface->Get_Rect());
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(rect.X, cy), LogicSurface->Get_Rect());
+	}
+
+	int rightx = rect.X + rect.Width - 14;
+	shapedata = MixFileClass::Retrieve("DD-RIGHT.SHP");
+	if (shapedata != nullptr) {
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(rightx, cy - 200), LogicSurface->Get_Rect());
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(rightx, cy), LogicSurface->Get_Rect());
+	}
+
+	shapedata = MixFileClass::Retrieve("DD-BOTM.SHP");
+	if (shapedata != nullptr) {
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(cx - 320, rect.Y + rect.Height - 16), LogicSurface->Get_Rect());
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(cx, rect.Y + rect.Height - 16), LogicSurface->Get_Rect());
+	}
+
+	shapedata = MixFileClass::Retrieve("DD-TOP.SHP");
+	if (shapedata != nullptr) {
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(cx - 320, rect.Y), LogicSurface->Get_Rect());
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(cx, rect.Y), LogicSurface->Get_Rect());
+	}
+
+	/*
+	**	Draw the corner caps.
+	*/
+	shapedata = MixFileClass::Retrieve("DD-CRNR.SHP");
+	if (shapedata != nullptr) {
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(rect.X, rect.Y), LogicSurface->Get_Rect());
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 1, Point2D(rect.X + rect.Width - (24 - 1), rect.Y), LogicSurface->Get_Rect());
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 2, Point2D(rect.X, rect.Y + rect.Height - 24), LogicSurface->Get_Rect());
+		Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 3, Point2D(rect.X + rect.Width - (24 - 1), rect.Y + rect.Height - 24), LogicSurface->Get_Rect());
+	}
+}
 
 #define TPF_BUTTON	(TPF_CENTER|TPF_6PT_GRAD|TPF_NOSHADOW)
 #define	BUTTON_1		1
@@ -65,9 +132,6 @@ int ViniferaMessageBox::Process(const char* msg, const char* b1txt, const char* 
 	if (b1txt != NULL && *b1txt == '\0') b1txt = NULL;
 	if (b2txt != NULL && *b2txt == '\0') b2txt = NULL;
 	if (b3txt != NULL && *b3txt == '\0') b3txt = NULL;
-
-	//PG_TO_FIX
-	//Fancy_Text_Print(TXT_NONE, 0, 0, TBLACK, TBLACK, TPF_TEXT);
 
 	/*
 	**	Examine the optional button parameters. Fetch the width and starting
@@ -103,8 +167,7 @@ int ViniferaMessageBox::Process(const char* msg, const char* b1txt, const char* 
 	*/
 	buffer[ARRAY_SIZE(buffer) - 1] = 0;
 	strncpy(buffer, msg, ARRAY_SIZE(buffer) - 1);
-	//PG_TO_FIX
-	//Fancy_Text_Print(TXT_NONE, 0, 0, TBLACK, TBLACK, TPF_TEXT);
+
 	int width;
 	int height;
 	int lines = Format_Window_String(buffer, font, 510, width, height);
@@ -127,29 +190,22 @@ int ViniferaMessageBox::Process(const char* msg, const char* b1txt, const char* 
 	}
 
 	/*
-	**	Other inits.
-	*/
-	// Set_Logic_Page(SeenBuff);
-	// VisiblePage.Blit(seen_buff_save);
-
-	/*
 	**	Initialize the button structures. All are initialized, even though one (or none) may
 	**	actually be added to the button list.
 	*/
-	//DOS BUILD GERMAN BUTTONS NEED TO ONE ON TOP OF THE OTHER  VG 11/6/96
 	TextButtonClass button1(BUTTON_1, b1txt, TPF_BUTTON,
-		x + ((numbuttons == 1) ? ((width - bwidth) >> 1) : 40), y + height - (bheight + 30), bwidth, -1, true, false);
+		x + ((numbuttons == 1) ? ((width - bwidth) >> 1) : 40), y + height - (bheight + 30), bwidth, -1, false, false);
 
 	/*
 	**	Center button.
 	*/
 	TextButtonClass button2(BUTTON_2, b2txt, TPF_BUTTON,
-		x + width - (bwidth + 40), y + height - (bheight + 30), bwidth, -1, true, false);
+		x + width - (bwidth + 40), y + height - (bheight + 30), bwidth, -1, false, false);
 
 	/*
 	**	Right button.
 	*/
-	TextButtonClass button3(BUTTON_3, b3txt, TPF_BUTTON, 0, y + height - (bheight + 30), -1, -1, true, false);
+	TextButtonClass button3(BUTTON_3, b3txt, TPF_BUTTON, 0, y + height - (bheight + 30), -1, -1, false, false);
 	button3.X = x + ((width - button3.Width) >> 1);
 
 	TextButtonClass* buttonlist = 0;
@@ -182,30 +238,7 @@ int ViniferaMessageBox::Process(const char* msg, const char* b1txt, const char* 
 		}
 	}
 
-	/*
-	**	Draw the dialog.
-	*/
-	// Hide_Mouse();
-	// if (preserve) {
-	// 	back = new char[width * height];
-	// 	SeenBuff.To_Buffer(x, y, width, height, back, width * height);
-	// }
-	//Dialog_Box(x, y, width, height);
-	//Draw_Caption(Caption, x, y, width);
-
-	/*
-	**	Draw the body of the message.
-	*/
 	Rect rect = Rect(x, y, width, height);
-	Fancy_Text_Print(buffer, LogicSurface, &LogicSurface->Get_Rect(), &Point2D(printx, y + 40), ColorSchemes[GadgetClass::Get_Color_Scheme()], COLOR_TBLACK, tpf);
-
-	/*
-	**	Redraw the buttons.
-	*/
-	if (buttonlist) {
-		buttonlist->Draw_All();
-	}
-	// Show_Mouse();
 
 	/*
 	**	Main Processing Loop.
@@ -229,12 +262,8 @@ int ViniferaMessageBox::Process(const char* msg, const char* b1txt, const char* 
 				display = false;
 
 				WWMouse->Hide_Mouse();
-				void const* shapedata = MixFileClass::Retrieve("ADDON.SHP");
-				
-				LogicSurface->Fill_Rect(rect, 100);
-				Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(rect.X, rect.Y), LogicSurface->Get_Rect());
 
-				//Dialog_Box(x, y, width, height);
+				Dialog_Box(rect);				
 				//Draw_Caption(Caption, x, y, width);
 
 				/*
@@ -357,7 +386,6 @@ int ViniferaMessageBox::Process(const char* msg, const char* b1txt, const char* 
 					TextButtonClass* toggle = (TextButtonClass*)buttonlist->Extract_Gadget(selection);
 					if (toggle != NULL) {
 						toggle->Turn_On();
-						//						toggle->IsOn = true;
 						toggle->IsPressed = true;
 					}
 				}
