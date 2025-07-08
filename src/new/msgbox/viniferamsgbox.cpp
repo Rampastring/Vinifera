@@ -63,8 +63,8 @@ void Dialog_Box(Rect rect)
 	shapedata = MixFileClass::Retrieve("DD-EDGE.SHP");
 	if (shapedata != nullptr) {
 		for (int yy = 0; yy < rect.Height; yy += 6) {
-			Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(rect.X + 14, yy), LogicSurface->Get_Rect());
-			Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 1, Point2D(rect.X + rect.Width - (14 + 16), yy), LogicSurface->Get_Rect());
+			Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 0, Point2D(rect.X + 14, rect.Y + yy), LogicSurface->Get_Rect());
+			Draw_Shape(*LogicSurface, *SidebarDrawer, (ShapeSet*)shapedata, 1, Point2D(rect.X + rect.Width - (14 + 16), rect.Y + yy), LogicSurface->Get_Rect());
 		}
 	}
 

@@ -159,6 +159,8 @@
 #include "hooker_macros.h"
 #include "spawnmanager_hooks.h"
 
+#include "viniferagameoptions.h"
+
 
 void Extension_Hooks()
 {
@@ -308,4 +310,6 @@ void Extension_Hooks()
     TheaterTypeClassExtension_Hooks();
     SpawnManager_Hooks();
     AircraftTracker_Hooks();
+
+    ViniferaGameOptionsClass_Hooks();
 }

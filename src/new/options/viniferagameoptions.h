@@ -4,12 +4,12 @@
  *
  *  @project       Vinifera
  *
- *  @file          VINIFERAMSGBOX.H
+ *  @file          VINIFERAGAMEOPTIONS.H
  *
  *  @authors       Rampastring
  *
- *  @brief         WWMessageBox reimplementation using DirectDraw rather 
- *                 than WinForms.
+ *  @brief         GameOptionsClass reimplementation using DirectDraw rather
+ *                 than Windows Forms.
  *
  *  @license       Vinifera is free software: you can redistribute it and/or
  *                 modify it under the terms of the GNU General Public License
@@ -28,25 +28,49 @@
  ******************************************************************************/
 #pragma once
 
-#ifndef VINIFERAMSGBOX_H
-#define VINIFERAMSGBOX_H
+#ifndef VINIFERAGAMEOPTIONS_H
+#define VINIFERAGAMEOPTIONS_H
 
 #include "tibsun_defines.h"
+#include "options.h"
 #include "language.h"
 
-class ViniferaMessageBox
+class ViniferaGameOptionsClass : public OptionsClass
 {
-public:
-	ViniferaMessageBox(int caption = TXT_NONE);
+	enum GameOptionsButtonEnum {
+		BUTTON_GAME = 1,
+		BUTTON_RESTATE,
+		BUTTON_LOAD,
+		BUTTON_SAVE,
+		BUTTON_DELETE,
+		BUTTON_QUIT,
+		BUTTON_RESUME,
 
-	int Process(const char* msg, const char* b1txt, const char* b2txt = nullptr, const char* b3txt = nullptr, bool preserve = false);
-	int Process(int msg, int a2, int b1txt = TXT_OK, int b2txt = TXT_NONE, int b3txt = TXT_NONE, bool preserve = false);
-	int Process(char const* msg, int b1txt = TXT_OK, int b2txt = TXT_NONE, int b3txt = TXT_NONE, bool preserve = false);
+		BUTTON_COUNT
+	};
+
+	enum GameOptionsEnum {
+		OPTION_WIDTH = (432 + 16),
+		OPTION_HEIGHT = 200,
+		OPTION_X = ((640 - (432 + 16)) / 2),
+		OPTION_Y = ((400 - 200) / 2),
+		BUTTON_WIDTH = 260,
+		CAPTION_Y_POS = 10,
+		BUTTON_Y = 42,
+		BUTTON_HEIGHT = 20,
+		BORDER1_LEN = 144,
+		BORDER2_LEN = 32,
+		BUTTON_RESUME_Y = (200 - 30)
+	};
+
+public:
+	ViniferaGameOptionsClass(void): OptionsClass () { }
+
+	void Process();
 
 private:
-	int Caption;
 };
 
-void Dialog_Box(Rect rect);
+void ViniferaGameOptionsClass_Hooks();
 
 #endif
