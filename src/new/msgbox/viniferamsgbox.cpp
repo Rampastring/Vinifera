@@ -41,8 +41,28 @@
 
 ViniferaMessageBox::ViniferaMessageBox(int caption) { Caption = caption; }
 
+void Draw_Caption(char const* text, WWFontClass* font, int x, int y, int w)
+{
+	/*
+	**	Draw the caption.
+	*/
+	if (text != NULL && *text != '\0') {
+		Fancy_Text_Print(text, LogicSurface, &Rect(x, y, w, font->Get_Font_Height()), &Point2D(w / 2 + x, 16 + y), ColorSchemes[GadgetClass::Get_Color_Scheme()], TBLACK, TPF_CENTER | TPF_METAL12 | TPF_NOSHADOW);
+		//int length = String_Pixel_Width(text);
+		LogicSurface->Draw_Line(Point2D(x, y + font->Get_Font_Height() + font->Get_Y_Spacing() + 16),
+			Point2D(x + w, y + font->Get_Font_Height() + font->Get_Y_Spacing() + 16), ColorSchemes[GadgetClass::Get_Color_Scheme()]->Box);
+	}
+}
+
+void Draw_Caption(int text, int x, int y, int w)
+{
+	Draw_Caption(Text_String(text), Metal12FontPtr, x, y, w);
+}
+
 void Dialog_Box(Rect rect)
 {
+	LogicSurface = HiddenSurface;
+
 	LogicSurface->Fill_Rect(rect, 100);
 
 	// Calculate dialog center points.
@@ -440,4 +460,24 @@ int ViniferaMessageBox::Process(const char* msg, const char* b1txt, const char* 
 	// 	Show_Mouse();
 	// }
 	return(retval);
+}
+
+
+int ViniferaMessageBox::Process(int msg, int b1txt, int b2txt, int b3txt, bool preserve)
+{
+	const char* message = Fetch_String(msg);
+	const char* bt1text = Fetch_String(b1txt);
+	const char* bt2text = Fetch_String(b2txt);
+	const char* bt3text = Fetch_String(b2txt);
+
+	return Process(message, bt1text, bt2text, bt3text, preserve);
+}
+
+int ViniferaMessageBox::Process(char const* msg, int b1txt, int b2txt, int b3txt, bool preserve)
+{
+	const char* bt1text = Fetch_String(b1txt);
+	const char* bt2text = Fetch_String(b2txt);
+	const char* bt3text = Fetch_String(b2txt);
+
+	return Process(msg, bt1text, bt2text, bt3text, preserve);
 }

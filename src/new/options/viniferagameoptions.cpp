@@ -29,6 +29,7 @@
 
 #include "viniferagameoptions.h"
 #include "viniferamsgbox.h"
+#include "viniferaloadoptions.h"
 #include "tibsun_globals.h"
 #include "tibsun_defines.h"
 #include "tibsun_functions.h"
@@ -84,19 +85,6 @@ void ViniferaGameOptionsClass::Process()
 	TextButtonClass* buttonsel[ARRAY_SIZE(_constants)];
 	static int num_buttons = sizeof(_constants) / sizeof(_constants[0]);
 	
-	int num_players = 0;
-	int i;
-
-	//
-	// Compute the number of real players in the game; only allow saves
-	// if there are more than 1.
-	//
-	for (i = 0; i < Session.Players.Count(); i++) {
-		if (!(HouseClass::As_Pointer(Session.Players[i]->Player.ID)->IsDefeated)) {
-			num_players++;
-		}
-	}
-
 	/*
     **	Build the button list for all of the buttons for this dialog.
     */
@@ -365,16 +353,15 @@ void ViniferaGameOptionsClass::Process()
 
 			case (BUTTON_LOAD):
 				display = true;
-				// if (LoadOptionsClass(LoadOptionsClass::LOAD).Process()) {
-				// 	process = false;
-				// }
+				if (ViniferaLoadOptionsClass::ViniferaLoadOptionsClass().Load()) {
+					process = false;
+				}
 				break;
 
 			case (BUTTON_SAVE):
 				display = true;
-				if (Session.Type == GAME_NORMAL) {
-					// LoadOptionsClass(LoadOptionsClass::SAVE).Process();
-
+				if (Session.Singleplayer_Game()) {
+					ViniferaLoadOptionsClass::ViniferaLoadOptionsClass().Save(Scen->Description);
 				}
 				else {
 					OutList.Add(EventClass::EventClass(PlayerPtr->ID, EVENT_SAVEGAME));
@@ -384,20 +371,14 @@ void ViniferaGameOptionsClass::Process()
 
 			case (BUTTON_DELETE):
 				display = true;
-				// if (Session.Type != GAME_NORMAL) {
-				// 	if (Surrender_Dialog(TXT_SURRENDER)) {
-				// 		OutList.Add(EventClass(EventClass::DESTRUCT));
-				// 	}
-				// 	process = false;
-				// }
-				// else {
-				// 	LoadOptionsClass(LoadOptionsClass::WWDELETE).Process();
-				// }
+				if (Session.Singleplayer_Game()) {
+					ViniferaLoadOptionsClass::ViniferaLoadOptionsClass().Delete();
+				}
 				break;
 
 			case (BUTTON_QUIT):
 				if (Session.Type == GAME_NORMAL) {
-					switch (ViniferaMessageBox().Process("Are you sure you want to abort mission?", "Abort", "Cancel", "Restart")) {
+					switch (ViniferaMessageBox().Process("Are you sure you want to abort the mission?", "Abort", "Cancel", "Restart")) {
 					case 1:
 						display = true;
 						break;
@@ -412,20 +393,49 @@ void ViniferaGameOptionsClass::Process()
 						process = false;
 						break;
 					}
-				} else {
-					// if (Surrender_Dialog(TXT_CONFIRM_EXIT)) {
-					// 	process = false;
-					// 	Queue_Exit();
-					// }
-					// else {
-					// 	display = true;
-					// }
-					//if (WWMessageBox().Process(TXT_CONFIRM_EXIT, TXT_YES, TXT_NO) == 0) {
-						//process = false;
-						//Queue_Exit();
-					//} else {
-						//display = true;
-					//}
+				}
+				else if (Session.Type == GAME_SKIRMISH) {
+					switch (ViniferaMessageBox().Process("Are you sure you want to abort the mission?", "Abort", "Cancel", "Surrender")) {
+					case 1:
+						display = true;
+						break;
+
+					case 0:
+						process = false;
+						Queue_Exit();
+						break;
+
+					case 2:
+						PlayerPtr->MPlayer_Defeated();
+						process = false;
+						break;
+					}
+				}
+				else {
+					if (PlayerPtr->IsDefeated) {
+						switch (ViniferaMessageBox().Process("Are you sure you want to abort the mission?", "Abort", "Cancel")) {
+						case 1:
+							display = true;
+							break;
+
+						case 0:
+							process = false;
+							Queue_Exit();
+							break;
+						}
+					}
+					else {
+						switch (ViniferaMessageBox().Process("Surrender?", "Yes", "Cancel")) {
+						case 1:
+							OutList.Add(EventClass::EventClass(PlayerPtr->HeapID, EVENT_DESTRUCT));
+							display = false;
+							break;
+
+						case 0:
+							process = false;
+							break;
+						}
+					}
 				}
 				break;
 
@@ -446,12 +456,16 @@ void ViniferaGameOptionsClass::Process()
 			buttonsel[curbutton - 1]->Turn_Off();
 			buttonsel[curbutton - 1]->Flag_To_Redraw();
 
-			buttons->Draw_All(true);
+			if (process) {
+				buttons->Draw_All(true);
+			}
 		}
 
-		CompositeSurface->Copy_From(rect, *LogicSurface, rect);
-		WWMouse->Show_Mouse();
-		GScreenClass::Blit(true, CompositeSurface);
+		if (!display && process) {
+			CompositeSurface->Copy_From(rect, *LogicSurface, rect);
+			WWMouse->Show_Mouse();
+			GScreenClass::Blit(true, CompositeSurface);
+		}
 	}
 
 	/*
