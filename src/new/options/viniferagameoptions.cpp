@@ -28,6 +28,7 @@
  ******************************************************************************/
 
 #include "viniferagameoptions.h"
+#include "viniferagamecontrols.h"
 #include "viniferamsgbox.h"
 #include "viniferaloadoptions.h"
 #include "tibsun_globals.h"
@@ -422,7 +423,7 @@ void ViniferaGameOptionsClass::Process()
 
 			case (BUTTON_GAME):
 				display = true;
-				// GameControlsClass().Process();
+				ViniferaGameControlsClass().Process();
 				break;
 
 			case (BUTTON_RESUME):
