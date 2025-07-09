@@ -41,16 +41,58 @@
 
 ViniferaMessageBox::ViniferaMessageBox(int caption) { Caption = caption; }
 
+
+/***************************************************************************
+ * STRING_PIXEL_WIDTH -- Return pixel width of a string of characters.     *
+ *                                                                         *
+ *    Calculates the pixel width of a string of characters.  This uses     *
+ *		the font width block for the widths.							   *
+ *                                                                         *
+ * INPUT:      Pointer to string of characters.                            *
+ *                                                                         *
+ * OUTPUT:     Pixel width of a string of characters.                      *
+ *                                                                         *
+ * WARNINGS:   Set_Font must have been called first.                       *
+ *                                                                         *
+ * HISTORY:                                                                *
+ *   01/30/1992 DRD : Created.                                             *
+ *   01/31/1992 DRD : Use Char_Pixel_Width.                                *
+ *   06/30/1994 SKB : Converted to 32 bit library.                         *
+ *=========================================================================*/
+unsigned int String_Pixel_Width(WWFontClass* font, char const* string)
+{
+	WORD	width;				// Working accumulator of string width.
+	WORD	largest = 0;		// Largest recorded width of the string.
+
+	if (!string) return(0);
+
+	width = 0;
+	while (*string) {
+		if (*string == '\r') {
+			string++;
+			largest = MAX(largest, width);
+			width = 0;
+		}
+		else {
+			width += font->Char_Pixel_Width(*string++);	// add each char's width
+		}
+	}
+	largest = MAX(largest, width);
+	return(largest);
+}
+
+
 void Draw_Caption(char const* text, WWFontClass* font, int x, int y, int w)
 {
 	/*
 	**	Draw the caption.
 	*/
 	if (text != NULL && *text != '\0') {
-		Fancy_Text_Print(text, LogicSurface, &Rect(x, y, w, font->Get_Font_Height()), &Point2D(w / 2 + x, 16 + y), ColorSchemes[GadgetClass::Get_Color_Scheme()], TBLACK, TPF_CENTER | TPF_METAL12 | TPF_NOSHADOW);
-		//int length = String_Pixel_Width(text);
-		LogicSurface->Draw_Line(Point2D(x, y + font->Get_Font_Height() + font->Get_Y_Spacing() + 16),
-			Point2D(x + w, y + font->Get_Font_Height() + font->Get_Y_Spacing() + 16), ColorSchemes[GadgetClass::Get_Color_Scheme()]->Box);
+		int length = String_Pixel_Width(font, text);
+		int xOffset = x + ((w - length) / 2);
+		Fancy_Text_Print(text, LogicSurface, &LogicSurface->Get_Rect(), &Point2D(xOffset, 16 + y), ColorSchemes[GadgetClass::Get_Color_Scheme()], TBLACK, TPF_METAL12 | TPF_NOSHADOW);
+		LogicSurface->Draw_Line(Point2D(xOffset, y + font->Get_Font_Height() + font->Get_Y_Spacing() + 16),
+			Point2D(xOffset + length, y + font->Get_Font_Height() + font->Get_Y_Spacing() + 16), ColorSchemes[GadgetClass::Get_Color_Scheme()]->Box);
 	}
 }
 

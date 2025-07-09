@@ -41,6 +41,7 @@
 #include "textbtn.h"
 #include "textprint.h"
 #include "options.h"
+#include "restate.h"
 #include "session.h"
 #include "wwmouse.h"
 #include "mouse.h"
@@ -327,28 +328,8 @@ void ViniferaGameOptionsClass::Process()
 			switch (selection) {
 			case BUTTON_RESTATE:
 				display = true;
-				// if (!Restate_Mission(Scen.ScenarioName, TXT_VIDEO, TXT_RESUME_MISSION/*KOTXT_OPTIONS*/)) {
-				// 	BreakoutAllowed = true;
-				// 	Play_Movie(Scen.BriefMovie);
-				// 	BlackPalette.Adjust(0x08, WhitePalette);
-				// 	BlackPalette.Set();
-				// 	BlackPalette.Adjust(0xFF);
-				// 	BlackPalette.Set();
-				// 	GamePalette.Set();
-				// 
-				// 	Map.Flag_To_Redraw(true);
-				// 	Theme.Queue_Song(THEME_PICK_ANOTHER);
-				// 	process = false;
-				// }
-				// else {
-				// 	BlackPalette.Adjust(0x08, WhitePalette);
-				// 	BlackPalette.Set();
-				// 	BlackPalette.Adjust(0xFF);
-				// 	BlackPalette.Set();
-				// 	GamePalette.Set();
-				// 	Map.Flag_To_Redraw(true);
-				// 	process = false;
-				// }
+				Restate_Mission(Scen);
+				process = false;
 				break;
 
 			case (BUTTON_LOAD):
@@ -489,4 +470,7 @@ void Show_Vinifera_Game_Options_Dialog()
 void ViniferaGameOptionsClass_Hooks()
 {
 	Patch_Call(0x004626BC, &Show_Vinifera_Game_Options_Dialog);
+	Patch_Dword(0x005C064D + 1, 0x0); // Patch MSAnim delay
+	Patch_Byte(0x005C0617 + 1, 0x1);
+	Patch_Byte(0x005C0619 + 1, 0x4);
 }

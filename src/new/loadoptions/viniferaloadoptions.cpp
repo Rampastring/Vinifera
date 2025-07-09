@@ -294,7 +294,7 @@ bool ViniferaLoadOptionsClass::Process(void)
 			WWMouse->Hide_Mouse();
 			if (display) {
 				Dialog_Box(rect);
-				// Draw_Caption(caption, d_dialog_x, d_dialog_y, d_dialog_w);
+				Draw_Caption(caption, Metal12FontPtr, d_dialog_x, d_dialog_y, d_dialog_w);
 
 				if (Style == SAVE) {
 					Fancy_Text_Print("File Name:", LogicSurface, &rect, &Point2D(d_dialog_cx, d_edit_y - d_txt8_h),
