@@ -615,7 +615,7 @@ bool SidebarClassExtension::TabButtonClass::Draw_Me(bool forced)
         }
         else
         {
-            const ColorSchemeType colorschemetype = Extension::Fetch<SideClassExtension>(Sides[PlayerPtr->Class->Side])->UIColor;
+            const ColorSchemeType colorschemetype = Extension::Fetch(Sides[PlayerPtr->Class->Side])->UIColor;
             colorscheme = ColorSchemes[colorschemetype];
         }
 

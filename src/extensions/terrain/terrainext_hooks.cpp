@@ -265,7 +265,7 @@ DECLARE_PATCH(_TerrainClass_Unlimbo_No_Overlay_Erase_Patch)
     GET_REGISTER_STATIC(TerrainClass *, this_ptr, edi);
     GET_REGISTER_STATIC(TerrainTypeClass *, terraintype, eax);
     // didn't work for some reason, maybe I don't know enough about C++ syntax
-    // GET_STACK_STATIC(Coordinate*, coord, esp, 0x1C);
+    // GET_STACK_STATIC(Coord*, coord, esp, 0x1C);
     static CellClass* cellptr;
     static OverlayTypeClass* overlaytype;
 
