@@ -58,7 +58,7 @@ BuildingTypeClassExtension::BuildingTypeClassExtension(const BuildingTypeClass *
     RoofDoorAnim(nullptr),
     UnderRoofDoorAnim(nullptr),
     IsExclusiveFactory(false),
-    IsWallOwner(true)
+    IsWallOwner(true),
     IsAdvancedAIIgnoresPrerequisites(false)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("BuildingTypeClassExtension::BuildingTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
