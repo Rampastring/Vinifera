@@ -87,4 +87,9 @@ IsometricTileTypeClassExtension final : public ObjectTypeClassExtension
          *  Can veins grow on this tile type?
          */
         bool IsAllowVeins;
+
+        /**
+         *  Defines the starting Overlay type when rendering each type of Tiberium on this tile type.
+         */
+        TypeList<OverlayType> TiberiumOverlays;
 };

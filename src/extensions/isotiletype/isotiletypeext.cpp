@@ -35,6 +35,7 @@
 #include "asserthandler.h"
 #include "debughandler.h"
 #include "tiberium.h"
+#include "overlaytype.h"
 #include "smudgetype.h"
 #include "vinifera_saveload.h"
 #include "findmake.h"
@@ -50,7 +51,8 @@ IsometricTileTypeClassExtension::IsometricTileTypeClassExtension(const Isometric
     TileSetName(""),
     AllowedTiberiums(),
     AllowedSmudges(),
-    IsAllowVeins(true)
+    IsAllowVeins(true),
+    TiberiumOverlays()
 {
     //if (this_ptr) EXT_DEBUG_TRACE("IsometricTileTypeClassExtension::~IsometricTileTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 
@@ -113,6 +115,7 @@ HRESULT IsometricTileTypeClassExtension::Load(IStream *pStm)
 
     AllowedTiberiums.Clear();
     AllowedSmudges.Clear();
+    TiberiumOverlays.Clear();
 
     HRESULT hr = ObjectTypeClassExtension::Load(pStm);
     if (FAILED(hr)) {
@@ -123,9 +126,11 @@ HRESULT IsometricTileTypeClassExtension::Load(IStream *pStm)
 
     AllowedTiberiums.Load(pStm);
     AllowedSmudges.Load(pStm);
+    TiberiumOverlays.Load(pStm);
 
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(AllowedTiberiums, "AllowedTiberiums");
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(AllowedSmudges, "AllowedSmudges");
+    // VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(TiberiumOverlays, "TiberiumOverlays");
     
     return hr;
 }
@@ -147,6 +152,7 @@ HRESULT IsometricTileTypeClassExtension::Save(IStream *pStm, BOOL fClearDirty)
 
     AllowedTiberiums.Save(pStm);
     AllowedSmudges.Save(pStm);
+    TiberiumOverlays.Save(pStm);
 
     return hr;
 }
@@ -183,6 +189,10 @@ void IsometricTileTypeClassExtension::Detach(AbstractClass * target, bool all)
     if (AllowedSmudges.Is_Present(reinterpret_cast<SmudgeTypeClass*>(target))) {
         AllowedSmudges.Delete(reinterpret_cast<SmudgeTypeClass*>(target));
     }
+
+    // if (TiberiumOffsets.Is_Present(reinterpret_cast<OverlayTypeClass*>(target))) {
+    //     TiberiumOffsets.Delete(reinterpret_cast<OverlayTypeClass*>(target));
+    // }
 }
 
 
@@ -217,20 +227,43 @@ bool IsometricTileTypeClassExtension::Read_INI(CCINIClass &ini)
     }
 
     char buffer[1024];
-    if (ini.Get_String(ini_name, "AllowedTiberiums", "", buffer, sizeof(buffer)) > 0) {
-        AllowedTiberiums.Clear();
-        char* token = std::strtok(buffer, ",");
-        while (token != nullptr) {
-            TiberiumType tiberium = TiberiumClass::From_Name(token);
-            if (tiberium != TIBERIUM_NONE) {
-                AllowedTiberiums.Add(Tiberiums[tiberium]);
-            }
-            token = std::strtok(nullptr, ",");
-        }
-    }
+    //if (ini.Get_String(ini_name, "AllowedTiberiums", "", buffer, sizeof(buffer)) > 0) {
+    //    AllowedTiberiums.Clear();
+    //    char* token = std::strtok(buffer, ",");
+    //    while (token != nullptr) {
+    //        TiberiumType tiberium = TiberiumClass::From_Name(token);
+    //        if (tiberium != TIBERIUM_NONE) {
+    //            AllowedTiberiums.Add(Tiberiums[tiberium]);
+    //        }
+    //        token = std::strtok(nullptr, ",");
+    //    }
+    //}
 
     AllowedSmudges = TGet_TypeList(ini, ini_name, "AllowedSmudges", AllowedSmudges);
     IsAllowVeins = ini.Get_Bool(ini_name, "AllowVeins", IsAllowVeins);
+
+    if (ini.Get_String(ini_name, "TiberiumOverlays", "", buffer, sizeof(buffer)) > 0) {
+        TiberiumOverlays.Clear();
+        for (int i = 0; i < Tiberiums.Count(); i++) {
+            TiberiumOverlays.Add(OVERLAY_NONE);
+        }
+
+        // TiberiumOverlays=Riparius:TIB1S_01,Vinifera:TIB2S_01,...
+        char* token = std::strtok(buffer, ",:");
+        while (token != nullptr) {
+            TiberiumType tiberium = TiberiumClass::From_Name(token);
+            if (tiberium != TIBERIUM_NONE) {
+                token = std::strtok(nullptr, ",:");
+                OverlayType otype = OverlayTypeClass::From_Name(token);
+                TiberiumOverlays[tiberium] = otype;
+            } else {
+                // Consume the token
+                token = std::strtok(nullptr, ",:");
+            }
+
+            token = std::strtok(nullptr, ",:");
+        }
+    }
 
     IsInitialized = true;
     
