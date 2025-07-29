@@ -31,6 +31,10 @@
 #include "building.h"
 #include "buildingtype.h"
 #include "buildingtypeext.h"
+#include "drawshape.h"
+#include "house.h"
+#include "lightconvert.h"
+#include "msgbox.h"
 #include "session.h"
 #include "rules.h"
 #include "iomap.h"
@@ -523,6 +527,48 @@ DECLARE_PATCH(_CellClass_Update_Wall_Owner_Skip_Buildings_That_Cannot_Own_Walls_
 }
 
 
+void Draw_Tib(CellClass* cellptr, TiberiumClass* tib, Point2D point, Rect* window, int height)
+{
+    int variety = (cellptr->CellID.Y * cellptr->CellID.X) % tib->Variety;
+    OverlayTypeClass* otype = OverlayTypes[tib->Overlay->HeapID + variety];
+
+    IsometricTileTypeClass* isotile = IsoTileTypes[cellptr->ITType];
+    IsometricTileTypeClassExtension* extension = Extension::Fetch(isotile);
+    if (extension->TiberiumOverlays.Count() > 0 && extension->TiberiumOverlays[tib->HeapID] != OVERLAY_NONE) {
+        otype = OverlayTypes[extension->TiberiumOverlays[tib->HeapID] + variety];
+    }
+
+    ShapeSet const * sdata = (ShapeSet const*)otype->Get_Image_Data();
+    /*if (!sdata && Class->CellAnim) {
+        sdata = (ShapeSet const*)Class->CellAnim->Get_Image_Data();
+    }*/
+
+    if (sdata == nullptr) {
+        DEBUG_ERROR("Tiberium Type %s is lacking an image for OverlayType %d!\n", tib->IniName, otype->HeapID);
+        WWMessageBox().Process("A Tiberium type is lacking an image. If you see this, please notify the developers. The game will now exit.", 0, TXT_OK);
+        Emergency_Exit(0);
+    }
+
+    Draw_Shape(*LogicSurface, *cellptr->Drawer, sdata, cellptr->OverlayData, point, *window, (ShapeFlags_Type)(SHAPE_CENTER | SHAPE_WIN_REL | SHAPE_ALPHA | SHAPE_Z_READ_WRITE),
+        nullptr, -2 - height, ZGRAD_GROUND, cellptr->TileBrightness, nullptr, 0, Point2D(0, 0));
+}
+
+
+DECLARE_PATCH(_CellClass_Draw_Overlay_Tiberium_Patch)
+{
+    GET_REGISTER_STATIC(CellClass*, this_ptr, esi);
+    GET_REGISTER_STATIC(TiberiumClass*, tib, ebp);
+    static int pointptr;
+    _asm { lea  eax, [esp + 0x18] }
+    _asm { mov pointptr, eax }
+    //GET_STACK_STATIC(void*, pointptr, esp, 0x18);
+    GET_REGISTER_STATIC(Rect*, rect, ebx);
+    GET_REGISTER_STATIC(int, height, edi);
+    Draw_Tib(this_ptr, tib, *(Point2D*)pointptr, rect, height);
+    JMP_REG(ecx, 0x00455B26);
+}
+
+
 /**
  *  Main function for patching the hooks.
  */
@@ -539,4 +585,5 @@ void CellClassExtension_Hooks()
     Patch_Jump(0x00459A00, &CellClassExt::_Recalc_Passability);
     Patch_Jump(0x00456BF0, &CellClassExt::_Reduce_Tiberium);
     Patch_Jump(0x004531E4, &_CellClass_Update_Wall_Owner_Skip_Buildings_That_Cannot_Own_Walls_Patch);
+    Patch_Jump(0x00455973, &_CellClass_Draw_Overlay_Tiberium_Patch);
 }

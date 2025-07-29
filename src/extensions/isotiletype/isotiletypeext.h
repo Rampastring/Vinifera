@@ -92,4 +92,9 @@ IsometricTileTypeClassExtension final : public ObjectTypeClassExtension
          *  Is this a water tunnel entrance?
          */
         bool IsWaterTunnel;
+
+        /**
+         *  Defines the starting Overlay type when rendering each type of Tiberium on this tile type.
+         */
+        TypeList<OverlayType> TiberiumOverlays;
 };
