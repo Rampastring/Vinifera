@@ -27,6 +27,7 @@
  ******************************************************************************/
 #include "rulesext.h"
 #include "ccini.h"
+#include "findmake.h"
 #include "rules.h"
 #include "tiberium.h"
 #include "weapontype.h"
@@ -791,7 +792,7 @@ bool RulesClassExtension::AI(CCINIClass& ini)
     IsAdvancedAIMultiConYard = ini.Get_Bool(AI, "AdvancedAIMultiConYard", IsAdvancedAIMultiConYard);
     AdvancedAIMaxExpansionDistance = ini.Get_Int(AI, "AdvancedAIMaxExpansionDistance", AdvancedAIMaxExpansionDistance);
     AdvancedAIMinimumRefineryCount = ini.Get_Int(AI, "AdvancedAIMinimumRefineryCount", AdvancedAIMinimumRefineryCount);
-    BuildNavalYard = ini.Get_Buildings(AI, "BuildNavalYard", BuildNavalYard);
+    BuildNavalYard = ::TGet_TypeList(ini, AI, "BuildNavalYard", BuildNavalYard);
 
     return true;
 }

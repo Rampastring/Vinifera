@@ -716,7 +716,7 @@ void TacticalExtension::Draw_Strengthen_Info()
     CompositeSurface->Fill_Rect_Trans(fill_rect, rgb_black, background_tint);
 
     Fancy_Text_Print(fullbuff, CompositeSurface, &CompositeSurface->Get_Rect(),
-        &text_draw_point, ColorSchemes[PlayerPtr->RemapColor], COLOR_TBLACK, style);
+        &text_draw_point, ColorSchemes[PlayerPtr->Scheme], COLOR_TBLACK, style);
 }
 
 

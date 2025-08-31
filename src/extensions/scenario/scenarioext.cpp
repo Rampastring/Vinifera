@@ -245,7 +245,7 @@ bool ScenarioClassExtension::Read_INI(CCINIClass &ini)
     ScoreEnemyColor = ini.Get_RGB(BASIC, "ScoreEnemyColor", ScoreEnemyColor);
     ini.Get_String(BASIC, "UIColorName", UIColorOverrideName, std::size(UIColorOverrideName));
     if (UIColorOverrideName[0] != '\0')
-        CachedUIColorSchemeIndex = ColorSchemes.ID(ColorScheme::As_Pointer(UIColorOverrideName));
+        CachedUIColorSchemeIndex = Fetch_Scheme_Index_By_Name(UIColorOverrideName);
 
     /**
      *  #issue-123
