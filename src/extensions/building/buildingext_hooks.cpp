@@ -2453,7 +2453,7 @@ int Get_Distance_To_Primary_Enemy(Cell cell, HouseClass* house)
     HouseClass* enemy = nullptr;
 
     if (house->Enemy != HOUSE_NONE) {
-        enemy = HouseClass::As_Pointer(house->Enemy);
+        enemy = Houses[house->Enemy];
     }
 
     if (enemy == nullptr) {
@@ -2892,7 +2892,7 @@ int Refinery_Placement_Cell_Value(Cell cell, BuildingClass* building)
 // ZivDero enjoys duplicate code
 Point2D Rectangle_Center_Point(Rect rect)
 {
-    return Point2D(Map.MapLocalSize.X + (Map.MapLocalSize.Width / 2), Map.MapLocalSize.Y + (Map.MapLocalSize.Y / 2));
+    return Point2D(Map.LocalRect.X + (Map.LocalRect.Width / 2), Map.LocalRect.Y + (Map.LocalRect.Y / 2));
 }
 
 /**
@@ -2926,14 +2926,14 @@ int Near_Enemy_Placement_Position_Value(Cell cell, BuildingClass* building)
     HouseClass* enemy = nullptr;
 
     if (owner->Enemy != HOUSE_NONE) {
-        enemy = HouseClass::As_Pointer(owner->Enemy);
+        enemy = Houses[owner->Enemy];
     }
 
     // If we have no enemy, then place it as close to the center of the map as possible.
     // Most commonly we are on the edge of a map, so if we place towards the center,
     // it doesn't go terribly wrong.
     if (enemy == nullptr) {
-        Point2D mapcenter = Rectangle_Center_Point(Map.MapLocalSize);
+        Point2D mapcenter = Rectangle_Center_Point(Map.LocalRect);
         Cell mapcenter_cell = Cell(mapcenter.X, mapcenter.Y);
         return ::Distance(cell, mapcenter_cell);
     }
@@ -2957,7 +2957,7 @@ int Near_Refinery_Placement_Position_Value(Cell cell, BuildingClass* building)
         refinerycell = refinery->Center_Coord().As_Cell();
     } else {
         // Fallback
-        Point2D mapcenter = Rectangle_Center_Point(Map.MapLocalSize);
+        Point2D mapcenter = Rectangle_Center_Point(Map.LocalRect);
         Cell mapcenter_cell = Cell(mapcenter.X, mapcenter.Y);
         refinerycell = mapcenter_cell;
     }
@@ -2976,7 +2976,7 @@ int Near_ConYard_Placement_Position_Value(Cell cell, BuildingClass* building)
         conyardcell = building->House->ConstructionYards[0]->Center_Coord().As_Cell();
     } else {
         // Fallback
-        Point2D mapcenter = Rectangle_Center_Point(Map.MapLocalSize);
+        Point2D mapcenter = Rectangle_Center_Point(Map.LocalRect);
         Cell mapcenter_cell = Cell(mapcenter.X, mapcenter.Y);
         conyardcell = mapcenter_cell;
     }
@@ -2994,7 +2994,7 @@ int Far_From_Enemy_Placement_Position_Value(Cell cell, BuildingClass* building)
     HouseClass* enemy = nullptr;
 
     if (owner->Enemy != HOUSE_NONE) {
-        enemy = HouseClass::As_Pointer(owner->Enemy);
+        enemy = Houses[owner->Enemy];
     }
 
     // If we have no enemy, then just place it near the base center.
@@ -3027,7 +3027,7 @@ int Towards_Expansion_Placement_Cell_Value(Cell cell, BuildingClass* building)
     HouseClass* enemy = nullptr;
 
     if (owner->Enemy != HOUSE_NONE) {
-        enemy = HouseClass::As_Pointer(owner->Enemy);
+        enemy = Houses[owner->Enemy];
     }
 
     int enemydistance = 0;
@@ -3111,7 +3111,7 @@ int Barracks_Placement_Cell_Value(Cell cell, BuildingClass* building)
     HouseClass* enemy = nullptr;
 
     if (owner->Enemy != HOUSE_NONE) {
-        enemy = HouseClass::As_Pointer(owner->Enemy);
+        enemy = Houses[owner->Enemy];
     }
 
     if (enemy != nullptr) {
@@ -3138,7 +3138,7 @@ int NavalYard_Placement_Cell_Value(Cell cell, BuildingClass* building)
     HouseClass* enemy = nullptr;
 
     if (owner->Enemy != HOUSE_NONE) {
-        enemy = HouseClass::As_Pointer(owner->Enemy);
+        enemy = Houses[owner->Enemy];
     }
 
     // If we have no enemy, then just place it away from the base center.
@@ -3243,7 +3243,7 @@ Cell Get_Best_Defense_Placement_Position(BuildingClass* building)
     // Defend our ConYard and refinery.
     if (houseext->IsUnderStartRushThreat)
     {
-        if (owner->ActiveBQuantity.Count_Of(building->Class->HeapID) < 3) {
+        if (owner->ActiveBQuantity.Value(building->Class->HeapID) < 3) {
             return Find_Best_Building_Placement_Cell(basearea, building, Near_ConYard_Placement_Position_Value);
         }
 
@@ -3258,7 +3258,7 @@ Cell Get_Best_Defense_Placement_Position(BuildingClass* building)
 
     HouseClass* enemy = nullptr;
     if (owner->Enemy != HOUSE_NONE) {
-        enemy = HouseClass::As_Pointer(owner->Enemy);
+        enemy = Houses[owner->Enemy];
     }
 
     // Place some defenses to the backline.

@@ -120,7 +120,7 @@ void SuperClassExt::_Do_DropPods(Cell* cell)
 	char buffer[24];
 
 	sprintf(buffer, "PARADROPINF_%d", this->House->HeapID);
-	const TeamTypeClass* ttype = TeamTypeClass::As_Pointer(buffer);
+	const TeamTypeClass* ttype = TeamTypeClass::Find_Or_Make(buffer);
 
 	if (ttype == nullptr) {
 		TeamTypeClass* newteamtype = new TeamTypeClass();
@@ -132,7 +132,7 @@ void SuperClassExt::_Do_DropPods(Cell* cell)
 			newteamtype->IsReinforcable = false;
 			newteamtype->IsSuicide = true;
 			newteamtype->Origin = WAYPT_SPECIAL;
-			newteamtype->Script = const_cast<ScriptTypeClass*>(ScriptTypeClass::As_Pointer("PARADROPINF_SCRIPT"));
+			newteamtype->Script = const_cast<ScriptTypeClass*>(ScriptTypeClass::Find_Or_Make("PARADROPINF_SCRIPT"));
 
 			if (newteamtype->Script == nullptr) {
 				ScriptTypeClass* newscripttype = new ScriptTypeClass();
@@ -150,7 +150,7 @@ void SuperClassExt::_Do_DropPods(Cell* cell)
 				newteamtype->Script = newscripttype;
 			}
 
-			newteamtype->TaskForce = const_cast<TaskForceClass*>(TaskForceClass::As_Pointer("PARADROPINF_TASKFORCE"));
+			newteamtype->TaskForce = const_cast<TaskForceClass*>(TaskForceClass::Find_Or_Make("PARADROPINF_TASKFORCE"));
 
 			if (newteamtype->TaskForce == nullptr) {
 				TaskForceClass* newtaskforce = new TaskForceClass();
@@ -160,9 +160,9 @@ void SuperClassExt::_Do_DropPods(Cell* cell)
 
 				strcpy(newtaskforce->IniName, "PARADROPINF_TASKFORCE");
 				newtaskforce->ClassCount = 2;
-				newtaskforce->Members[0].Class = InfantryTypeClass::As_Pointer("E1");
-				newtaskforce->Members[0].Quantity = AircraftTypeClass::As_Pointer("BADGER")->Max_Passengers();
-				newtaskforce->Members[1].Class = AircraftTypeClass::As_Pointer("BADGER");
+				newtaskforce->Members[0].Class = InfantryTypeClass::Find_Or_Make("E1");
+				newtaskforce->Members[0].Quantity = AircraftTypeClass::Find_Or_Make("BADGER")->Max_Passengers();
+				newtaskforce->Members[1].Class = AircraftTypeClass::Find_Or_Make("BADGER");
 				newtaskforce->Members[1].Quantity = 1;
 
 				newteamtype->TaskForce = newtaskforce;
