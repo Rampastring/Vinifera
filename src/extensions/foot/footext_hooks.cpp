@@ -32,20 +32,27 @@
 #include "technoext.h"
 #include "technotype.h"
 #include "technotypeext.h"
+#include "tibsun_defines.h"
 #include "tibsun_inline.h"
+#include "tibsun_functions.h"
 #include "tibsun_globals.h"
 #include "tactical.h"
 #include "textprint.h"
 #include "clipline.h"
 #include "convert.h"
+#include "coord.h"
 #include "house.h"
+#include "infantry.h"
 #include "iomap.h"
 #include "rules.h"
 #include "rulesext.h"
 #include "session.h"
+#include "team.h"
+#include "teamtypeext.h"
 #include "unit.h"
 #include "unitext.h"
 #include "unittype.h"
+#include "weapontype.h"
 #include "extension.h"
 #include "fatal.h"
 #include "asserthandler.h"
@@ -77,6 +84,7 @@ public:
     Cell _Search_For_Tiberium(int rad, bool a2);
     bool _Unlimbo(const Coord& coord, Dir256 dir);
     bool _Limbo();
+    int  _Do_MISSION_HUNT();
 
 private:
     void _Draw_Line(Coord& start_coord, Coord& end_coord, bool is_dashed, bool is_thick, bool is_dropshadow, unsigned line_color, unsigned drop_color, int rate) const;
@@ -791,6 +799,164 @@ bool FootClassExt::_Limbo()
 }
 
 
+// Copy of Target_Something_Nearby that does not ignore ThreatTypes other than the range specifiers.
+bool Respectable_Target_Something_Nearby(FootClassExt* foot, Coord & coord, ThreatType threat)
+{
+    /*
+    **	Determine that if there is an existing target it is still legal
+    **	and within range.
+    */
+    if (foot->TarCom != NULL) {
+        if ((threat & THREAT_RANGE)) {
+            WeaponSlotType primary = foot->What_Weapon_Should_I_Use(foot->TarCom);
+            if (!foot->In_Range(foot->TarCom->Center_Coord(), primary)) {
+                foot->Assign_Target(NULL);
+            }
+        }
+    }
+
+    /*
+    **	If there is no target, then try to find one and assign it as
+    **	the target for this unit.
+    */
+    if (foot->TarCom == NULL) {
+        foot->Assign_Target(foot->Greatest_Threat(threat, coord, false));
+    }
+
+    /*
+    **	Return with answer to question: Does this unit now have a target?
+    */
+    return(foot->TarCom != NULL);
+}
+
+
+/*
+**	Implements smart hunt logic.
+**
+**  Author: tomsons26/ZivDero for original decompiled code, Rampastring for smart hunt logic.
+*/
+int FootClassExt::_Do_MISSION_HUNT()
+{
+    int delay = Current_Mission_Control().Normal_Delay() + Random_Pick(0, 2);
+    bool smarthunt = true;
+
+    if (Team != nullptr)
+    {
+        auto teamtypeext = Extension::Fetch(Team->Class);
+        smarthunt = teamtypeext->SmartHunt;
+    }
+
+    if (smarthunt) {
+        // First, try to target something in range.
+        // Prefer focusing on targets that are actually threatening - mobile objects and base defenses.
+        if (!Respectable_Target_Something_Nearby(this, PositionCoord, THREAT_RANGE | THREAT_AIR | THREAT_INFANTRY | THREAT_VEHICLES | THREAT_BASE_DEFENSE)) {
+
+            // If it failed, then try to target something far away.
+            if (!Respectable_Target_Something_Nearby(this, PositionCoord, THREAT_NORMAL)) {
+
+                // If there's truly nothing to target, we're done.
+                Random_Animate();
+                return delay;
+            }
+        }
+    } else {
+        // Without smart hunt, use original game code.
+
+        if (!Target_Something_Nearby(PositionCoord, THREAT_NORMAL)) {
+            Random_Animate();
+            return delay;
+        }
+    }
+
+    InfantryClass* infantry = RTTI == RTTI_INFANTRY ? (InfantryClass*)this : NULL;
+    if (infantry != NULL && infantry->Class->IsEngineer && !infantry->Class->IsBomber && !infantry->Has_Ability(ABILITY_C4)) {
+        Assign_Destination(TarCom);
+        Assign_Mission(MISSION_CAPTURE);
+        if (Ready_To_Commence()) {
+            Commence();
+        }
+    }
+    else if (infantry != NULL && (infantry->Class->IsBomber || infantry->Has_Ability(ABILITY_C4)) && dynamic_cast<BuildingClass*>(TarCom)) {
+        Assign_Destination(TarCom);
+        Assign_Mission(MISSION_SABOTAGE);
+        if (Ready_To_Commence()) {
+            Commence();
+        }
+    }
+    else if (infantry != NULL && infantry->Class->IsVehicleThief) {
+        Assign_Destination(TarCom);
+        Assign_Mission(MISSION_CAPTURE);
+        if (Ready_To_Commence()) {
+            Commence();
+        }
+    }
+    else {
+        bool approach_target = true;
+
+        if (smarthunt)
+        {
+            Coord targetcoord = TarCom->Center_Coord();
+            WeaponSlotType weaponslot = What_Weapon_Should_I_Use(TarCom);
+            const WeaponTypeClass* ourweapon = TClass->Fetch_Weapon_Info(weaponslot).Weapon;
+
+            if (ourweapon != nullptr)
+            {
+                bool inrange = In_Range(targetcoord, weaponslot);
+
+                // If we have a target in range and we cannot fire while moving, then stop movement so we can fire.
+                if (inrange && RTTI != RTTI_AIRCRAFT && (RTTI != RTTI_UNIT || reinterpret_cast<const UnitTypeClass*>(TClass)->IsNoFireWhileMoving))
+                {
+                    Assign_Destination(nullptr);
+                    approach_target = false;
+                }
+                else if (inrange && RTTI == RTTI_UNIT && !reinterpret_cast<const UnitTypeClass*>(TClass)->IsNoFireWhileMoving) 
+                {
+                    // Allow the AI to kite if it's not too much for the player's skill level.
+                    int kitechance = RuleExtension->AIKiteChance[House->Difficulty];
+
+                    if (kitechance > 0 && (kitechance >= 100 || Percent_Chance(kitechance))) {
+                        // If the target is in range, we can fire while moving AND we outrange the target by at least a cell,
+                        // try to maximize our distance to the target.
+
+                        int distance = Distance(targetcoord);
+                        WeaponSlotType weaponslot = What_Weapon_Should_I_Use(TarCom);
+                        const WeaponTypeClass* ourweapon = TClass->Fetch_Weapon_Info(weaponslot).Weapon;
+                        int distancediff = std::abs(ourweapon->Range - distance);
+
+                        // No point in moving unless we're at least a cell away from optimal distance
+                        if (distancediff > CELL_LEPTON_H && In_Range(targetcoord, weaponslot))
+                        {
+                            TechnoClass* tarcom_as_techno = ::As_Techno(TarCom);
+                            if (tarcom_as_techno != nullptr)
+                            {
+                                const WeaponTypeClass* theirweapon = tarcom_as_techno->TClass->Fetch_Weapon_Info(tarcom_as_techno->What_Weapon_Should_I_Use(this)).Weapon;
+
+                                if (theirweapon != nullptr && ourweapon->Range > theirweapon->Range + CELL_LEPTON)
+                                {
+                                    Dir256 dir = Direction256(targetcoord, PositionCoord);
+                                    Cell maximumRangeCell = Coord_Move(targetcoord, DirType(dir), ourweapon->Range).As_Cell();
+
+                                    Cell nearbyloc = Map.Nearby_Location(maximumRangeCell, TClass->Speed, Map.Get_Cell_Zone(PositionCell, TClass->MZone, IsOnBridge), TClass->MZone, false, Point2D(1, 1), false, false, false, true, maximumRangeCell);
+                                    if (nearbyloc != CELL_NONE) {
+                                        Assign_Destination(&Map[nearbyloc]);
+                                        approach_target = false;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (approach_target) {
+            Approach_Target();
+        }
+    }
+
+    return delay;
+}
+
 
 /**
  *  Main function for patching the hooks.
@@ -807,4 +973,5 @@ void FootClassExtension_Hooks()
     Patch_Jump(0x004A76F0, &FootClassExt::_Search_For_Tiberium);
     Patch_Jump(0x004A2C70, &FootClassExt::_Unlimbo);
     Patch_Jump(0x004A5E80, &FootClassExt::_Limbo);
+    Patch_Jump(0x004A1BE0, &FootClassExt::_Do_MISSION_HUNT);
 }

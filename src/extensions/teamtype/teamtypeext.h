@@ -62,4 +62,5 @@ TeamTypeClassExtension final : public AbstractTypeClassExtension
         virtual bool Read_INI(CCINIClass &ini) override;
 
     public:
+        bool SmartHunt;
 };

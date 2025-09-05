@@ -136,6 +136,11 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     MaxPips.Add(8);     // PIP_CHARGE
 
     BuildNavalYard = TypeList<BuildingTypeClass*>(0);
+
+    AIKiteChance = TypeList<int>(DIFF_COUNT);
+    AIKiteChance.Add(100);
+    AIKiteChance.Add(20);
+    AIKiteChance.Add(0);
 }
 
 
@@ -147,7 +152,8 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
 RulesClassExtension::RulesClassExtension(const NoInitClass &noinit) :
     GlobalExtensionClass(noinit),
     MaxPips(noinit),
-    BuildNavalYard(noinit)
+    BuildNavalYard(noinit),
+    AIKiteChance(noinit)
 {
     //EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension(NoInitClass) - 0x%08X\n", (uintptr_t)(ThisPtr));
 }
@@ -185,6 +191,7 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
 
     MaxPips.Load(pStm);
     BuildNavalYard.Load(pStm);
+    AIKiteChance.Load(pStm);
 
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(BuildNavalYard, "BuildNavalYard");
     
@@ -208,6 +215,7 @@ HRESULT RulesClassExtension::Save(IStream *pStm, BOOL fClearDirty)
 
     MaxPips.Save(pStm);
     BuildNavalYard.Save(pStm);
+    AIKiteChance.Save(pStm);
 
     return hr;
 }
@@ -703,6 +711,8 @@ bool RulesClassExtension::General(CCINIClass &ini)
         int water[7] = {2, 2, 2, 1, 2, 2, 3}; // LAND = NO, CRUSH = NO, BLOCKED = NO, WATER = YES, PARTIALLY_BLOCKED = NO, NO = NO, OUTSIDE = ILLEGAL
         std::copy(std::begin(water), std::end(water), MovementZonePassability[mzone_water]);
     }
+
+    AIKiteChance = ini.Get_Integers(GENERAL, "AIKiteChance", AIKiteChance);
 
     return true;
 }

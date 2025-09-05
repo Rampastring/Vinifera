@@ -242,4 +242,9 @@ public:
      *  List of naval yards for the AI to build.
      */
     TypeList<BuildingTypeClass*> BuildNavalYard;
+
+    /**
+     *  Percent chance that the AI will kite at any given level.
+     */
+    TypeList<int> AIKiteChance;
 };
