@@ -35,11 +35,20 @@
 #include "uicontrol.h"
 #include "rules.h"
 #include "fatal.h"
+#include "optionsext.h"
+#include "gadget.h"
+#include "txtlabel.h"
 #include "debughandler.h"
 #include "asserthandler.h"
 
 #include "hooker.h"
 #include "hooker_macros.h"
+
+class MessageListClassExt final : public MessageListClass
+{
+public:
+    void MessageListClassExt::Set_Width(int width);
+};
 
 
 /**
@@ -61,12 +70,47 @@ DECLARE_PATCH(_MessageListClass_Init_Modify_Width_Patch)
     width -= posx;
     width -= 5;
 
-    DEBUG_INFO("MessageListClass::Init(Width: %d)", width);
-    this_ptr->Width = width;
+    DEBUG_INFO("MessageListClass::Init(Width: %d)\n", width);
 
     _asm { xor ebx, ebx }
     _asm { mov edi, [esi] }
     JMP(0x00572EC4);
+}
+
+
+/**
+ *  Shrinks the width of the message list to accommodate for its moved position.
+ *
+ *  Author: original RE by tomsons26/ZivDero, modified by Rampastring
+ */
+void MessageListClassExt::Set_Width(int width)
+{
+    // It'd be technically cleaner to modify the callsites instead,
+    // but we have all of them reimplemented yet
+    if (UIControls != nullptr) {
+        if (OptionsExtension == nullptr || !OptionsExtension->IsClassicMessagePosition)
+        {
+            width = width - UIControls->MessageListPositionX;
+        }
+    }
+
+    GadgetClass* gadg;
+
+    width = width - 8;
+    Width = width;
+    DEBUG_INFO("MessageListClass::Set_Width(%d)\n", width);
+
+    if (MessageList) {
+        gadg = MessageList;
+        while (gadg) {
+            ((TextLabelClass*)gadg)->PixWidth = width;
+            gadg = (GadgetClass*)gadg->Get_Next();
+        }
+    }
+
+    if (IsEdit) {
+        EditLabel->PixWidth = width;
+    }
 }
 
 
@@ -78,4 +122,5 @@ void MessageListClassExtension_Hooks()
     // Replace the message format to add a space after the semicolon after the message author's name.
     Patch_Dword(0x00573161 + 1, reinterpret_cast<uintptr_t>(&"%s: %s"));
     Patch_Jump(0x00572EAC, &_MessageListClass_Init_Modify_Width_Patch);
+    Patch_Jump(0x00573EF0, &MessageListClassExt::Set_Width);
 }
