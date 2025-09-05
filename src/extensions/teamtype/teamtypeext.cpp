@@ -40,7 +40,8 @@
  *  @author: Rampastring
  */
 TeamTypeClassExtension::TeamTypeClassExtension(const TeamTypeClass *this_ptr) :
-    AbstractTypeClassExtension(this_ptr)
+    AbstractTypeClassExtension(this_ptr),
+    SmartHunt(true)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("TeamTypeClassExtension::TeamTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 
@@ -162,6 +163,7 @@ void TeamTypeClassExtension::Detach(AbstractClass * target, bool all)
 void TeamTypeClassExtension::Object_CRC(CRCEngine &crc) const
 {
     //EXT_DEBUG_TRACE("TeamTypeClassExtension::Object_CRC - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
+    crc(SmartHunt);
 }
 
 
@@ -175,6 +177,8 @@ bool TeamTypeClassExtension::Read_INI(CCINIClass &ini)
     //EXT_DEBUG_TRACE("TeamTypeClassExtension::Read_INI - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 
     const char *ini_name = Name();
+
+    SmartHunt = ini.Get_Bool(ini_name, "SmartHunt", SmartHunt);
 
     IsInitialized = true;
     
