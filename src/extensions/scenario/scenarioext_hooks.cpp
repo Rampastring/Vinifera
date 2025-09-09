@@ -530,23 +530,23 @@ void ScenarioClassExtension_Hooks()
 
     Patch_Jump(0x005DEBFA, &_Create_Units_Save_Spawn_Waypoint_Patch);
 
-    Patch_Jump(0x005DF930, &ScenarioClassExt::_Read_Global_INI);
+    // Patch_Jump(0x005DF930, &ScenarioClassExt::_Read_Global_INI);
     Patch_Jump(0x005DFBD0, &ScenarioClassExt::_Read_Local_INI);
     Patch_Jump(0x005DFD10, &ScenarioClassExt::_Write_Local_INI);
-    Patch_Jump(0x005DF720, static_cast<bool (ScenarioClassExt::*)(int, bool)>(&ScenarioClassExt::_Set_Global_To));
-    Patch_Jump(0x005DF770, static_cast<bool (ScenarioClassExt::*)(const char*, bool)>(&ScenarioClassExt::_Set_Global_To));
-    Patch_Jump(0x005DF810, static_cast<bool (ScenarioClassExt::*)(int, bool&)>(&ScenarioClassExt::_Get_Global_Value));
-    Patch_Jump(0x005DF840, static_cast<bool (ScenarioClassExt::*)(const char*, bool&)>(&ScenarioClassExt::_Get_Global_Value));
+    // Patch_Jump(0x005DF720, static_cast<bool (ScenarioClassExt::*)(int, bool)>(&ScenarioClassExt::_Set_Global_To));
+    // Patch_Jump(0x005DF770, static_cast<bool (ScenarioClassExt::*)(const char*, bool)>(&ScenarioClassExt::_Set_Global_To));
+    // Patch_Jump(0x005DF810, static_cast<bool (ScenarioClassExt::*)(int, bool&)>(&ScenarioClassExt::_Get_Global_Value));
+    // Patch_Jump(0x005DF840, static_cast<bool (ScenarioClassExt::*)(const char*, bool&)>(&ScenarioClassExt::_Get_Global_Value));
     Patch_Jump(0x005DF9C0, static_cast<bool (ScenarioClassExt::*)(int, bool)>(&ScenarioClassExt::_Set_Local_To));
     Patch_Jump(0x005DFA10, static_cast<bool (ScenarioClassExt::*)(const char*, bool)>(&ScenarioClassExt::_Set_Local_To));
     Patch_Jump(0x005DFAB0, static_cast<bool (ScenarioClassExt::*)(int, bool&)>(&ScenarioClassExt::_Get_Local_Value));
     Patch_Jump(0x005DFAE0, static_cast<bool (ScenarioClassExt::*)(const char*, bool&)>(&ScenarioClassExt::_Get_Local_Value));
-    Patch_Jump(0x005DF8D0, &ScenarioClassExt::_Find_Global_Variable_Index);
+    // Patch_Jump(0x005DF8D0, &ScenarioClassExt::_Find_Global_Variable_Index);
     Patch_Jump(0x005DFB70, &ScenarioClassExt::_Find_Local_Variable_Index);
     Patch_Jump(0x005DFDC0, &ScenarioClassExt::_Find_Free_Local);
     Patch_Jump(0x005DFDA0, &ScenarioClassExt::_Num_Locals);
 
-    Patch_Jump(0x005DCB59, &_ScenarioClass_Do_Win_GlobalFlags_Patch);
-    Patch_Jump(0x005DC64D, &_Clear_Scenario_Clear_Globals_Patch);
-    Patch_Jump(0x005DD85D, &_Read_Scenario_INI_Read_Global_INI_Patch);
+    // Patch_Jump(0x005DCB59, &_ScenarioClass_Do_Win_GlobalFlags_Patch);
+    // Patch_Jump(0x005DC64D, &_Clear_Scenario_Clear_Globals_Patch);
+    // Patch_Jump(0x005DD85D, &_Read_Scenario_INI_Read_Global_INI_Patch);
 }

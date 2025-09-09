@@ -51,6 +51,7 @@
 #include "houseext.h"
 #include "tacticalext.h"
 #include "tag.h"
+#include "msgbox.h"
 #include <regex>
 
 
@@ -219,7 +220,7 @@ void ScenarioClassExtension::Init_Clear()
 
     for (int index = 0; index < std::size(GlobalFlags); index++) {
         GlobalFlags[index].VariableName[0] = '\0';
-        Set_Global_To(index, 0);
+        // Set_Global_To(index, 0);
     }
 
     for (int index = 0; index < std::size(LocalFlags); index++) {
@@ -591,6 +592,11 @@ const char * ScenarioClassExtension::Waypoint_As_String(WAYPOINT wp) const
  */
 int ScenarioClassExtension::Set_Global_To(int global, int value)
 {
+    DEBUG_ERROR("ScenarioClassExtension::Set_Global_To(int, int) called!\n");
+    WWMessageBox().Process("ScenarioClassExtension::Set_Global_To called. If you see this, please report this error to the developers. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return 0;
+
     if ((unsigned)global < std::size(GlobalFlags)) {
 
         int previous = GlobalFlags[global].Value;
@@ -623,6 +629,11 @@ int ScenarioClassExtension::Set_Global_To(int global, int value)
  */
 int ScenarioClassExtension::Set_Global_To(char const* name, int value)
 {
+    DEBUG_ERROR("ScenarioClassExtension::Set_Global_To(char*, int) called!\n");
+    WWMessageBox().Process("ScenarioClassExtension::Set_Global_To called. If you see this, please report this error to the developers. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return 0;
+
     int global = Find_Global_Variable_Index(name);
     if (global != -1) {
         return Set_Global_To(global, value);
@@ -638,6 +649,11 @@ int ScenarioClassExtension::Set_Global_To(char const* name, int value)
  */
 bool ScenarioClassExtension::Get_Global_Value(int global, int& value)
 {
+    DEBUG_ERROR("ScenarioClassExtension::Get_Global_Value(int, int) called!\n");
+    WWMessageBox().Process("ScenarioClassExtension::Get_Global_Value(int, int) called. If you see this, please report this error to the developers. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return false;
+
     if (global >= 0 && global < std::size(GlobalFlags)) {
         value = GlobalFlags[global].Value;
         return true;
@@ -653,6 +669,11 @@ bool ScenarioClassExtension::Get_Global_Value(int global, int& value)
  */
 bool ScenarioClassExtension::Get_Global_Value(char const* name, int& value)
 {
+    DEBUG_ERROR("ScenarioClassExtension::Get_Global_Value(char*, int) called!\n");
+    WWMessageBox().Process("ScenarioClassExtension::Get_Global_Value(char, int) called. If you see this, please report this error to the developers. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return false;
+
     int global = Find_Global_Variable_Index(name);
     if (global != -1) {
         return Get_Global_Value(global, value);
@@ -668,6 +689,11 @@ bool ScenarioClassExtension::Get_Global_Value(char const* name, int& value)
  */
 int ScenarioClassExtension::Find_Global_Variable_Index(char const* name)
 {
+    DEBUG_ERROR("ScenarioClassExtension::Find_Global_Variable_Index called!\n");
+    WWMessageBox().Process("ScenarioClassExtension::Find_Global_Variable_Index called. If you see this, please report this error to the developers. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return 0;
+
     for (int i = 0; i < std::size(GlobalFlags); i++) {
         if (!strcmp(name, GlobalFlags[i].VariableName)) {
             return i;
@@ -684,6 +710,11 @@ int ScenarioClassExtension::Find_Global_Variable_Index(char const* name)
  */
 bool ScenarioClassExtension::Read_Global_INI(INIClass& ini)
 {
+    DEBUG_ERROR("ScenarioClassExtension::Read_Global_INI called!\n");
+    WWMessageBox().Process("ScenarioClassExtension::Read_Global_INI called. If you see this, please report this error to the developers. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return 0;
+
     int count = std::min(ini.Entry_Count("VariableNames"), static_cast<int>(std::size(GlobalFlags)));
 
     for (int i = 0; i < count; i++) {
