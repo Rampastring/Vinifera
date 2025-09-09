@@ -46,6 +46,7 @@
 #include "trigger.h"
 #include "triggertype.h"
 #include "voc.h"
+#include "msgbox.h"
 
 
 TActionClass::ActionDescriptionStruct TActionClassExtension::ExtActionDescriptions[EXT_TACTION_COUNT - EXT_TACTION_FIRST] = {
@@ -830,6 +831,10 @@ static int Operate(int lhs, int rhs, VariableOperation operation)
  */
 bool TActionClassExtension::Do_MODIFY_GLOBAL_CONSTANT(TActionClass& taction, HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
+    WWMessageBox().Process("TAction::Do_MODIFY_GLOBAL_CONSTANT is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return false;
+
     /**
      *  Save the parameters for convenience.
      */
@@ -866,6 +871,10 @@ bool TActionClassExtension::Do_MODIFY_GLOBAL_CONSTANT(TActionClass& taction, Hou
  */
 bool TActionClassExtension::Do_MODIFY_GLOBAL_GLOBAL(TActionClass& taction, HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
+    WWMessageBox().Process("TAction::Do_MODIFY_GLOBAL_GLOBAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return false;
+
     /**
      *  Save the parameters for convenience.
      */
@@ -910,6 +919,10 @@ bool TActionClassExtension::Do_MODIFY_GLOBAL_GLOBAL(TActionClass& taction, House
  */
 bool TActionClassExtension::Do_MODIFY_GLOBAL_LOCAL(TActionClass& taction, HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
+    WWMessageBox().Process("TAction::Do_MODIFY_GLOBAL_LOCAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return false;
+
     /**
      *  Save the parameters for convenience.
      */
@@ -954,6 +967,10 @@ bool TActionClassExtension::Do_MODIFY_GLOBAL_LOCAL(TActionClass& taction, HouseC
  */
 bool TActionClassExtension::Do_INCREMENT_GLOBAL(TActionClass& taction, HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
+    WWMessageBox().Process("TAction::Do_INCREMENT_GLOBAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return false;
+
     /**
      *  Save the parameters for convenience.
      */
@@ -988,6 +1005,10 @@ bool TActionClassExtension::Do_INCREMENT_GLOBAL(TActionClass& taction, HouseClas
  */
 bool TActionClassExtension::Do_DECREMENT_GLOBAL(TActionClass& taction, HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
+    WWMessageBox().Process("TAction::Do_DECREMENT_GLOBAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return false;
+
     /**
      *  Save the parameters for convenience.
      */
@@ -1058,6 +1079,10 @@ bool TActionClassExtension::Do_MODIFY_LOCAL_CONSTANT(TActionClass& taction, Hous
  */
 bool TActionClassExtension::Do_MODIFY_LOCAL_GLOBAL(TActionClass& taction, HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
+    WWMessageBox().Process("TAction::Do_MODIFY_LOCAL_GLOBAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return false;
+
     /**
      *  Save the parameters for convenience.
      */
@@ -1214,6 +1239,10 @@ bool TActionClassExtension::Do_DECREMENT_LOCAL(TActionClass& taction, HouseClass
  */
 bool TActionClassExtension::Do_RANDOM_NUMBER_GLOBAL(TActionClass& taction, HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
+    WWMessageBox().Process("TAction::Do_RANDOM_NUMBER_GLOBAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return false;
+
     /**
      *  Save the parameters for convenience.
      */
@@ -1274,6 +1303,10 @@ bool TActionClassExtension::Do_RANDOM_NUMBER_LOCAL(TActionClass& taction, HouseC
  */
 bool TActionClassExtension::Do_PRINT_GLOBAL(TActionClass& taction, HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
+    WWMessageBox().Process("TAction::Do_PRINT_GLOBAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
+    Emergency_Exit(0);
+    return false;
+
     /**
      *  Save the parameters for convenience.
      */

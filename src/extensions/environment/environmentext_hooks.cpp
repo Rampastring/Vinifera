@@ -211,8 +211,8 @@ void EnvironmentExtension_Hooks()
 {
     Patch_Jump(0x00493881, &_EnvironmentClass_Constructor_Patch);
     Patch_Jump(0x004E2AD7, &_Select_Game_Set_EnvironmentClass_Difficulty_Patch);
-    Patch_Jump(0x004938A0, &EnvironmentClassExt::_Snapshot_Game_State);
-    Patch_Jump(0x00493920, &EnvironmentClassExt::_Apply_To_Game_State);
-    Patch_Jump(0x00493A30, &EnvironmentClassExt::_Load);
-    Patch_Jump(0x00493A50, &EnvironmentClassExt::_Save);
+    // Patch_Jump(0x004938A0, &EnvironmentClassExt::_Snapshot_Game_State);
+    // Patch_Jump(0x00493920, &EnvironmentClassExt::_Apply_To_Game_State);
+    // Patch_Jump(0x00493A30, &EnvironmentClassExt::_Load);
+    // Patch_Jump(0x00493A50, &EnvironmentClassExt::_Save);
 }
