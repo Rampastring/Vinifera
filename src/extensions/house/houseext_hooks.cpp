@@ -53,6 +53,7 @@
 #include "unittypeext.h"
 #include "extension.h"
 #include "team.h"
+#include "teamtype.h"
 #include "techno.h"
 #include "super.h"
 #include "rules.h"
@@ -1055,6 +1056,67 @@ int Vinifera_HouseClass_AI_Building(HouseClass* this_ptr)
     return TICKS_PER_SECOND;
 }
 
+
+BuildingClass* AdvAI_Find_Nearest_Capturable_Oil_Refinery_To(InfantryClass* infantry)
+{
+    BuildingClass* target = nullptr;
+    int shortestdistance = INT_MAX;
+
+    for (int i = 0; i < Buildings.Count(); i++)
+    {
+        BuildingClass* building = Buildings[i];
+        BuildingTypeClassExtension* buildingtypeext = Extension::Fetch(building->Class);
+
+        if (building->IsActive && building->IsDown && buildingtypeext->ProduceCashAmount > 0 &&
+            building->Class->IsCaptureable &&
+            (building->House->Class->IsMultiplayPassive || !Session.Options.CrapEngineers) &&
+            !infantry->House->Is_Ally(building->House) &&
+            Map.Is_Same_Zone(infantry->PositionCell, building->PositionCell) &&
+            Map.Cell_Threat(building->PositionCell, infantry->House) < 1)
+        {
+            int distance = infantry->Distance(building);
+            if (distance < shortestdistance) {
+                target = building;
+                shortestdistance = distance;
+            }
+        }
+    }
+
+    return target;
+}
+
+
+void AdvAI_Check_For_Infantry_Capturing_Neutral_Building(HouseClass* house)
+{
+    for (int i = 0; i < Infantry.Count(); i++)
+    {
+        InfantryClass* infantry = Infantry[i];
+
+        if (infantry->IsActive && infantry->IsDown && infantry->House == house && infantry->Class->IsEngineer) {
+
+            BuildingClass* building = AdvAI_Find_Nearest_Capturable_Oil_Refinery_To(infantry);
+            if (building != nullptr) {
+
+                if (infantry->Team != nullptr) {
+                    infantry->Team->Remove(infantry);
+                    infantry->field_205 = false;
+                    infantry->field_206 = false;
+                }
+
+                infantry->Assign_Target(building);
+                infantry->Assign_Destination(building);
+                infantry->Assign_Mission(MISSION_CAPTURE);
+                infantry->Commence();
+
+                // only process one infantry at a time or we break teams that contain engineers,
+                // causing the AI to build only engineers for a long time
+                break; 
+            }
+        }
+    }
+}
+
+
 /**
  *  Performs some maintenance for the Advanced AI.
  *
@@ -1083,6 +1145,11 @@ void AdvAI_HouseClass_Expert_AI(HouseClass* house)
     }
 
     HouseClassExtension* houseext = Extension::Fetch(house);
+
+    if (houseext->NextEngineerCheckFrame < Frame && houseext->NextOilRefineryCaptureCheckFrame < INT_MAX) {
+        AdvAI_Check_For_Infantry_Capturing_Neutral_Building(house);
+        houseext->NextEngineerCheckFrame = Frame + 500 + Random_Pick(10, 50);
+    }
 
     // Do some economy upkeep to keep the AI running.
 
@@ -1155,6 +1222,7 @@ static DECLARE_EXTENDING_CLASS_AND_PAIR(HouseClass)
 public:
     int _AI_Building();
     int _AI_Unit();
+    int _AI_Infantry();
     int _Expert_AI();
     bool _Can_Build_Required_Forbidden_Houses(const TechnoTypeClass* techno_type);
     void _Active_Remove(TechnoClass const* techno);
@@ -1368,6 +1436,169 @@ int HouseClassExt::_AI_Unit()
     int delay1 = extension->AI_Unit();
     int delay2 = extension->AI_Naval_Unit();
     return std::min(delay1, delay2);
+}
+
+
+InfantryType Find_Engineer(HouseClass* house)
+{
+    for (int i = 0; i < InfantryTypes.Count(); i++)
+    {
+        auto infantrytype = InfantryTypes[i];
+
+        if (infantrytype->IsEngineer && house->Can_Build(infantrytype, false, true)) {
+            return infantrytype->HeapID;
+        }
+    }
+
+    return INFANTRY_NONE;
+}
+
+
+/**
+ *  Advanced AI replacement for AI infantry production.
+ *
+ *  Author: original reverse-engineered by tomsons26/ZivDero, modified by Rampastring.
+ */
+int HouseClassExt::_AI_Infantry()
+{
+    InfantryType& BUILD = BuildInfantry;
+    const InfantryType OBJNONE = INFANTRY_NONE;
+
+    if (BUILD != OBJNONE) return(TICKS_PER_SECOND);
+
+    int i;
+    int counter[1000];
+    int value[std::size(counter)];
+    memset(counter, 0x00, sizeof(counter));
+    for (i = 0; i < std::size(value); i++) {
+        value[i] = 0x7FFFFFFF;
+    }
+
+    if (RuleExtension->IsUseAdvancedAI)
+    {
+        auto extension = Extension::Fetch(this);
+        if (extension->NextOilRefineryCaptureCheckFrame < Frame && ConstructionYards.Count() > 0)
+        {
+            bool oilreffound = false;
+
+            for (int i = 0; i < Buildings.Count(); i++) 
+            {
+                BuildingClass* building = Buildings[i];
+                BuildingTypeClassExtension* buildingtypeext = Extension::Fetch(building->Class);
+
+                if (building->IsActive && building->IsDown &&
+                    buildingtypeext->ProduceCashAmount > 0 && building->Class->IsCaptureable &&
+                    (building->House->Class->IsMultiplayPassive || !Session.Options.CrapEngineers) && !Is_Ally(building->House) &&
+                    Map.In_Local_Radar(building->PositionCell) && 
+                    Map.Is_Same_Zone(ConstructionYards[0]->PositionCell, building->PositionCell))
+                {
+                    // There is an oil refinery on the map that is theoretically capturable by us.
+                    if (!oilreffound) 
+                    {
+                        extension->NextOilRefineryCaptureCheckFrame = Frame + 5000 + Random_Pick(0, 500);
+                        oilreffound = true;
+                    }
+
+                    // Don't attempt to capture refineries that are defended by an enemy.
+                    if (Map.Cell_Threat(building->PositionCell, this) > 1) {
+                        continue;
+                    }
+
+                    InfantryType engineer = Find_Engineer(this);
+                    if (engineer != INFANTRY_NONE && ActiveIQuantity.Value(engineer) == 0) {
+                        BuildInfantry = engineer;
+                        return TICKS_PER_SECOND;
+                    }
+
+                    break;
+                }
+            }
+
+            // If no capturable oil refinery exists even in theory, assume they are gone for the rest of the game.
+            if (!oilreffound) {
+                extension->NextOilRefineryCaptureCheckFrame = INT_MAX;
+            }
+        }
+    }
+
+    /*
+    **	Build a list of the maximum of each type we wish to produce. This will be
+    **	twice the number required to fill all teams.
+    */
+    for (i = 0; i < Teams.Count(); i++) {
+        TeamClass* tptr = Teams[i];
+        if (tptr != NULL) {
+
+            int val = tptr->field_40;
+
+            if (((tptr->Class->IsReinforcable && !tptr->IsFullStrength) || (!tptr->IsForcedActive && !tptr->IsHasBeen)) && tptr->House == this) {
+                DynamicVectorClass<const TechnoTypeClass*> _members;
+                tptr->Team_Members(_members);
+
+                for (int subindex = 0; subindex < _members.Count(); subindex++) {
+
+                    TechnoTypeClass const* memtype = (TechnoTypeClass const*)_members[subindex];
+
+                    if (memtype->RTTI == RTTI_INFANTRYTYPE) {
+                        InfantryTypeClass const * infantrytype = reinterpret_cast<InfantryTypeClass const*>(memtype);
+                        counter[infantrytype->HeapID]++;
+                        if (val < value[infantrytype->HeapID]) {
+                            value[infantrytype->HeapID] = val;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+    **	Reduce the theoretical maximum by the actual number of objects currently
+    **	in play.
+    */
+    for (int oindex = 0; oindex < Infantry.Count(); oindex++) {
+        InfantryClass* obj = Infantry[oindex];
+        if (obj != NULL && obj->Is_Recruitable(this) && counter[obj->Class->HeapID] > 0) {
+            counter[obj->Class->HeapID]--;
+        }
+    }
+
+    /*
+    **	Pick to build the most needed object but don't consider those object that
+    **	can't be built because of scenario restrictions or insufficient cash.
+    */
+    int bestval = -1;
+    int bestcount = 0;
+    InfantryType lasttype = INFANTRY_NONE;
+    int lastval = 0x7FFFFFFF;
+    InfantryType bestlist[std::size(counter)];
+    for (InfantryType type = InfantryType(0); type < InfantryTypes.Count(); type++) {
+        if (counter[type] > 0 && Can_Build(InfantryTypes[type], false, false) && InfantryTypes[type]->Cost_Of(this) <= Available_Money()) {
+            if (bestval == -1 || bestval < counter[type]) {
+                bestval = counter[type];
+                bestcount = 0;
+            }
+            bestlist[bestcount++] = type;
+
+            if (lasttype == OBJNONE || value[type] < lastval) {
+                lasttype = type;
+                lastval = value[type];
+            }
+        }
+    }
+
+    if (Random_Pick2(0, 0x7FFFFFFE) < Rule->FillEarliestTeamProbability[Difficulty] / 100.0) {
+        BUILD = lasttype;
+    }
+    else {
+        /*
+        **	The object type to build is now known. Fetch a pointer to the techno type class.
+        */
+        if (bestcount) {
+            BUILD = bestlist[Random_Pick(0, bestcount - 1)];
+        }
+    }
+
+    return TICKS_PER_SECOND;
 }
 
 
@@ -2610,6 +2841,7 @@ void HouseClassExtension_Hooks()
 
     Patch_Jump(0x004C10E0, &HouseClassExt::_AI_Building);
     Patch_Jump(0x004C1650, &HouseClassExt::_AI_Unit);
+    Patch_Jump(0x004C1A30, &HouseClassExt::_AI_Infantry);
     Patch_Jump(0x004C0630, &HouseClassExt::_Expert_AI);
     Patch_Jump(0x004BBC74, &_Can_Build_Required_Forbidden_Houses_Patch);
 
