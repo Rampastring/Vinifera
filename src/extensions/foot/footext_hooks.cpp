@@ -85,7 +85,6 @@ public:
     bool _Unlimbo(const Coord& coord, Dir256 dir);
     bool _Limbo();
     int  _Do_MISSION_HUNT();
-
 private:
     void _Draw_Line(Coord& start_coord, Coord& end_coord, bool is_dashed, bool is_thick, bool is_dropshadow, unsigned line_color, unsigned drop_color, int rate) const;
 };
@@ -959,6 +958,37 @@ int FootClassExt::_Do_MISSION_HUNT()
 
 
 /**
+ *  There is a bug in the game where sometimes AI-owned units start firing at a wall,
+ *  but don't stop firing once the wall has been destroyed.
+ * 
+ *  This patch makes the AI abandon the target if it's firing at a cell that has no overlay on it.
+ *  It hooks the beginning of FootClass::AI, making it a good place for putting further per-frame
+ *  patches if necessary.
+ *
+ *  Author: Rampastring
+ */
+DECLARE_PATCH(_FootClass_AI_Hook_Patch)
+{
+    GET_REGISTER_STATIC(FootClass*, this_ptr, esi);
+
+    if (this_ptr->TarCom != nullptr && this_ptr->TarCom->RTTI == RTTI_CELL && !this_ptr->House->Is_Human_Player()) {
+        if (reinterpret_cast<CellClass*>(this_ptr->TarCom)->Overlay == OVERLAY_NONE) {
+            this_ptr->Assign_Target(nullptr);
+        }
+    }
+
+    // Restore stolen bytes / code
+    this_ptr->field_34A = false;
+
+    if (this_ptr->Techno_Type_Class()->IsTiberiumHeal) {
+        JMP(0x004A58D4);
+    }
+
+    JMP(0x004A58C3);
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void FootClassExtension_Hooks()
@@ -968,6 +998,7 @@ void FootClassExtension_Hooks()
     Patch_Jump(0x004A2BE7, &_FootClass_Mission_Guard_Area_Can_Passive_Acquire_Patch);
     Patch_Jump(0x004A1AAE, &_FootClass_Mission_Guard_Can_Passive_Acquire_Patch);
     Patch_Jump(0x004A102F, &_FootClass_Mission_Move_Can_Passive_Acquire_Patch);
+    Patch_Jump(0x004A58A8, &_FootClass_AI_Hook_Patch);
     Patch_Jump(0x004A6A40, &FootClassExt::_Draw_Action_Line);
     Patch_Jump(0x004A4D60, &FootClassExt::_Death_Announcement);
     Patch_Jump(0x004A76F0, &FootClassExt::_Search_For_Tiberium);
