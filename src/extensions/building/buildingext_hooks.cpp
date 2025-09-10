@@ -102,6 +102,7 @@
 static DECLARE_EXTENDING_CLASS_AND_PAIR(BuildingClass)
 {
 public:
+    AbstractClass* _Greatest_Threat(ThreatType threat, Coord & coord, bool b);
     bool _Can_Have_Rally_Point();
     void _Update_Buildables();
     const InfantryTypeClass* _Crew_Type() const;
@@ -3456,6 +3457,30 @@ DECLARE_PATCH(_BuildingClass_Exit_Object_Factory_Busy_Customized_Alternate_Facto
 
 
 /**
+ *  Patches player-owned base defenses to automatically fire at enemy base defenses.
+ *
+ *  @author: Rampastring
+ */
+AbstractClass* BuildingClassExt::_Greatest_Threat(ThreatType threat, Coord & coord, bool b)
+{
+    if (PrimaryWeapon != NULL) {
+        threat = ThreatType(threat | PrimaryWeapon->Allowed_Threats());
+    }
+    if (SecondaryWeapon != NULL) {
+        threat = ThreatType(threat | SecondaryWeapon->Allowed_Threats());
+    }
+    if (House->Is_Human_Player()) {
+        threat = ThreatType(threat & ~THREAT_BUILDINGS);
+        threat = ThreatType(threat | THREAT_BASE_DEFENSE);
+    }
+
+    threat = ThreatType(threat | THREAT_RANGE);
+
+    return TechnoClass::Greatest_Threat(threat, coord, b);
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void BuildingClassExtension_Hooks()
@@ -3515,4 +3540,5 @@ void BuildingClassExtension_Hooks()
     Patch_Jump(0x0042D3B8, &_BuildingClass_Exit_Object_Seek_Building_Position);
     Patch_Jump(0x0042CAB9, &_BuildingClass_Exit_Object_Factory_Busy_Customized_Alternate_Factory_Seeking_Logic);
     Patch_Byte(0x00432786 + 1, 0x00); // Change "true" to "false" in Create_Bullet call in Mission_Missile to disable combat light from nukes
+    Patch_Jump(0x0042E0E0, &BuildingClassExt::_Greatest_Threat);
 }
