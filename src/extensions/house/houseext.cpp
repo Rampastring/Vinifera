@@ -75,7 +75,9 @@ HouseClassExtension::HouseClassExtension(const HouseClass *this_ptr) :
     LastExcessRefineryCheckFrame(0),
     LastSleepingHarvesterCheckFrame(0),
     HasPerformedVehicleCharge(false),
-    IsUnderStartRushThreat(false)
+    IsUnderStartRushThreat(false),
+    NextOilRefineryCaptureCheckFrame(1000),
+    NextEngineerCheckFrame(0)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("HouseClassExtension::HouseClassExtension - 0x%08X\n", (uintptr_t)(This()));
 
@@ -228,6 +230,9 @@ void HouseClassExtension::Object_CRC(CRCEngine &crc) const
     crc(NextExpansionPointLocation.As_Cell_Number());
     crc(LastExcessRefineryCheckFrame);
     crc(LastSleepingHarvesterCheckFrame);
+    crc(IsUnderStartRushThreat);
+    crc(NextOilRefineryCaptureCheckFrame);
+    crc(NextEngineerCheckFrame);
 }
 
 

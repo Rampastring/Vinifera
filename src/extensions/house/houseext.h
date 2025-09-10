@@ -170,4 +170,12 @@ public:
      *  was made under threat of getting rushed early in the game.
      */
     bool IsUnderStartRushThreat;
+
+    /**
+     *  Next frame where this house should check for producing engineers
+     *  for capturing a neutral oil refinery.
+     */
+    int NextOilRefineryCaptureCheckFrame;
+
+    int NextEngineerCheckFrame;
 };
