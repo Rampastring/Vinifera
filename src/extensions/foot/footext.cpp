@@ -36,6 +36,7 @@
  *  @author: CCHyper
  */
 FootClassExtension::FootClassExtension(const FootClass *this_ptr) :
+    WFStuckFrame(0),
     TechnoClassExtension(this_ptr)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("FootClassExtension::FootClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));

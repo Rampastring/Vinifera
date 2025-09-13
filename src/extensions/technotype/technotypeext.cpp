@@ -28,15 +28,23 @@
 #include "technotypeext.h"
 
 #include "aircrafttype.h"
+#include "aircrafttypeext.h"
 #include "technotype.h"
+#include "bullettype.h"
 #include "ccini.h"
 #include "filepng.h"
+#include "rockettype.h"
 #include "swizzle.h"
 #include "bsurface.h"
 #include "tibsun_globals.h"
 #include "vinifera_util.h"
+#include "rulesext.h"
 #include "spritecollection.h"
+#include "unittype.h"
+#include "verses.h"
 #include "vinifera_saveload.h"
+#include "weapontype.h"
+#include "weapontypeext.h"
 #include "asserthandler.h"
 #include "debughandler.h"
 #include "findmake.h"
@@ -104,7 +112,8 @@ TechnoTypeClassExtension::TechnoTypeClassExtension(const TechnoTypeClass *this_p
     IsNaval(false),
     BuiltAt(),
     BuildTimeMultiplier(1.0f),
-    IsOpportunityFire(false)
+    IsOpportunityFire(false),
+    Buildability(TechnoTypeBuildability::BUILDABILITY_NORMAL)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("TechnoTypeClassExtension::TechnoTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
@@ -430,6 +439,20 @@ bool TechnoTypeClassExtension::Read_INI(CCINIClass &ini)
     BuiltAt = TGet_TypeList(ini, ini_name, "BuiltAt", BuiltAt);
     IsOpportunityFire = ini.Get_Bool(ini_name, "OpportunityFire", IsOpportunityFire);
 
+    char buffer[32];
+    if (ini.Get_String(ini_name, "Buildability", buffer, std::size(buffer)) > 0)
+    {
+        if (!strcasecmp("Normal", buffer)) {
+            Buildability = TechnoTypeBuildability::BUILDABILITY_NORMAL;
+        }
+        else if (!strcasecmp("AIOnly", buffer)) {
+            Buildability = TechnoTypeBuildability::BUILDABILITY_AI_ONLY;
+        }
+        else if (!strcasecmp("HumanOnly", buffer)) {
+            Buildability = TechnoTypeBuildability::BUILDABILITY_HUMAN_ONLY;
+        }
+    }
+
     return true;
 }
 
@@ -465,6 +488,294 @@ ProductionFlags TechnoTypeClassExtension::Get_Production_Flags(const TechnoTypeC
     return flags;
 }
 
+int Drone_Spawn_Weapon_Value(TechnoTypeClass* technotype, const WeaponTypeClass* weapon, ArmorType armortype)
+{
+    WeaponTypeClassExtension* weaponext = Extension::Fetch(weapon);
+    TechnoTypeClassExtension* technotypeext = Extension::Fetch(technotype);
+
+    const WeaponTypeClass* spawnerweapon = technotypeext->Spawns->Fetch_Weapon_Info(WEAPON_SLOT_PRIMARY).Weapon;
+
+    // Factor speed as a slight bonus to range for low-ranged units.
+    int rangescore = std::max(3 + (technotype->MaxSpeed / 12), weapon->Range / CELL_LEPTON);
+    int damage = spawnerweapon->Attack * spawnerweapon->Burst;
+
+    int rof = technotypeext->SpawnRegenRate + technotypeext->SpawnSpawnRate;
+
+    double spreadf = 1.0 + spawnerweapon->WarheadPtr->SpreadFactor / 128.0;
+
+    // Give extra value to high-ranged high-damage weapons
+    if (weapon->Range > 8 * CELL_LEPTON)
+        damage = damage + (int)(damage * ((weapon->Range / CELL_LEPTON) - 7) * 0.2);
+
+    if (weapon->Bullet->IsInaccurate) {
+        damage = damage * (0.67);
+    }
+
+    // Bounciness and elasticity is kinda like inaccuracy...
+    if (weapon->Bullet->IsBouncy && weapon->Bullet->Elasticity > 0.0)
+        damage = damage * (1.0 / (1.0 + weapon->Bullet->Elasticity / (armortype == ARMOR_NONE ? 1.0 : 2.0)));
+
+    int weaponvalue = (damage * (Verses::Get_Modifier(armortype, const_cast<WarheadTypeClass*>(spawnerweapon->WarheadPtr)) * rangescore * spreadf)) / std::pow(rof, 0.95);
+
+    if (technotype->MaxAmmo > 0) {
+        weaponvalue = weaponvalue / 5;
+        weaponvalue = weaponvalue * technotype->MaxAmmo;
+    }
+
+    return weaponvalue * RuleExtension->AdvancedAIOffensiveWeaponValueMultiplier;
+}
+
+int Missile_Spawn_Weapon_Value(TechnoTypeClass* technotype, const WeaponTypeClass* weapon, ArmorType armortype)
+{
+    WeaponTypeClassExtension* weaponext = Extension::Fetch(weapon);
+    TechnoTypeClassExtension* technotypeext = Extension::Fetch(technotype);
+    const RocketTypeClass* rockettype = RocketTypeClass::From_AircraftType(technotypeext->Spawns);
+
+    int spawnerdamage = rockettype->Damage;
+    const WarheadTypeClass* spawnerwarhead = rockettype->Warhead;
+
+    int rangescore = std::max(3 + (technotype->MaxSpeed / 12), weapon->Range / CELL_LEPTON);
+    int damage = spawnerdamage * technotypeext->SpawnsNumber;
+    int rof = technotypeext->SpawnRegenRate + technotypeext->SpawnSpawnRate;
+
+    double spreadf = 1.0 + spawnerwarhead->SpreadFactor / 128.0;
+
+    // Give extra value to high-ranged high-damage weapons
+    if (weapon->Range > 8 * CELL_LEPTON)
+        damage = damage + (int)(damage * ((weapon->Range / CELL_LEPTON) - 7) * 0.2);
+
+    int weaponvalue = (damage * (Verses::Get_Modifier(armortype, const_cast<WarheadTypeClass*>(spawnerwarhead)) * rangescore * spreadf)) / std::pow(rof, 0.95);
+
+    return weaponvalue * RuleExtension->AdvancedAIOffensiveWeaponValueMultiplier;
+}
+
+int Weapon_Value(TechnoTypeClass* technotype, const WeaponTypeClass* weapon, ArmorType armortype, bool oneburst = false) 
+{
+    WeaponTypeClassExtension* weaponext = Extension::Fetch(weapon);
+    if (weaponext->IsSpawner)
+    {
+        TechnoTypeClassExtension* technotypeext = Extension::Fetch(technotype);
+        if (Extension::Fetch(technotypeext->Spawns)->IsMissileSpawn) {
+            return Missile_Spawn_Weapon_Value(technotype, weapon, armortype);
+        }
+
+        return Drone_Spawn_Weapon_Value(technotype, weapon, armortype);
+    }
+
+    BulletTypeClass const* bullet = weapon->Bullet;
+    const WarheadTypeClass* warhead = weapon->WarheadPtr;
+
+    // Factor speed as a slight bonus to range for low-ranged units.
+    int rangescore = std::max(3 * CELL_LEPTON + (technotype->MaxSpeed / 3) * (CELL_LEPTON / 4), weapon->Range) / CELL_LEPTON;
+
+    int bursts = oneburst ? 1 : weapon->Burst;
+    int damage = weapon->Attack * bursts;
+
+    // Railguns and other ambient-damage weapons get some extra damage because they sometimes hit multiple targets.
+    if (weapon->IsRailgun || weapon->IsSonic)
+        damage += (weapon->AmbientDamage * 3) / 2;
+
+    int rof = weapon->ROF;
+
+    for (int b = 0; b < bursts && b < 4; b++)
+        rof += weapon->BurstDelay[b];
+
+    double spreadf = 1.0 + warhead->SpreadFactor / 128.0;
+    
+    // Give extra value to high-ranged high-damage weapons
+    if (weapon->Range > 8 * CELL_LEPTON)
+        damage = damage + (int)(damage * ((weapon->Range / CELL_LEPTON) - 7) * 0.2);
+
+    if (weapon->Bullet->IsInaccurate) {
+        damage = damage * (0.67);
+    }
+
+    // Bounciness and high elasticity is kinda like inaccuracy...
+    if (weapon->Bullet->IsBouncy && weapon->Bullet->Elasticity > 1.0)
+        damage = damage * (1.0 / (1.0 + weapon->Bullet->Elasticity / (armortype == ARMOR_NONE ? 1.0 : 2.0)));
+
+    double mod = Verses::Get_Modifier(armortype, const_cast<WarheadTypeClass*>(warhead));
+    int weaponvalue = (damage * mod * rangescore * spreadf) / std::pow(rof, 0.95);
+
+    if (technotype->MaxAmmo > 0) {
+        weaponvalue = weaponvalue / 5;
+        weaponvalue = weaponvalue * technotype->MaxAmmo;
+    }
+
+    return weaponvalue * RuleExtension->AdvancedAIOffensiveWeaponValueMultiplier;
+}
+
+int AntiGroundValue(ArmorType armortype, TechnoTypeClass* technotype)
+{
+    const WeaponTypeClass* weapon = technotype->Fetch_Weapon_Info(WEAPON_SLOT_PRIMARY).Weapon;
+    int value = 0;
+
+    if (weapon != nullptr) {
+        if (!weapon->Bullet->IsAntiGround) return(0);
+
+        value += Weapon_Value(technotype, weapon, armortype);
+
+        weapon = technotype->Fetch_Weapon_Info(WEAPON_SLOT_SECONDARY).Weapon;
+
+        if (weapon != nullptr && weapon->Bullet->IsAntiGround) {
+
+            // Units with FiringSyncFrame can use both their primary and secondary weapon on the same target.
+            if (technotype->RTTI == RTTI_UNITTYPE && reinterpret_cast<UnitTypeClass*>(technotype)->FiringSyncFrame[0] > -1) {
+                if (weapon != nullptr) {
+                    value += Weapon_Value(technotype, weapon, armortype, true);
+                }
+            }
+            else {
+                int secondaryweaponvalue = Weapon_Value(technotype, weapon, armortype);
+
+                if (secondaryweaponvalue > value) {
+                    value = secondaryweaponvalue;
+                }
+            }
+        }
+    }
+
+    return(value);
+}
+
+
+int TechnoTypeClassExtension::AntiNoneArmorValue() const
+{
+    return AntiGroundValue(ARMOR_NONE, This());
+}
+
+int TechnoTypeClassExtension::AntiLightArmorValue() const
+{
+    return (AntiGroundValue(ARMOR_ALUMINUM, This()) + AntiGroundValue(ARMOR_WOOD, This()) + AntiGroundValue((ArmorType)6, This())) / 3;
+}
+
+int TechnoTypeClassExtension::AntiHeavyArmorValue() const
+{
+    return AntiGroundValue(ARMOR_STEEL, This());
+}
+
+int TechnoTypeClassExtension::AntiNoneArmorValueAA() const
+{
+    return AntiAirValue(ARMOR_NONE);
+}
+
+int TechnoTypeClassExtension::AntiLightArmorValueAA() const
+{
+    // TODO unhardcode
+    return (AntiAirValue(ARMOR_ALUMINUM) + AntiAirValue(ARMOR_WOOD) + AntiAirValue((ArmorType)6)) / 3;
+}
+
+int TechnoTypeClassExtension::AntiHeavyArmorValueAA() const
+{
+    return AntiAirValue(ARMOR_STEEL);
+}
+
+int TechnoTypeClassExtension::AntiAirValue(ArmorType armor) const
+{
+    const WeaponTypeClass* weapon = This()->Fetch_Weapon_Info(WEAPON_SLOT_PRIMARY).Weapon;
+    int value = 0;
+
+    if (weapon != nullptr)
+    {
+        if (weapon->Bullet->IsAntiAircraft)
+        {
+            value = Weapon_Value(This(), weapon, armor);
+        }
+    }
+
+    weapon = This()->Fetch_Weapon_Info(WEAPON_SLOT_SECONDARY).Weapon;
+    if (weapon != nullptr)
+    {
+        if (weapon->Bullet->IsAntiAircraft)
+        {
+            value = std::max(Weapon_Value(This(), weapon, armor), value);
+        }
+    }
+
+    return(value);
+}
+
+int TechnoTypeClassExtension::ArtilleryValue() const
+{
+    const WeaponTypeClass* weapon = This()->Fetch_Weapon_Info(WEAPON_SLOT_PRIMARY).Weapon;
+    int value = 0;
+
+    if (weapon != nullptr && weapon->Bullet->IsAntiGround && weapon->Range > CELL_LEPTON * 8) {
+
+        value = Weapon_Value(This(), weapon, ARMOR_NONE) + Weapon_Value(This(), weapon, ARMOR_ALUMINUM) + Weapon_Value(This(), weapon, ARMOR_STEEL);
+        value = value / 3;
+
+        // Units with FiringSyncFrame can use both their primary and secondary weapon on the same target.
+        if (This()->RTTI == RTTI_UNITTYPE && reinterpret_cast<UnitTypeClass*>(This())->FiringSyncFrame[0] > -1) {
+            weapon = This()->Fetch_Weapon_Info(WEAPON_SLOT_SECONDARY).Weapon;
+
+            if (weapon != nullptr) {
+                value += (Weapon_Value(This(), weapon, ARMOR_NONE) + Weapon_Value(This(), weapon, ARMOR_ALUMINUM) + Weapon_Value(This(), weapon, ARMOR_STEEL)) / 3;
+            }
+        }
+    }
+
+    return(value);
+}
+
+int TechnoTypeClassExtension::DefensiveValue() const
+{
+    int value = This()->MaxStrength;
+
+    if (This()->IsCrushable)
+    {
+        const WeaponTypeClass* weapon = This()->Fetch_Weapon_Info(WEAPON_SLOT_PRIMARY).Weapon;
+        if (weapon != nullptr) {
+            double reduction = (5 - (weapon->Range / CELL_LEPTON)) * 0.1;
+
+            if (reduction > 0.0)
+                value = (int)(value * (1.0 - reduction));
+        }
+    }
+
+    return value;
+}
+
+bool TechnoTypeClassExtension::CategorizedAsLightlyArmored() const
+{
+    return This()->Armor == ARMOR_WOOD || This()->Armor == ARMOR_ALUMINUM || This()->Armor == (ArmorType)5 || This()->Armor == (ArmorType)6 || This()->Armor == (ArmorType)7;
+}
+
+int TechnoTypeClassExtension::Scale_Value_By_Properties(int value, double speedmultiplier, double strengthmultiplier, double cloakmultiplier, double costweightmultiplier)
+{
+    // Increase value if the unit is able to q-move
+    if (This()->RTTI == RTTI_UNITTYPE) {
+        UnitTypeClass* unittype = reinterpret_cast<UnitTypeClass*>(This());
+        if (unittype->IsTurretEquipped && !unittype->IsNoFireWhileMoving) {
+            value = (int)(value * 1.1);
+        }
+    }
+
+    double speed = (double)This()->MaxSpeed / 6.0;
+
+    if (speedmultiplier < 0.0)
+    {
+        // Negative speed multiplier - give bonus to slower units
+        speed = 1.0 - speed;
+        speedmultiplier = speedmultiplier * -1.0;
+    }
+
+    double strength = 0; // This()->MaxStrength / 4000.0;
+
+    int adjusted = (int)(value * (1.0 + speed * speedmultiplier + strength * strengthmultiplier));
+
+    if (This()->IsCloakable) {
+        adjusted = (int)(adjusted + adjusted * cloakmultiplier);
+    }
+
+    if (This()->Cost <= 0)
+        return adjusted;
+
+    if (costweightmultiplier == 1.0)
+        return adjusted / This()->Cost;
+
+    return (int)(adjusted / (std::pow(This()->Cost, costweightmultiplier)));
+}
 
 int TechnoTypeClassExtension::Get_Jumpjet_Turn_Rate() const
 {
@@ -535,3 +846,4 @@ int TechnoTypeClassExtension::Get_Jumpjet_Cloak_Detection_Radius() const {
     }
     return Rule->JumpjetCloakDetectionRadius;
 }
+

@@ -31,7 +31,9 @@
 #include "aircraftext.h"
 #include "aircrafttype.h"
 #include "aircrafttypeext.h"
+#include "housetypeext.h"
 #include "object.h"
+#include "rulesext.h"
 #include "target.h"
 #include "unit.h"
 #include "unittype.h"
@@ -72,6 +74,8 @@ public:
     LONG STDMETHODCALLTYPE _Landing_Altitude_Thunk();
     RadioMessageType _Receive_Message(RadioClass * from, RadioMessageType message, long& param);
     int _Mission_Retreat();
+    bool _Enter_Idle_Mode(bool initial, bool a2);
+    int _Do_MISSION_GUARD();
 };
 
 
@@ -859,6 +863,160 @@ void Check_For_Paradrop_Aircraft(AircraftClass* aircraft, AircraftClassExtension
     }
 }
 
+void Aircraft_Move_Near_Dock(AircraftClass* aircraft)
+{
+    int lowestdistance = INT_MAX;
+    Cell nearestcell = CELL_NONE;
+
+    for (int i = 0; i < Buildings.Count(); i++)
+    {
+        BuildingClass* building = Buildings[i];
+
+        if (!building->IsActive || building->IsInLimbo || !building->IsDown || building->Class->IsInvisibleInGame || building->House != aircraft->House)
+            continue;
+
+        if (aircraft->Class->Dock.Is_Present(building->Class)) {
+            int distance = aircraft->Distance(building);
+            if (distance < lowestdistance) {
+                lowestdistance = distance;
+                nearestcell = building->Center_Coord().As_Cell();
+            }
+        }
+    }
+
+    if (nearestcell != CELL_NONE) {
+        Cell nearbyloc = Map.Nearby_Location(nearestcell, SPEED_TRACK);
+        if (nearbyloc != CELL_NONE) {
+            aircraft->Assign_Destination(&Map[nearbyloc]);
+            aircraft->Assign_Mission(MISSION_MOVE);
+            if (aircraft->Ready_To_Commence())
+                aircraft->Commence();
+
+            aircraft->Assign_Archive_Target(nullptr);
+
+            Extension::Fetch(aircraft)->DockedFrame = -1;
+        }
+    }
+}
+
+void AdvAI_Aircraft_Maintenance(AircraftClass* aircraft)
+{
+    if (!aircraft->IsActive || !aircraft->IsDown) {
+        return;
+    }
+
+    if (!RuleExtension->AdvancedAIAircraftReuse || aircraft->House->Is_Human_Player())
+    {
+        return;
+    }
+
+    if (aircraft->House->Class->IsMultiplayPassive) {
+        return;
+    }
+
+    // If we are targeting a cell, stop doing that immediately.
+    if (aircraft->TarCom != nullptr && aircraft->TarCom->RTTI == RTTI_CELL) {
+        aircraft->Assign_Target(nullptr);
+    }
+
+    if (aircraft->Team != nullptr && aircraft->Team->IsForcedActive) {
+
+        if (aircraft->Ammo == 0 && aircraft->Class->MaxAmmo > 0) {
+            aircraft->Team->Remove(aircraft);
+        }
+        else {
+            return;
+        }
+    }
+
+    if (aircraft->Mission != MISSION_GUARD && aircraft->Mission != MISSION_GUARD_AREA) {
+        return;
+    }
+
+    AircraftClassExtension* aircraftext = Extension::Fetch(aircraft);
+
+    if (aircraft->Class->MaxAmmo > 0 && aircraft->Class->MaxAmmo < INT_MAX) {
+        if (aircraft->Ammo == aircraft->Class->MaxAmmo) {
+
+            if (aircraft->In_Air()) {
+                // If we are in air, order us to land somewhere.
+                aircraft->Assign_Destination(aircraft->Good_LZ());
+                aircraft->Assign_Mission(MISSION_MOVE);
+                if (aircraft->Ready_To_Commence())
+                    aircraft->Commence();
+
+                aircraft->Assign_Archive_Target(nullptr);
+            }
+            else {
+
+                // If this aircraft is sitting on a dock building and it is fully loaded, order it to move away from the building.
+                BuildingClass* cellbldg = Map[aircraft->PositionCoord].Cell_Building();
+                if (cellbldg != nullptr) {
+                    aircraft->Assign_Destination(aircraft->Good_LZ());
+                    aircraft->Assign_Mission(MISSION_MOVE);
+                    if (aircraft->Ready_To_Commence())
+                        aircraft->Commence();
+
+                    aircraft->Assign_Archive_Target(nullptr);
+                    aircraftext->DockedFrame = -1;
+                }
+            }
+        }
+        else {
+            // If this aircraft does not have max ammo, and it is on a dock building, check how long it has been on the dock building.
+            // If it has been for significantly longer than theoretically necessary for replacing its ammo, move it away - the AI
+            // has likely got it stuck somehow.
+
+            bool shoulddock = true;
+
+            CellClass& aircraftcell = Map[aircraft->PositionCell];
+            if (aircraftcell.Cell_Building() != nullptr && aircraftcell.Cell_Building()->Class->IsCanUnitReload) {
+                int reloadtime = Extension::Fetch(aircraft->Class)->ReloadRate * TICKS_PER_MINUTE;
+                if (Frame - aircraftext->DockedFrame > reloadtime * aircraft->Class->MaxAmmo + 500) {
+                    Aircraft_Move_Near_Dock(aircraft);
+                    shoulddock = false;
+                    aircraftext->DockedFrame = Frame;
+                }
+            }
+
+            // If this aircraft does not have max ammo, and it is not on a dock building, order it on one.
+
+            if (shoulddock && Frame - aircraftext->DockedFrame > 500) {
+                bool dockfound = false;
+
+                BuildingClass* cellbldg = Map[aircraft->PositionCell].Cell_Building();
+                if (cellbldg == nullptr) {
+                    for (int i = 0; i < aircraft->Class->Dock.Count(); i++) {
+                        BuildingClass* dockingbay = aircraft->Find_Docking_Bay(aircraft->Class->Dock[i], false, false);
+                        if (dockingbay != nullptr && aircraft->Transmit_Message(RADIO_HELLO, dockingbay) == RADIO_ROGER) {
+                            aircraft->Assign_Destination(dockingbay);
+                            aircraft->Assign_Mission(MISSION_ENTER);
+                            if (aircraft->Ready_To_Commence())
+                                aircraft->Commence();
+
+                            aircraft->Assign_Archive_Target(nullptr);
+                            aircraftext->DockedFrame = Frame;
+
+                            dockfound = true;
+                            break;
+                        }
+                    }
+                }
+
+                // If the aircraft did not find a dock building, but we are far away from any friendly buildings, then move near a dock.
+                if (!dockfound)
+                    Aircraft_Move_Near_Dock(aircraft);
+            }
+        }
+    }
+
+    // If the aircraft is not part of a team and it has full ammunition, make it recruitable
+    if (aircraft->Team == nullptr) {
+        aircraft->field_205 = true;
+        aircraft->field_206 = true;
+    }
+}
+
 
 DECLARE_PATCH(_AircraftClass_AI_Hook_Patch)
 {
@@ -867,6 +1025,7 @@ DECLARE_PATCH(_AircraftClass_AI_Hook_Patch)
 
     aircraftext = Extension::Fetch(this_ptr);
     Check_For_Paradrop_Aircraft(this_ptr, aircraftext);
+    AdvAI_Aircraft_Maintenance(this_ptr);
 
     /**
      *  Stolen bytes / code.
@@ -882,6 +1041,283 @@ DECLARE_PATCH(_AircraftClass_AI_Hook_Patch)
      *  Continue function execution.
      */
     JMP(0x0040918A);
+}
+
+
+bool AircraftClassExt::_Enter_Idle_Mode(bool initial, bool a2)
+{
+    assert(IsActive);
+
+    if (Has_Suspended_Mission()) {
+        Restore_Mission();
+        if (CurrentMission == MISSION_PATROL) {
+            Status = 0;
+            IsLocked = false;
+        }
+        return(false);
+    }
+
+    bool result = FootClass::Enter_Idle_Mode(initial, a2);
+
+    MissionType mission = MISSION_GUARD;
+    
+    if ((!RuleExtension->AdvancedAIAircraftReuse || House->Class->IsMultiplayPassive) && Team == nullptr && Is_Weapon_Equipped())
+        mission = MISSION_GUARD_AREA;
+
+    AircraftTypeClassExtension* aircrafttypeext = Extension::Fetch(Class);
+
+    int landingalt = Landing_Altitude();
+    if (In_Which_Layer() == LAYER_GROUND || HeightAGL <= landingalt || aircrafttypeext->IsMissileSpawn) {
+        if (IsALoaner) {
+            if (Cargo.Is_Something_Attached()) {
+
+                /*
+                **	In the case of a computer controlled helicopter that hold passengers,
+                **	don't unload when landing. Wait for specific instructions from the
+                **	controlling team.
+                */
+                if (Team != NULL) {
+                    mission = MISSION_GUARD;
+                }
+                else {
+                    mission = MISSION_UNLOAD;
+                }
+            }
+            else if (Team == NULL) {
+                mission = MISSION_RETREAT;
+            }
+        }
+        else {
+            Assign_Destination(NULL);
+            Assign_Target(NULL);
+            if (false && !House->Is_Human_Player() && Team == NULL && Is_Weapon_Equipped()) {
+                mission = MISSION_GUARD_AREA;
+            }
+            else {
+                mission = MISSION_GUARD;
+            }
+        }
+    }
+    else {
+        if (Cargo.Is_Something_Attached()) {
+            if (IsALoaner) {
+                if (Team != NULL) {
+                    mission = MISSION_GUARD;
+                }
+                else {
+                    mission = MISSION_UNLOAD;
+                    Assign_Destination(Good_LZ());
+                }
+            }
+            else {
+                Assign_Destination(Good_LZ());
+                mission = MISSION_MOVE;
+            }
+        }
+        else {
+
+            /*
+            **	If this transport is a loaner and part of a team, then remove it from
+            **	the team it is attached to.
+            */
+            if ((IsALoaner && House->Is_Human_Player()) || (!House->Is_Human_Player() && !Class->MaxAmmo)) {
+                if (Team != NULL && Team->Has_Entered_Map()) {
+                    Team->Remove(this);
+                }
+            }
+
+            if (PrimaryWeapon != NULL) {
+
+                /*
+                **	Weapon equipped helicopters that run out of ammo and were
+                **	brought in as reinforcements will leave the map.
+                */
+                if (IsALoaner) {
+
+                    /*
+                    **	If it has no ammo, then break off of the team and leave the map.
+                    **	If it can fight, then give it fighting orders.
+                    */
+                    if (Ammo == 0) {
+                        if (Team != NULL) Team->Remove(this);
+                        mission = MISSION_RETREAT;
+                    }
+                    else {
+                        if (Team == NULL) {
+                            mission = MISSION_HUNT;
+                        }
+                    }
+
+                }
+                else if (Ammo && TarCom != NULL && Mission == MISSION_ATTACK || MissionQueue == MISSION_ATTACK) {
+                    mission = MISSION_ATTACK;
+                }
+                else if (In_Air()) {
+                    if (NavCom == NULL || (CurrentMission != MISSION_MOVE && CurrentMission != MISSION_ENTER)) {
+                        if (Class->Dock.Count() > 0 && (IsLocked || Team == NULL)) {
+
+                            /*
+                            **	Normal aircraft try to find a good landing spot to rest.
+                            */
+                            BuildingClass* building = NULL;
+                            for (int i = 0; i < Class->Dock.Count(); i++) {
+                                building = Find_Docking_Bay(Class->Dock[i], false, false);
+                                if (building) break;
+                            }
+                            Assign_Destination(NULL);
+                            if (building && Transmit_Message(RADIO_HELLO, building) == RADIO_ROGER) {
+                                Assign_Destination(building);
+                                mission = MISSION_ENTER;
+                            }
+                            else {
+                                Assign_Destination(Good_LZ());
+                                mission = MISSION_MOVE;
+                            }
+                        }
+                    }
+                }
+            }
+            else {
+                if (Team != NULL) return(false);
+                Assign_Destination(Good_LZ());
+                mission = MISSION_MOVE;
+            }
+        }
+    }
+
+    Assign_Mission(mission);
+    if (Ready_To_Commence()) {
+        Commence();
+    }
+
+    return(result);
+}
+
+
+int AircraftClassExt::_Do_MISSION_GUARD(void)
+{
+    assert(IsActive);
+
+    if (HeightAGL == Class->Flight_Level()) {
+
+        /*
+        **	If part of a team, then do nothing, since the team
+        **	handler will take care of giving this aircraft a
+        **	mission.
+        */
+        if (Team) {
+            if (NavCom != NULL) {
+                Assign_Mission(MISSION_MOVE);
+            }
+            return(Current_Mission_Control().Normal_Delay());
+        }
+
+        if (PrimaryWeapon == NULL) {
+            Assign_Destination(&Map[(Coord&)PositionCoord]);
+            Assign_Mission(MISSION_MOVE);
+        }
+        else {
+            if (Team == NULL) Enter_Idle_Mode();
+        }
+        return(1);
+    }
+    //if (House->IsHuman) return(MissionControl[Mission].Normal_Delay());
+
+    /*
+    **	If the aircraft is very badly damaged, then it will search for a
+    **	repair bay first.
+    */
+    if ((!RuleExtension->AdvancedAIAircraftReuse || House->Class->IsMultiplayPassive) &&
+        !House->Is_Human_Player() && House->Available_Money() >= 100 && HealthRatio <= Rule->ConditionYellow) {
+        if (!In_Radio_Contact() ||
+            (HeightAGL == 0 &&
+                (Contact_With_Whom()->RTTI != RTTI_BUILDING || ((BuildingClass*)Contact_With_Whom())->Class_Of() != Rule->RepairBay))) {
+    
+    
+            BuildingClass* building = Find_Docking_Bay(Rule->RepairBay, true);
+            if (building != NULL) {
+                Assign_Mission(MISSION_ENTER);
+                Assign_Destination(building);
+                Assign_Target(NULL);
+                return(1);
+            }
+        }
+    }
+
+    /*
+    **	If the aircraft cannot attack anything because of lack of ammo,
+    **	abort any normal guard logic in order to look for a helipad
+    **	to rearm.
+    */
+    if ((!RuleExtension->AdvancedAIAircraftReuse || House->Class->IsMultiplayPassive) &&
+        !House->Is_Human_Player() && Ammo == 0 && Is_Weapon_Equipped()) {
+        if (!In_Radio_Contact()) {
+            BuildingClass* building = NULL;
+            for (int index = 0; index < Class->Dock.Count(); index++) {
+                building = Find_Docking_Bay(Class->Dock[index], false);
+                if (building != NULL) {
+                    break;
+                }
+            }
+    
+            if (building != NULL) {
+                Assign_Mission(MISSION_ENTER);
+                Assign_Destination(building);
+                Assign_Target(NULL);
+                return(1);
+            }
+        }
+    }
+
+    if (Ammo != -1 && Ammo < (Class->MaxAmmo / 2) && In_Radio_Contact()) {
+        if (Contact_With_Whom()->RTTI == RTTI_BUILDING && ((BuildingClass*)Contact_With_Whom())->Class->IsCanUnitReload) {
+            return(1);
+        }
+    }
+
+    /*
+    **	If the aircraft already has a target, then attack it if possible.
+    */
+    if (TarCom != NULL) {
+        Assign_Mission(MISSION_ATTACK);
+        return(1);
+    }
+
+    /*
+    **	Transport helicopters don't really do anything but just sit there.
+    */
+    if (!Is_Weapon_Equipped()) {
+        return(TICKS_PER_SECOND * 3);
+    }
+
+    /*
+    **	Computer controlled helicopters will defend themselves by bouncing around
+    **	and looking for a free helipad.
+    */
+    if (HeightAGL == 0 && !In_Radio_Contact()) {
+        //Scatter(COORD_NONE, true);
+        return(TICKS_PER_SECOND * 3);
+    }
+
+    /*
+    **	Perform a special check to hunt for harvesters that are outside of the protective
+    **	shield of their base.
+    */
+    if ((!RuleExtension->AdvancedAIAircraftReuse || House->Class->IsMultiplayPassive) &&
+        !House->Is_Human_Player() && House->State != STATE_ATTACKED) {
+        AbstractClass* target = House->Find_Juicy_Target(PositionCoord);
+    
+        if (target != NULL) {
+            Assign_Target(target);
+            Assign_Mission(MISSION_ATTACK);
+        }
+    }
+
+    if (/*House->Is_Human_Player() && */!In_Air()) {
+        return(MISSION_GUARD);
+    }
+
+    return(FootClass::Mission_Guard());
 }
 
 
@@ -928,4 +1364,6 @@ void AircraftClassExtension_Hooks()
 
     Patch_Jump(0x00409910, &AircraftClassExt::_Mission_Retreat);
     Patch_Jump(0x0040917A, &_AircraftClass_AI_Hook_Patch);
+    Patch_Jump(0x0040B310, &AircraftClassExt::_Enter_Idle_Mode);
+    Patch_Jump(0x0040DD10, &AircraftClassExt::_Do_MISSION_GUARD);
 }

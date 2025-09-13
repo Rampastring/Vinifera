@@ -126,7 +126,7 @@ void SuperClassExt::_Do_DropPods(Cell* cell)
 		TeamTypeClass* newteamtype = new TeamTypeClass();
 
 		if (newteamtype != nullptr) {
-			strcpy(newteamtype->IniName, buffer);
+			newteamtype->IniName.assign(buffer);
 			// ttype->IsTransient = true;
 			newteamtype->IsPrebuilt = false;
 			newteamtype->IsReinforcable = false;
@@ -140,7 +140,7 @@ void SuperClassExt::_Do_DropPods(Cell* cell)
 				if (newscripttype == nullptr)
 					return;
 
-				strcpy(newscripttype->IniName, "PARADROPINF_SCRIPT");
+				newscripttype->IniName.assign("PARADROPINF_SCRIPT");
 				newscripttype->MissionCount = 2;
 				newscripttype->MissionList[0].Mission = SMISSION_ATT_WAYPT;
 				newscripttype->MissionList[0].Data.Value = WAYPT_SPECIAL;
@@ -158,7 +158,7 @@ void SuperClassExt::_Do_DropPods(Cell* cell)
 				if (newtaskforce == nullptr)
 					return;
 
-				strcpy(newtaskforce->IniName, "PARADROPINF_TASKFORCE");
+				newtaskforce->IniName.assign("PARADROPINF_TASKFORCE");
 				newtaskforce->ClassCount = 2;
 				newtaskforce->Members[0].Class = InfantryTypeClass::Find_Or_Make("E1");
 				newtaskforce->Members[0].Quantity = AircraftTypeClass::Find_Or_Make("BADGER")->Max_Passengers();

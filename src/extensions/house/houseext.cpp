@@ -42,13 +42,17 @@
 #include "tibsun_functions.h"
 #include "utracker.h"
 #include "building.h"
+#include "buildingtypeext.h"
 #include "factoryext.h"
 #include "overlaytype.h"
 #include "prerequisitegroup.h"
 #include "rules.h"
+#include "rulesext.h"
 #include "session.h"
 #include "team.h"
+#include "teamext.h"
 #include "teamtype.h"
+#include "teamtypeext.h"
 #include "unit.h"
 #include "unittypeext.h"
 #include "voc.h"
@@ -60,7 +64,7 @@
  *  
  *  @author: CCHyper
  */
-HouseClassExtension::HouseClassExtension(const HouseClass *this_ptr) :
+HouseClassExtension::HouseClassExtension(const HouseClass* this_ptr) :
     AbstractClassExtension(this_ptr),
     TiberiumStorage(Tiberiums.Count()),
     WeedStorage(Tiberiums.Count()),
@@ -70,6 +74,7 @@ HouseClassExtension::HouseClassExtension(const HouseClass *this_ptr) :
     SpawnWaypoint(WAYPOINT_NONE),
     StrengthenDestroyedCost(0),
     NextExpansionPointLocation(0, 0),
+    ArchivedExpansionPointLocation(0, 0),
     ShouldBuildRefinery(false),
     HasBuiltFirstBarracks(false),
     LastExcessRefineryCheckFrame(0),
@@ -77,7 +82,33 @@ HouseClassExtension::HouseClassExtension(const HouseClass *this_ptr) :
     HasPerformedVehicleCharge(false),
     IsUnderStartRushThreat(false),
     NextOilRefineryCaptureCheckFrame(1000),
-    NextEngineerCheckFrame(0)
+    NextEngineerCheckFrame(0),
+    AdvAIGroundTactic(AdvAITacticType::TACTIC_NONE, -1, -1),
+    AdvAIAirTactic(AIRTACTIC_NONE, -1, -1),
+    AdvAINavalTactic(NAVALTACTIC_NONE, -1, -1),
+    AdvAILastTacticExecutionFrame(0),
+    EnemyNoneStrength(0),
+    EnemyLightStrength(0),
+    EnemyHeavyStrength(0),
+    EnemyArtilleryStrength(0),
+    EnemyBaseDefenseStrength(0),
+    EnemyNavalStrength(0),
+    EnemyHarvesterCount(0),
+    EnemyRefineryCount(0),
+    EnemyHasSensors(false),
+    LastHarvesterBuildFrame(0),
+    LastUnitValueDebugPrintFrame(0),
+    LastInfantryValueDebugPrintFrame(0),
+    LastAircraftValueDebugPrintFrame(0),
+    LastNavalValueDebugPrintFrame(0),
+    AttemptedBuildingCaptureCount(0),
+    AdvAILastBuiltUnit(UNIT_NONE),
+    AdvAILastBuiltUnitCount(0),
+    AdvAILastBuiltInfantry(INFANTRY_NONE),
+    AdvAILastBuiltInfantryCount(0),
+    AdvAILastUndeployableUnitCheckFrame(0),
+    AdvAIFunValue(0),
+    IsNavalOnly(AdvancedAINavalOnlyState::NOT_CHECKED)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("HouseClassExtension::HouseClassExtension - 0x%08X\n", (uintptr_t)(This()));
 
@@ -92,6 +123,13 @@ HouseClassExtension::HouseClassExtension(const HouseClass *this_ptr) :
         new ((StorageClassExt*)&this_ptr->Tiberium) StorageClassExt(&TiberiumStorage);
         new ((StorageClassExt*)&this_ptr->Weed) StorageClassExt(&WeedStorage);
     }
+
+    EnemyAntiGroundStrength.Clear();
+    EnemyAntiAirStrength.Clear();
+    EnemyAntiNavalStrength.Clear();
+
+    memset(FactionSpecificTacticalValues, 0, sizeof(FactionSpecificTacticalValues));
+    memset(AdvAILastExecutionFrameForTactic, 0, sizeof(AdvAILastExecutionFrameForTactic));
 
     HouseExtensions.Add(this);
 }
@@ -598,10 +636,8 @@ bool HouseClassExtension::Place_Object(RTTIType type, Cell const& cell, Producti
             if (!factory_ext->HasSpoken && factory->House == PlayerPtr) {
                 if (tech->Is_Foot()) {
                     Speak(VOX_UNIT_READY);
-                } else if (tech->RTTI == RTTI_BUILDING) {
-                    Speak(VOX_CONSTRUCTION);
+                    factory_ext->HasSpoken = true;
                 }
-                factory_ext->HasSpoken = true;
             }
 
             /*
@@ -828,6 +864,269 @@ TechnoTypeClass const* HouseClassExtension::Suggest_New_Object(RTTIType objectty
 }
 
 
+
+TeamClass* HouseClassExtension::Get_Team_In_Production(int& id, RTTIType for_type, ProductionFlags prodflags) const
+{
+    if (id < 0) {
+        DEBUG_ERROR("AdvAI!! Get_Team_In_Production: negative ID supplied!\n");
+        return nullptr;
+    }
+
+    for (int i = id; i < Teams.Count(); i++)
+    {
+        TeamClass* team = Teams[i];
+
+        if (team->House != This())
+            continue;
+
+        if (team->IsHasBeen)
+            continue;
+
+        TeamClassExtension* teamext = Extension::Fetch(team);
+
+        if (teamext->ProdFlags != prodflags)
+            continue;
+
+        if (for_type == RTTI_INFANTRY) {
+            if (teamext->NoInfantry) {
+                continue;
+            }
+
+            if (teamext->MaxInfantry > -1 && teamext->Infantry_Count() >= teamext->MaxInfantry) {
+                continue;
+            }
+        }
+
+        if (for_type == RTTI_UNIT) {
+            if (teamext->NoVehicles) {
+                continue;
+            }
+
+            if (teamext->IsTransportTeam && teamext->Contains_Transport()) {
+                continue;
+            }
+        }
+
+        if (for_type == RTTI_AIRCRAFT && teamext->NoAircraft)
+            continue;
+
+        id = i + 1;
+        return team;
+    }
+
+    return nullptr;
+}
+
+UnitTypeClass* Find_Our_MCV(HouseClass* house)
+{
+    for (int i = 0; i < UnitTypes.Count(); i++)
+    {
+        UnitTypeClass* unittype = UnitTypes[i];
+
+        if (unittype->DeploysInto != nullptr && unittype->DeploysInto->IsConstructionYard && 
+           (unittype->Ownable & (1 << house->ActLike)) == (1 << house->ActLike))
+        {
+            return unittype;
+        }
+    }
+
+    return nullptr;
+}
+
+
+int AdvancedAI_AI_Unit_Start_Rush_Counter(HouseClass* house)
+{
+    HouseClassExtension* houseext = Extension::Fetch(house);
+
+    DynamicVectorClass<BuildingTypeClass const*> owned_buildings;
+    houseext->Fill_Owned_Buildings_List(owned_buildings);
+
+    UnitType mostvaluable = UNIT_NONE;
+    int highestvalue = -1;
+
+    // Build a list of all infantry that we can build, alongside their scores for our current tactic.
+    for (int i = 0; i < UnitTypes.Count(); i++)
+    {
+        UnitTypeClass* unittype = UnitTypes[i];
+        UnitTypeClassExtension* unittypeext = Extension::Fetch(unittype);
+
+        if ((unittype->Ownable & (1 << house->ActLike)) == (1 << house->ActLike) &&
+            house->Can_Build(unittype, false, true) && houseext->_AI_Has_Prerequisites(unittype, owned_buildings, owned_buildings.Count())) {
+
+            if (unittype->BuildLimit > 0 && house->ActiveUQuantity.Value(unittype->HeapID) >= unittype->BuildLimit)
+                continue;
+
+            int value = unittypeext->AntiNoneArmorValue() + unittypeext->AntiLightArmorValue();
+            if (value > highestvalue) {
+                mostvaluable = unittype->HeapID;
+                highestvalue = value;
+            }
+        }
+    }
+
+    if (mostvaluable != UNIT_NONE) {
+        house->BuildUnit = mostvaluable;
+    }
+
+    return TICKS_PER_SECOND;
+}
+
+
+int AdvancedAI_AI_Unit(HouseClass* house)
+{
+    HouseClassExtension* houseext = Extension::Fetch(house);
+
+    // ew WW
+    DynamicVectorClass<BuildingTypeClass const*> owned_buildings;
+    houseext->Fill_Owned_Buildings_List(owned_buildings);
+
+    // If we have no Construction Yard, see if we should build an MCV.
+    if (house->ConstructionYards.Count() < 1) {
+        UnitTypeClass* mcv = Find_Our_MCV(house);
+        if (mcv != nullptr) {
+            if (house->ActiveUQuantity.Value(mcv->HeapID) < 1 && house->Can_Build(mcv, true, true) &&
+                houseext->_AI_Has_Prerequisites(mcv, owned_buildings, owned_buildings.Count()))
+            {
+                house->BuildUnit = mcv->HeapID;
+                return TICKS_PER_SECOND;
+            }
+        }
+    }
+
+    int harv = house->ActiveUQuantity.Value(house->Get_First_ActLike(Rule->HarvesterUnit)->HeapID);
+    int ref = house->ActiveBQuantity.Value(house->Get_First_ActLike(Rule->BuildRefinery)->HeapID);
+    int refmult;
+    int harvmult;
+    if (house->Difficulty == DIFF_HARD) {
+        refmult = 1;
+        harvmult = 1;
+    }
+    else if (house->Difficulty == DIFF_NORMAL) {
+        refmult = 3;
+        harvmult = 2;
+
+        if (house->IsTiberiumShort) {
+            refmult = 1;
+            harvmult = 1;
+        }
+    }
+    else { // DIFF_EASY
+        refmult = 2;
+        harvmult = 1;
+
+        if (house->IsTiberiumShort) {
+            refmult = 3;
+            harvmult = 2;
+        }
+    }
+
+    /*
+    **  A computer controlled house will try to build a replacement
+    **  harvester if possible. Unlike regular AI, AdvancedAI does not
+    **  care about IsTiberiumShort - the tiberium will regrow after all.
+    **  Also, Advanced AI does not build harvesters if it's getting rushed or
+    **  or is attempting to rush the enemy itself.
+    */
+    if (!houseext->IsUnderStartRushThreat && houseext->AdvAIGroundTactic.Tactic != AdvAITacticType::TACTIC_RUSH_ATTACK &&
+        (harv == 0 || (Frame > houseext->LastHarvesterBuildFrame + 3000 && Frame > house->LATime + 240)) &&
+        house->IQ >= Rule->IQHarvester && !house->Is_Human_Player() && ref * refmult > harv * harvmult) {
+        if (house->Get_First_ActLike(Rule->HarvesterUnit)->Level <= house->Control.TechLevel) {
+            houseext->LastHarvesterBuildFrame = Frame;
+            house->BuildUnit = house->Get_First_ActLike(Rule->HarvesterUnit)->HeapID;
+            return TICKS_PER_SECOND;
+        }
+    }
+
+    int id = 0;
+    TeamClass* team = houseext->Get_Team_In_Production(id, RTTI_UNIT, PRODFLAG_NONE);
+
+    if (team == nullptr) {
+
+        // We need to produce something if we are under start rush threat, even if there's no team.
+        if (houseext->IsUnderStartRushThreat) {
+            return AdvancedAI_AI_Unit_Start_Rush_Counter(house);
+        }
+
+        return TICKS_PER_SECOND;
+    }
+
+    TeamClassExtension* teamext = Extension::Fetch(team);
+
+    UnitType mostvaluable = UNIT_NONE;
+    int highestvalue = 0;
+
+    bool debugprint = Frame > houseext->LastUnitValueDebugPrintFrame + 10000;
+
+    if (debugprint) {
+        houseext->LastUnitValueDebugPrintFrame = Frame;
+        DEBUG_INFO("AdvAI: House %d: Unit values: Frame: %d, Current Tactic: %s\n", house->HeapID, Frame, AdvAITacticType_To_Name(houseext->AdvAIGroundTactic.Tactic));
+    }
+
+    // Build a list of all non-naval vehicles that we can build, alongside their scores for our current tactic.
+    for (int i = 0; i < UnitTypes.Count(); i++)
+    {
+        UnitTypeClass* unittype = UnitTypes[i];
+        UnitTypeClassExtension* unittypeext = Extension::Fetch(unittype);
+
+        if (unittypeext->IsNaval) {
+            continue;
+        }
+
+        if (unittypeext->Buildability != TechnoTypeBuildability::BUILDABILITY_HUMAN_ONLY &&
+            unittype->Level <= house->Control.TechLevel &&
+            (unittype->Ownable & (1 << house->ActLike)) == (1 << house->ActLike) &&
+            house->Can_Build(unittype, false, true) && houseext->_AI_Has_Prerequisites(unittype, owned_buildings, owned_buildings.Count())) {
+
+            if (unittype->BuildLimit > 0) {
+                // Those damn Enforcers...
+
+                int quantity = house->UQuantity.Value(unittype->HeapID);
+                if (unittype->DeploysInto != nullptr && unittype->DeploysInto->UndeploysInto == unittype) {
+                    quantity += house->ActiveBQuantity.Value(unittype->DeploysInto->HeapID);
+                }
+
+                if (quantity >= unittype->BuildLimit)
+                    continue;
+            }
+
+            // Don't waste epic units on risky suicide missions.
+            if (team->Class->IsSuicide && unittype->BuildLimit < 5) {
+                continue;
+            }
+
+            int value = teamext->AdvAI_Get_Object_Value_For_Team(unittype, debugprint);
+
+            if (debugprint) {
+                DEBUG_INFO("    %s: %d\n", unittype->IniName.c_str(), value);
+            }
+
+            if (value > highestvalue) {
+                mostvaluable = unittype->HeapID;
+                highestvalue = value;
+            }
+        }
+    }
+
+    if (mostvaluable != UNIT_NONE) {
+        if (debugprint) {
+            DEBUG_INFO("    Selected: %s\n", UnitTypes[mostvaluable]->IniName.c_str());
+        }
+
+        house->BuildUnit = mostvaluable;
+
+        if (houseext->AdvAILastBuiltUnit == mostvaluable) {
+            houseext->AdvAILastBuiltUnitCount++;
+        }
+        else {
+            houseext->AdvAILastBuiltUnit = mostvaluable;
+            houseext->AdvAILastBuiltUnitCount = 1;
+        }
+    }
+
+    return TICKS_PER_SECOND;
+}
+
+
 /**
  *  Reimplementation of HouseClass::AI_Unit.
  *
@@ -836,6 +1135,10 @@ TechnoTypeClass const* HouseClassExtension::Suggest_New_Object(RTTIType objectty
 int HouseClassExtension::AI_Unit()
 {
     if (This()->BuildUnit != UNIT_NONE) return TICKS_PER_SECOND;
+
+    if (RuleExtension->AdvancedAIUnitProduction) {
+        return AdvancedAI_AI_Unit(This());
+    }
 
     int harv = This()->ActiveUQuantity.Value(This()->Get_First_ActLike(Rule->HarvesterUnit)->HeapID);
     int ref = This()->ActiveBQuantity.Value(This()->Get_First_ActLike(Rule->BuildRefinery)->HeapID);
@@ -937,6 +1240,78 @@ int HouseClassExtension::AI_Unit()
 }
 
 
+int AdvancedAI_AI_Naval_Unit(HouseClass* house)
+{
+    HouseClassExtension* houseext = Extension::Fetch(house);
+
+    DynamicVectorClass<BuildingTypeClass const*> owned_buildings;
+    houseext->Fill_Owned_Buildings_List(owned_buildings);
+
+    int id = 0;
+    TeamClass* team = houseext->Get_Team_In_Production(id, RTTI_UNIT, PRODFLAG_NAVAL);
+
+    if (team == nullptr) {
+        return TICKS_PER_SECOND;
+    }
+
+    TeamClassExtension* teamext = Extension::Fetch(team);
+
+    UnitType mostvaluable = UNIT_NONE;
+    int highestvalue = 0;
+
+    bool debugprint = Frame > houseext->LastUnitValueDebugPrintFrame + 10000;
+
+    if (debugprint) {
+        houseext->LastUnitValueDebugPrintFrame = Frame;
+        DEBUG_INFO("AdvAI: House %d: Naval unit values: Frame: %d\n", house->HeapID, Frame);
+    }
+
+    // Build a list of all non-naval vehicles that we can build, alongside their scores for our current tactic.
+    for (int i = 0; i < UnitTypes.Count(); i++)
+    {
+        UnitTypeClass* unittype = UnitTypes[i];
+        UnitTypeClassExtension* unittypeext = Extension::Fetch(unittype);
+
+        if (!unittypeext->IsNaval) {
+            continue;
+        }
+
+        if (unittypeext->Buildability != TechnoTypeBuildability::BUILDABILITY_HUMAN_ONLY &&
+            (unittype->Ownable & (1 << house->ActLike)) == (1 << house->ActLike) &&
+            house->Can_Build(unittype, false, true) && houseext->_AI_Has_Prerequisites(unittype, owned_buildings, owned_buildings.Count())) {
+
+            if (unittype->BuildLimit > 0) {
+                int quantity = house->UQuantity.Value(unittype->HeapID);
+
+                if (quantity >= unittype->BuildLimit)
+                    continue;
+            }
+
+            int value = teamext->AdvAI_Get_Object_Value_For_Team(unittype, debugprint);
+
+            if (debugprint) {
+                DEBUG_INFO("    %s: %d\n", unittype->IniName, value);
+            }
+
+            if (value > highestvalue) {
+                mostvaluable = unittype->HeapID;
+                highestvalue = value;
+            }
+        }
+    }
+
+    if (mostvaluable != UNIT_NONE) {
+        if (debugprint) {
+            DEBUG_INFO("    Selected: %s\n", UnitTypes[mostvaluable]->IniName);
+        }
+
+        houseext->BuildNavalUnit = mostvaluable;
+    }
+
+    return TICKS_PER_SECOND;
+}
+
+
 /**
  *  A new AI naval unit production handler.
  *
@@ -945,6 +1320,10 @@ int HouseClassExtension::AI_Unit()
 int HouseClassExtension::AI_Naval_Unit()
 {
     if (BuildNavalUnit != UNIT_NONE) return TICKS_PER_SECOND;
+
+    if (RuleExtension->AdvancedAIUnitProduction) {
+        return AdvancedAI_AI_Naval_Unit(This());
+    }
 
     int counter[1000]; // size increased replicating ts-patches
     int value[std::size(counter)];
@@ -1131,6 +1510,70 @@ void HouseClassExtension::Put_Storage_Pointers()
 }
 
 
+bool HouseClassExtension::_AI_Has_Prerequisites(const TechnoTypeClass* type, DynamicVectorClass<const BuildingTypeClass*>& owned, int ownedcount) const
+{
+    for (int i = 0; i < type->Prerequisite.Count(); i++) {
+
+        if (type->Prerequisite[i] >= STRUCT_FIRST) {
+
+            BuildingTypeClass* btype = BuildingTypes[type->Prerequisite[i]];
+
+            // Ignore service depots and naval yards as prerequisites
+            if (btype->IsCanUnitRepair)
+                continue;
+
+            if (Extension::Fetch(btype)->IsNaval)
+                continue;
+
+            if (!Rule->BuildConst.Is_Present(btype)) {
+
+                bool found = false;
+                for (int j = 0; j < ownedcount; j++) {
+                    if (owned[j] == btype) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    return false;
+                }
+            }
+
+        }
+        else {
+
+            if (type->Prerequisite[i] == -1) {
+                continue;
+            }
+
+            PrerequisiteGroupType grouptype = PrerequisiteGroupClass::Decode(type->Prerequisite[i]);
+            if (grouptype == PREREQ_GROUP_NONE) {
+                return false;
+            }
+
+            PrerequisiteGroupClass* group = PrerequisiteGroups[grouptype];
+
+            if (group->Prerequisites.Count() > 0 && BuildingTypes[group->Prerequisites[0]]->IsCanUnitRepair)
+                continue;
+
+            bool found = false;
+            for (int j = 0; j < ownedcount; j++) {
+                if (group->Prerequisites.Is_Present(owned[j]->HeapID)) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 /**
  *  A fake class for implementing new member functions which allow
  *  access to the "this" pointer of the intended class.
@@ -1311,4 +1754,478 @@ HouseClass* HouseClassExtension::House_From_HousesType(HousesType house)
      *  Otherwise, just perform the normal logic to fetch the house.
      */
     return ::House_From_HousesType(house);
+}
+
+bool HouseClassExtension::AdvAI_Is_Outnumbered() const
+{
+    int enemytotalstrength = EnemyNoneStrength + EnemyLightStrength + EnemyHeavyStrength;
+    int ourstrength = 0;
+
+    for (int i = 0; i < Teams.Count(); i++)
+    {
+        TeamClass* team = Teams[i];
+        if (team->House != This())
+            continue;
+
+        TeamClassExtension* teamext = Extension::Fetch(team);
+        if (teamext->IsAircraftTeam)
+            continue;
+
+        ourstrength += teamext->CurrentCost;
+    }
+
+    return enemytotalstrength > ourstrength * 2;
+}
+
+bool HouseClassExtension::AdvAI_Is_Disadvantaged() const
+{
+    int enemytotalstrength = EnemyNoneStrength + EnemyLightStrength + EnemyHeavyStrength;
+    int ourstrength = 0;
+
+    for (int i = 0; i < Teams.Count(); i++)
+    {
+        TeamClass* team = Teams[i];
+        if (team->House != This())
+            continue;
+
+        TeamClassExtension* teamext = Extension::Fetch(team);
+        ourstrength += teamext->CurrentCost;
+    }
+
+    return enemytotalstrength > ourstrength;
+}
+
+bool HouseClassExtension::Enemy_Building_Scan(DynamicVectorClass<BuildingTypeClass*>& list, int threatvalue) const
+{
+    if (This()->Enemy == HOUSE_NONE) {
+        return false;
+    }
+
+    for (int i = 0; i < Buildings.Count(); i++)
+    {
+        BuildingClass* building = Buildings[i];
+
+        if (!building->IsActive || building->IsInLimbo || !building->IsDown || building->House->HeapID != This()->Enemy)
+            continue;
+
+        if (!list.Is_Present(building->Class))
+            continue;
+
+        if (Map.Cell_Threat(building->Center_Coord().As_Cell(), This()) <= threatvalue) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+bool HouseClassExtension::AdvAI_Enemy_Has_Vulnerable_Buildings(DynamicVectorClass<BuildingTypeClass*>& list) const
+{
+    return Enemy_Building_Scan(list, 50);
+}
+
+
+bool HouseClassExtension::AdvAI_Enemy_Has_Lightly_Defended_Buildings(DynamicVectorClass<BuildingTypeClass*>& list) const
+{
+    return Enemy_Building_Scan(list, 500);
+}
+
+void HouseClassExtension::AdvAI_Bias_Team_Strength_Ratios_By_Enemy_Strength(TeamClass* team) const
+{
+    TeamClassExtension* teamext = Extension::Fetch(team);
+    HouseClassExtension* houseext = Extension::Fetch(team->House);
+
+    teamext->IsBiasedForEnemyStrength = true;
+
+    int enemytotal = houseext->EnemyBaseDefenseStrength + houseext->EnemyHeavyStrength +
+        houseext->EnemyLightStrength + houseext->EnemyNoneStrength + houseext->EnemyArtilleryStrength;
+
+    double enemyBaseDefenses = houseext->EnemyBaseDefenseStrength / (double)enemytotal;
+    double enemyHeavy = houseext->EnemyHeavyStrength / (double)enemytotal;
+    double enemyLight = houseext->EnemyLightStrength / (double)enemytotal;
+    double enemyNone = houseext->EnemyNoneStrength / (double)enemytotal;
+    double enemyArtillery = houseext->EnemyArtilleryStrength / (double)enemytotal;
+
+    if (teamext->DesiredAntiNoneRatio > 0.0) {
+        teamext->DesiredAntiNoneRatio = (teamext->DesiredAntiNoneRatio + enemyNone * 2) / 3.0;
+    }
+
+    if (teamext->DesiredAntiLightRatio > 0.0) {
+        teamext->DesiredAntiNoneRatio = (teamext->DesiredAntiLightRatio + enemyLight * 2) / 3.0;
+    }
+
+    if (teamext->DesiredAntiHeavyRatio > 0.0) {
+        teamext->DesiredAntiHeavyRatio = (teamext->DesiredAntiHeavyRatio + enemyHeavy * 2) / 3.0;
+    }
+
+    if (enemyBaseDefenses > 0.0 && teamext->DesiredArtilleryRatio > 0.0) {
+        teamext->DesiredArtilleryRatio = (teamext->DesiredArtilleryRatio + enemyBaseDefenses) / 2.0;
+    }
+
+    if (enemyArtillery > teamext->DesiredArtilleryRatio) {
+        teamext->DesiredArtilleryRatio = (teamext->DesiredArtilleryRatio + enemyArtillery) / 2.0;
+    }
+
+    EnemyStrengthStruct* strengthstruct = &houseext->EnemyAntiGroundStrength;
+
+    if (teamext->ProdFlags == PRODFLAG_NAVAL) {
+        strengthstruct = &houseext->EnemyAntiNavalStrength;
+    }
+
+    if (!teamext->IsAircraftTeam && !teamext->IsTransportTeam) {
+        int enemyCounterTotal = strengthstruct->Total();
+
+        if (enemyCounterTotal > 0) {
+            if (teamext->DesiredNoneStrengthRatio > 0.0) {
+                double enemyAntiNoneRatio = (strengthstruct->None * 2.0) / (double)enemyCounterTotal;
+                double ratio = enemyAntiNoneRatio / teamext->DesiredNoneStrengthRatio;
+                teamext->DesiredNoneStrengthRatio = teamext->DesiredNoneStrengthRatio / std::max(ratio, 0.1);
+
+                if (enemyArtillery > 0) {
+                    double multi = houseext->EnemyArtilleryStrength > 2500 ? 2.0 : 1.0;
+
+                    teamext->DesiredNoneStrengthRatio = std::max(teamext->DesiredNoneStrengthRatio * (1.0 - (enemyArtillery * multi)), 0.0);
+                }
+            }
+
+            if (teamext->DesiredLightStrengthRatio > 0.0) {
+                double enemyAntiLightRatio = strengthstruct->Light / (double)enemyCounterTotal;
+                double ratio = enemyAntiLightRatio / teamext->DesiredLightStrengthRatio;
+                teamext->DesiredLightStrengthRatio = teamext->DesiredLightStrengthRatio / std::max(ratio, 0.1);
+            }
+
+            if (teamext->DesiredHeavyStrengthRatio > 0.0) {
+                double enemyAntiHeavyRatio = strengthstruct->Heavy / (double)enemyCounterTotal;
+                double ratio = enemyAntiHeavyRatio / teamext->DesiredHeavyStrengthRatio;
+                teamext->DesiredHeavyStrengthRatio = teamext->DesiredHeavyStrengthRatio / std::max(ratio, 0.1);
+            }
+        }
+    }
+}
+
+void HouseClassExtension::AdvAI_Set_Aircraft_Team_Desired_Ratios(TeamClass* team) const
+{
+    TeamClassExtension* teamext = Extension::Fetch(team);
+    HouseClassExtension* houseext = Extension::Fetch(team->House);
+
+    switch (houseext->AdvAIAirTactic.Tactic)
+    {
+    case AIRTACTIC_ATTACK_INFANTRY:
+        teamext->DesiredAntiNoneRatio = 0.8;
+        teamext->DesiredAntiLightRatio = 0.1;
+        teamext->DesiredAntiHeavyRatio = 0.1;
+        break;
+    case AIRTACTIC_ATTACK_HARVESTERS:
+        if (Rule->HarvesterUnit[0]->Armor == ARMOR_STEEL) {
+            teamext->DesiredAntiHeavyRatio = 1.0;
+            break;
+        }
+        teamext->DesiredAntiLightRatio = 1.0;
+        break;
+    case AIRTACTIC_ATTACK_REFINERIES:
+    case AIRTACTIC_ATTACK_FACTORIES:
+        teamext->DesiredAntiLightRatio = 1.0;
+        break;
+    case AIRTACTIC_ATTACK_VEHICLES:
+        if (houseext->EnemyArtilleryStrength > 2000 || houseext->EnemyLightStrength > houseext->EnemyHeavyStrength || Rule->HarvesterUnit[0]->Armor != ARMOR_STEEL) {
+            teamext->DesiredAntiLightRatio = 0.5;
+            teamext->DesiredAntiHeavyRatio = 0.5;
+        }
+        else {
+            teamext->DesiredAntiLightRatio = 0.25;
+            teamext->DesiredAntiHeavyRatio = 0.75;
+        }
+
+        break;
+    default:
+    case AIRTACTIC_NONE:
+        teamext->DesiredAntiNoneRatio = 0.0;
+        teamext->DesiredAntiLightRatio = 0.5;
+        teamext->DesiredAntiHeavyRatio = 0.5;
+        break;
+    }
+}
+
+void HouseClassExtension::AdvAI_Set_Naval_Team_Desired_Ratios(TeamClass* team) const
+{
+    TeamClassExtension* teamext = Extension::Fetch(team);
+    HouseClassExtension* houseext = Extension::Fetch(team->House);
+
+    switch (houseext->AdvAINavalTactic.Tactic)
+    {
+    case NAVALTACTIC_DIRECT_ATTACK:
+    default:
+        teamext->DesiredAntiNoneRatio = 0.0;
+        teamext->DesiredAntiLightRatio = 0.5;
+        teamext->DesiredAntiHeavyRatio = 0.5;
+        teamext->DesiredArtilleryRatio = 0.3;
+        teamext->DesiredLightStrengthRatio = 0.5;
+        teamext->DesiredHeavyStrengthRatio = 0.5;
+        teamext->PenalizeSameTypeUnits = true;
+        houseext->AdvAI_Bias_Team_Strength_Ratios_By_Enemy_Strength(team);
+        break;
+    }
+}
+
+void HouseClassExtension::AdvAI_Set_Ground_Team_Desired_Ratios(TeamClass* team, AdvAITacticType tacticoverride) const
+{
+    TeamClassExtension* teamext = Extension::Fetch(team);
+
+    AdvAITacticType tactic = AdvAIGroundTactic.Tactic;
+    if (tacticoverride != AdvAITacticType::TACTIC_NONE)
+        tactic = tacticoverride;
+
+    switch (tactic)
+    {
+    case AdvAITacticType::TACTIC_SCOUT:
+        teamext->DesiredAntiNoneRatio = 0.75;
+        teamext->DesiredAntiLightRatio = 0.25;
+        teamext->SpeedValueMultiplier = 2.5;
+        teamext->CostWeightMultiplier = 1.0;
+        teamext->DesiredNoneStrengthRatio = 1.0;
+        break;
+    case AdvAITacticType::TACTIC_RUSH_ATTACK:
+        teamext->DesiredAntiLightRatio = 1.0;
+        teamext->SpeedValueMultiplier = team->House->Class->HeapID == 1 ? 3.0 : 4.0;
+        if (teamext->NoInfantry) {
+            teamext->DesiredLightStrengthRatio = 1.0;
+        }
+        else if (teamext->NoVehicles) {
+            teamext->DesiredNoneStrengthRatio = 1.0;
+        }
+        else {
+            teamext->DesiredLightStrengthRatio = 0.67;
+            teamext->DesiredNoneStrengthRatio = 0.33;
+        }
+        break;
+    case AdvAITacticType::TACTIC_DIRECT_ATTACK_REGULAR:
+        teamext->DesiredAntiNoneRatio = 0.33;
+        teamext->DesiredAntiLightRatio = 0.33;
+        teamext->DesiredAntiHeavyRatio = 0.33;
+        teamext->DesiredArtilleryRatio = 0.5;
+        teamext->SpeedValueMultiplier = team->House->Class->HeapID > 0 ? -0.2 : 0.0;
+        teamext->StrengthValueMultiplier = 1.2;
+        teamext->CostWeightMultiplier = 0.85;
+        teamext->DesiredNoneStrengthRatio = 0.2;
+        teamext->DesiredLightStrengthRatio = 0.35;
+        teamext->DesiredHeavyStrengthRatio = 0.45;
+        teamext->PenalizeSameTypeUnits = true;
+        AdvAI_Bias_Team_Strength_Ratios_By_Enemy_Strength(team);
+        break;
+    case AdvAITacticType::TACTIC_DIRECT_ATTACK_FAST:
+        teamext->DesiredAntiNoneRatio = 0.2;
+        teamext->DesiredAntiLightRatio = 0.5;
+        teamext->DesiredAntiHeavyRatio = 0.3;
+        teamext->SpeedValueMultiplier = 2.0;
+        teamext->CostWeightMultiplier = 0.9;
+        teamext->DesiredNoneStrengthRatio = 0.2;
+        teamext->DesiredLightStrengthRatio = 0.3;
+        teamext->DesiredHeavyStrengthRatio = 0.5;
+        teamext->PenalizeSameTypeUnits = true;
+        AdvAI_Bias_Team_Strength_Ratios_By_Enemy_Strength(team);
+        break;
+    case AdvAITacticType::TACTIC_ATTACK_HARVESTERS:
+        teamext->DesiredAntiHeavyRatio = 0.7;
+        teamext->DesiredAntiLightRatio = 0.3;
+        teamext->SpeedValueMultiplier = 2.0;
+        teamext->CloakValueMultiplier = EnemyHasSensors ? 0.3 : 2.0;
+        AdvAI_Bias_Team_Strength_Ratios_By_Enemy_Strength(team);
+        break;
+    case AdvAITacticType::TACTIC_ATTACK_REFINERIES:
+        teamext->DesiredAntiLightRatio = 0.7;
+        teamext->DesiredAntiHeavyRatio = 0.3;
+        teamext->SpeedValueMultiplier = 1.2;
+        teamext->StrengthValueMultiplier = 1.2;
+        break;
+    case AdvAITacticType::TACTIC_APC_ATTACK:
+        teamext->SpeedValueMultiplier = 0.0; // Speed doesn't matter for inf that is carried by APCs
+        teamext->DesiredAntiNoneRatio = 0.1;
+        teamext->DesiredAntiLightRatio = 0.8;
+        teamext->DesiredAntiHeavyRatio = 0.1;
+        teamext->StrengthValueMultiplier = 2.0;
+        teamext->CostWeightMultiplier = 0.75;
+        teamext->CloakValueMultiplier = 3.0;
+        break;
+    default:
+    case AdvAITacticType::TACTIC_NONE:
+        teamext->DesiredAntiNoneRatio = 0.33;
+        teamext->DesiredAntiLightRatio = 0.33;
+        teamext->DesiredAntiHeavyRatio = 0.33;
+        teamext->DesiredNoneStrengthRatio = 0.33;
+        teamext->DesiredLightStrengthRatio = 0.33;
+        teamext->DesiredHeavyStrengthRatio = 0.33;
+        AdvAI_Bias_Team_Strength_Ratios_By_Enemy_Strength(team);
+        break;
+    }
+}
+
+void HouseClassExtension::Assign_AdvAI_Tactic(AdvAITacticType tactic, int expected_duration)
+{
+    DEBUG_INFO("AdvAI: House %d: Assigning tactic %d with a duration of %d. Frame: %d\n", This()->HeapID, tactic, expected_duration, Frame);
+
+    assert(AdvAIGroundTactic.Tactic == TACTIC_NONE);
+
+    AdvAIGroundTactic = AdvAITacticInfo<AdvAITacticType>(tactic, Frame, expected_duration);
+    LastInfantryValueDebugPrintFrame = INT_MIN;
+    LastUnitValueDebugPrintFrame = INT_MIN;
+}
+
+void HouseClassExtension::Assign_AdvAI_Air_Tactic(AdvAIAirTacticType airtactic, int expected_duration)
+{
+    DEBUG_INFO("AdvAI: House %d: Assigning air tactic %d with a duration of %d. Frame: %d\n", This()->HeapID, airtactic, expected_duration, Frame);
+
+    assert(AdvAIAirTactic.Tactic == TACTIC_NONE);
+
+    AdvAIAirTactic = AdvAITacticInfo<AdvAIAirTacticType>(airtactic, Frame, expected_duration);
+    LastAircraftValueDebugPrintFrame = INT_MIN;
+}
+
+void HouseClassExtension::Assign_AdvAI_Naval_Tactic(AdvAINavalTacticType navaltactic, int expected_duration)
+{
+    DEBUG_INFO("AdvAI: House %d: Assigning naval tactic %d with a duration of %d. Frame: %d\n", This()->HeapID, navaltactic, expected_duration, Frame);
+
+    assert(AdvAINavalTactic.Tactic == TACTIC_NONE);
+
+    AdvAINavalTactic = AdvAITacticInfo<AdvAINavalTacticType>(navaltactic, Frame, expected_duration);
+    LastNavalValueDebugPrintFrame = INT_MIN;
+}
+
+void HouseClassExtension::Fill_Owned_Buildings_List(DynamicVectorClass<const BuildingTypeClass*>& owned) const
+{
+    for (int i = 0; i < Buildings.Count(); i++) {
+        BuildingClass* b2 = Buildings[i];
+        if (b2->House == This() && !b2->IsInLimbo && b2->IsDown) {
+            owned.Add(b2->Class);
+        }
+    }
+}
+
+int HouseClassExtension::Get_Building_Capture_Attempt_Index_For(BuildingClass* building) const
+{
+    for (int j = 0; j < AttemptedBuildingCaptureCount; j++)
+    {
+        auto attempt = AttemptedBuildingCaptures[j];
+
+        if (attempt.BuildingLocation == building->PositionCell) {
+            return j;
+        }
+    }
+
+    return -1;
+}
+
+bool Should_Try_To_Capture(BuildingClass* building)
+{
+    BuildingTypeClassExtension* btypeext = Extension::Fetch(building->Class);
+
+    if (btypeext->ProduceCashAmount > 0 && (building->House->Class->IsMultiplayPassive || !Session.Options.CrapEngineers)) {
+        return true;
+    }
+
+    if (building->Class->SuperWeapon != SUPER_NONE && building->House->Class->IsMultiplayPassive) {
+        return true;
+    }
+
+    return false;
+}
+
+bool HouseClassExtension::Is_Valid_Building_For_Capturing(BuildingClass* building, Cell zonecell, bool & okintheory) const
+{
+    okintheory = false;
+
+    BuildingTypeClassExtension* btypeext = Extension::Fetch(building->Class);
+
+    if (building->IsActive && !building->IsInLimbo && building->IsDown &&
+        Should_Try_To_Capture(building) &&
+        building->Class->IsCaptureable &&
+        !This()->Is_Ally(building->House) &&
+        Map.Is_Same_Zone(zonecell, building->PositionCell))
+    {
+        okintheory = true;
+
+        if (Map.Cell_Threat(building->Center_Coord().As_Cell(), This()) > 0) {
+            return false;
+        }
+
+        // Check if we haven't attempted to capture this building recently. 
+        // If we have, then don't try again - our engineer is either heading there or died on the way,
+        // meaning trying to capture it is currently too dangerous.
+        int attemptindex = Get_Building_Capture_Attempt_Index_For(building);
+        if (attemptindex > -1) {
+            auto attempt = AttemptedBuildingCaptures[attemptindex];
+
+            if (AttemptedBuildingCaptures[attemptindex].Frame > Frame - 20000) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+void HouseClassExtension::Add_Building_Capture_Attempt(BuildingClass* building)
+{
+    if (AttemptedBuildingCaptureCount >= std::size(AttemptedBuildingCaptures))
+    {
+        AttemptedBuildingCaptures[0] = AttemptedBuildingCaptureStruct(building->PositionCell, Frame);
+    }
+    else
+    {
+        AttemptedBuildingCaptures[AttemptedBuildingCaptureCount] = AttemptedBuildingCaptureStruct(building->PositionCell, Frame);
+        AttemptedBuildingCaptureCount++;
+    }
+}
+
+bool HouseClassExtension::AdvAI_Is_Recently_Attacked() const
+{
+    return This()->LATime > 0 && This()->LATime + TICKS_PER_MINUTE > Frame;
+}
+
+bool HouseClassExtension::Has_One_Of(DynamicVectorClass<BuildingTypeClass*> buildingtypes) const
+{
+    for (int i = 0; i < buildingtypes.Count(); i++)
+    {
+        if (This()->ActiveBQuantity.Value(buildingtypes[i]->HeapID) > 0)
+            return true;
+    }
+
+    return false;
+}
+
+bool HouseClassExtension::Has_Barracks() const
+{
+    return Has_One_Of(Rule->BuildBarracks);
+}
+
+bool HouseClassExtension::Has_War_Factory() const
+{
+    return Has_One_Of(Rule->BuildWeapons);
+}
+
+bool HouseClassExtension::Has_Naval_Yard() const
+{
+    return Has_One_Of(RuleExtension->BuildNavalYard);
+}
+
+bool HouseClassExtension::Has_Helipad() const
+{
+    return Has_One_Of(Rule->BuildHelipad);
+}
+
+bool HouseClassExtension::Has_Construction_Yard() const
+{
+    return Has_One_Of(Rule->BuildConst);
+}
+
+bool HouseClassExtension::Has_Radar() const
+{
+    return Has_One_Of(Rule->BuildRadar);
+}
+
+bool HouseClassExtension::Has_Tech_Center() const
+{
+    return Has_One_Of(Rule->BuildTech);
 }

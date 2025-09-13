@@ -86,6 +86,7 @@ DynamicVectorClass<RocketTypeClass*> RocketTypes;
 DynamicVectorClass<MouseTypeClass *> MouseTypes;
 DynamicVectorClass<ActionTypeClass *> ActionTypes;
 DynamicVectorClass<PrerequisiteGroupClass *> PrerequisiteGroups;
+DynamicVectorClass<AdvancedAITacticTypeClass*> AdvancedAITacticTypes;
 
 KamikazeTrackerClass* KamikazeTracker = nullptr;
 AircraftTrackerClass* AircraftTracker = nullptr;

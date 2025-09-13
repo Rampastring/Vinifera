@@ -63,6 +63,7 @@
 #include "voxelanimtypeext.h"
 #include "tiberiumext.h"
 #include "sideext.h"
+#include "advaitactictype.h"
 
 #include "extension.h"
 #include "extension_globals.h"
@@ -112,7 +113,26 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     IsUseAdvancedAI(false),
     IsAdvancedAIMultiConYard(false),
     AdvancedAIMaxExpansionDistance(150),
-    AdvancedAIMinimumRefineryCount(2)
+    AdvancedAIExpansionCloseEnough(10),
+    AdvancedAIMinimumRefineryCount(2),
+    AdvancedAIFieldOccupyMaximumDistance(20),
+    AdvancedAIExpansionDistanceComparisonRandomness(20),
+    AdvancedAIVulnerableBuildingMaxThreat(50),
+    AdvancedAILightlyDefendedBuildingMaxThreat(300),
+    AdvancedAISameUnitAntiBias(0.1),
+    AdvancedAIOverweightedArmorTypeAntiBias(5.0),
+    AdvancedAIOffensiveWeaponValueMultiplier(50),
+    AdvancedAISkipInfantryProductionValueThreshold(50),
+    AdvancedAIConditionalSkipInfantryProductionValueThreshold(100),
+    AdvancedAICriticalBaseDefenseDeficiencyThreshold(3),
+    AdvancedAIIonCannonTargeting(false),
+    AdvancedAINukeTargeting(false),
+    AdvancedAIBaseBuilding(false),
+    AdvancedAIUnitProduction(false),
+    AdvancedAIAreaGuard(false),
+    AdvancedAISmartHunt(true),
+    AdvancedAIAircraftTargeting(false),
+    AdvancedAIAircraftReuse(false)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
 
@@ -141,6 +161,16 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AIKiteChance.Add(100);
     AIKiteChance.Add(20);
     AIKiteChance.Add(0);
+
+    AdvancedAITacticSelectionDelay = TypeList<int>(DIFF_COUNT);
+    AdvancedAITacticSelectionDelay.Add(0);
+    AdvancedAITacticSelectionDelay.Add(300);
+    AdvancedAITacticSelectionDelay.Add(900);
+
+    AdvancedAIIonCannonRandomizationFactors = TypeList<int>(DIFF_COUNT);
+    AdvancedAIIonCannonRandomizationFactors.Add(1);
+    AdvancedAIIonCannonRandomizationFactors.Add(2);
+    AdvancedAIIonCannonRandomizationFactors.Add(3);
 }
 
 
@@ -153,7 +183,8 @@ RulesClassExtension::RulesClassExtension(const NoInitClass &noinit) :
     GlobalExtensionClass(noinit),
     MaxPips(noinit),
     BuildNavalYard(noinit),
-    AIKiteChance(noinit)
+    AIKiteChance(noinit),
+    AdvancedAITacticSelectionDelay(noinit)
 {
     //EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension(NoInitClass) - 0x%08X\n", (uintptr_t)(ThisPtr));
 }
@@ -181,6 +212,9 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
 
     MaxPips.Clear();
     BuildNavalYard.Clear();
+    AIKiteChance.Clear();
+    AdvancedAITacticSelectionDelay.Clear();
+    AdvancedAIIonCannonRandomizationFactors.Clear();
 
     HRESULT hr = GlobalExtensionClass::Load(pStm);
     if (FAILED(hr)) {
@@ -192,6 +226,8 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
     MaxPips.Load(pStm);
     BuildNavalYard.Load(pStm);
     AIKiteChance.Load(pStm);
+    AdvancedAITacticSelectionDelay.Load(pStm);
+    AdvancedAIIonCannonRandomizationFactors.Load(pStm);
 
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(BuildNavalYard, "BuildNavalYard");
     
@@ -216,6 +252,8 @@ HRESULT RulesClassExtension::Save(IStream *pStm, BOOL fClearDirty)
     MaxPips.Save(pStm);
     BuildNavalYard.Save(pStm);
     AIKiteChance.Save(pStm);
+    AdvancedAITacticSelectionDelay.Save(pStm);
+    AdvancedAIIonCannonRandomizationFactors.Save(pStm);
 
     return hr;
 }
@@ -344,6 +382,15 @@ void RulesClassExtension::Process(CCINIClass &ini)
     This()->Land_Types(ini);
     This()->IQ(ini);
     This()->General(ini);
+
+    /**
+     *  Read Advanced AI tactic types.
+     *
+     *  @author: Rampastring
+     */
+    AdvancedAIGroundTactics(ini);
+    AdvancedAIAirTactics(ini);
+    AdvancedAINavalTactics(ini);
 
     for (int index = 0; index < BuildingTypes.Count(); ++index) {
 
@@ -664,6 +711,11 @@ bool RulesClassExtension::Objects(CCINIClass &ini)
         ::PrerequisiteGroups[index]->Read_INI(ini);
     }
 
+    DEBUG_INFO("Rules: Processing AdvancedAITacticTypes (Count: %d)...\n", AdvancedAITacticTypes.Count());
+    for (int index = 0; index < AdvancedAITacticTypes.Count(); ++index) {
+        AdvancedAITacticTypes[index]->Read_INI(ini);
+    }
+
     return true;
 }
 
@@ -802,6 +854,28 @@ bool RulesClassExtension::AI(CCINIClass& ini)
     IsAdvancedAIMultiConYard = ini.Get_Bool(AI, "AdvancedAIMultiConYard", IsAdvancedAIMultiConYard);
     AdvancedAIMaxExpansionDistance = ini.Get_Int(AI, "AdvancedAIMaxExpansionDistance", AdvancedAIMaxExpansionDistance);
     AdvancedAIMinimumRefineryCount = ini.Get_Int(AI, "AdvancedAIMinimumRefineryCount", AdvancedAIMinimumRefineryCount);
+    AdvancedAIExpansionCloseEnough = ini.Get_Int(AI, "AdvancedAIExpansionCloseEnough", AdvancedAIExpansionCloseEnough);
+    AdvancedAIFieldOccupyMaximumDistance = ini.Get_Int(AI, "AdvancedAIFieldOccupyMaximumDistance", AdvancedAIFieldOccupyMaximumDistance);
+    AdvancedAITacticSelectionDelay = ini.Get_Integers(AI, "AdvancedAITacticSelectionDelay", AdvancedAITacticSelectionDelay);
+    AdvancedAIIonCannonRandomizationFactors = ini.Get_Integers(AI, "AdvancedAIIonCannonRandomizationFactors", AdvancedAIIonCannonRandomizationFactors);
+    AdvancedAIExpansionDistanceComparisonRandomness = ini.Get_Int(AI, "AdvancedAIExpansionDistanceComparisonRandomness", AdvancedAIExpansionDistanceComparisonRandomness);
+    AdvancedAIVulnerableBuildingMaxThreat = ini.Get_Int(AI, "AdvancedAIVulnerableBuildingMaxThreat", AdvancedAIVulnerableBuildingMaxThreat);
+    AdvancedAILightlyDefendedBuildingMaxThreat = ini.Get_Int(AI, "AdvancedAILightlyDefendedBuildingMaxThreat", AdvancedAILightlyDefendedBuildingMaxThreat);
+    AdvancedAISameUnitAntiBias = ini.Get_Double(AI, "AdvancedAISameUnitAntiBias", AdvancedAISameUnitAntiBias);
+    AdvancedAIOverweightedArmorTypeAntiBias = ini.Get_Double(AI, "AdvancedAIOverweightedArmorTypeAntiBias", AdvancedAIOverweightedArmorTypeAntiBias);
+    AdvancedAIOffensiveWeaponValueMultiplier = ini.Get_Int(AI, "AdvancedAIOffensiveWeaponValueMultiplier", AdvancedAIOffensiveWeaponValueMultiplier);
+    AdvancedAISkipInfantryProductionValueThreshold = ini.Get_Int(AI, "AdvancedAISkipInfantryProductionValueThreshold", AdvancedAISkipInfantryProductionValueThreshold);
+    AdvancedAIConditionalSkipInfantryProductionValueThreshold = ini.Get_Int(AI, "AdvancedAIConditionalSkipInfantryProductionValueThreshold", AdvancedAIConditionalSkipInfantryProductionValueThreshold);
+    AdvancedAICriticalBaseDefenseDeficiencyThreshold = ini.Get_Int(AI, "AdvancedAICriticalBaseDefenseDeficiencyThreshold", AdvancedAICriticalBaseDefenseDeficiencyThreshold);
+    AdvancedAIIonCannonTargeting = ini.Get_Bool(AI, "AdvancedAIIonCannonTargeting", AdvancedAIIonCannonTargeting);
+    AdvancedAINukeTargeting = ini.Get_Bool(AI, "AdvancedAINukeTargeting", AdvancedAINukeTargeting);
+    AdvancedAIBaseBuilding = ini.Get_Bool(AI, "AdvancedAIBaseBuilding", AdvancedAIBaseBuilding);
+    AdvancedAIUnitProduction = ini.Get_Bool(AI, "AdvancedAIUnitProduction", AdvancedAIUnitProduction);
+    AdvancedAIAreaGuard = ini.Get_Bool(AI, "AdvancedAIAreaGuard", AdvancedAIAreaGuard);
+    AdvancedAISmartHunt = ini.Get_Bool(AI, "AdvancedAISmartHunt", AdvancedAISmartHunt);
+    AdvancedAIAircraftTargeting = ini.Get_Bool(AI, "AdvancedAIAircraftTargeting", AdvancedAIAircraftTargeting);
+    AdvancedAIAircraftReuse = ini.Get_Bool(AI, "AdvancedAIAircraftReuse", AdvancedAIAircraftReuse);
+
     BuildNavalYard = ::TGet_TypeList(ini, AI, "BuildNavalYard", BuildNavalYard);
 
     return true;
@@ -942,6 +1016,126 @@ bool RulesClassExtension::Rockets(CCINIClass &ini)
                 DEV_DEBUG_INFO("Rules: Found RocketType \"%s\".\n", buf);
             } else {
                 DEV_DEBUG_WARNING("Rules: Error processing RocketType \"%s\"!\n", buf);
+            }
+        }
+    }
+
+    return counter > 0;
+}
+
+
+/**
+ *  Fetch all Advanced AI ground tactic types.
+ *
+ *  @author: Rampastring
+ */
+bool RulesClassExtension::AdvancedAIGroundTactics(CCINIClass& ini)
+{
+    //EXT_DEBUG_TRACE("RulesClassExtension::AdvancedAIGroundTactics - 0x%08X\n", (uintptr_t)(This()));
+
+    static const char* const ADVAITACTICTYPES = "AdvancedAIGroundTactics";
+
+    char buf[128];
+    const AdvancedAITacticTypeClass* tactictype;
+
+    int counter = ini.Entry_Count(ADVAITACTICTYPES);
+    for (int index = 0; index < counter; ++index) {
+        const char* entry = ini.Get_Entry(ADVAITACTICTYPES, index);
+
+        /**
+         *  Get a tactic entry.
+         */
+        if (ini.Get_String(ADVAITACTICTYPES, entry, buf, sizeof(buf))) {
+
+            /**
+             *  Find or create a rocket of the name specified.
+             */
+            tactictype = AdvancedAITacticTypeClass::Find_Or_Make(buf);
+            if (tactictype) {
+                DEV_DEBUG_INFO("Rules: Found AdvancedAITactic \"%s\".\n", buf);
+            }
+            else {
+                DEV_DEBUG_WARNING("Rules: Error processing AdvancedAITactic \"%s\"!\n", buf);
+            }
+        }
+    }
+
+    return counter > 0;
+}
+
+/**
+ *  Fetch all Advanced AI air tactic types.
+ *
+ *  @author: Rampastring
+ */
+bool RulesClassExtension::AdvancedAIAirTactics(CCINIClass& ini)
+{
+    //EXT_DEBUG_TRACE("RulesClassExtension::AdvancedAIAirTactics - 0x%08X\n", (uintptr_t)(This()));
+
+    static const char* const ADVAITACTICTYPES = "AdvancedAIAirTactics";
+
+    char buf[128];
+    const AdvancedAITacticTypeClass* tactic;
+
+    int counter = ini.Entry_Count(ADVAITACTICTYPES);
+    for (int index = 0; index < counter; ++index) {
+        const char* entry = ini.Get_Entry(ADVAITACTICTYPES, index);
+
+        /**
+         *  Get a tactic entry.
+         */
+        if (ini.Get_String(ADVAITACTICTYPES, entry, buf, sizeof(buf))) {
+
+            /**
+             *  Find or create a rocket of the name specified.
+             */
+            tactic = AdvancedAITacticTypeClass::Find_Or_Make(buf, true);
+            if (tactic) {
+                DEV_DEBUG_INFO("Rules: Found AdvancedAITactic \"%s\".\n", buf);
+                ASSERT(tactic->IsAir);
+            }
+            else {
+                DEV_DEBUG_WARNING("Rules: Error processing AdvancedAITactic \"%s\"!\n", buf);
+            }
+        }
+    }
+
+    return counter > 0;
+}
+
+/**
+ *  Fetch all Advanced AI naval tactic types.
+ *
+ *  @author: Rampastring
+ */
+bool RulesClassExtension::AdvancedAINavalTactics(CCINIClass& ini)
+{
+    //EXT_DEBUG_TRACE("RulesClassExtension::AdvancedAINavalTactics - 0x%08X\n", (uintptr_t)(This()));
+
+    static const char* const ADVAITACTICTYPES = "AdvancedAINavalTactics";
+
+    char buf[128];
+    const AdvancedAITacticTypeClass* tactic;
+
+    int counter = ini.Entry_Count(ADVAITACTICTYPES);
+    for (int index = 0; index < counter; ++index) {
+        const char* entry = ini.Get_Entry(ADVAITACTICTYPES, index);
+
+        /**
+         *  Get a tactic entry.
+         */
+        if (ini.Get_String(ADVAITACTICTYPES, entry, buf, sizeof(buf))) {
+
+            /**
+             *  Find or create a rocket of the name specified.
+             */
+            tactic = AdvancedAITacticTypeClass::Find_Or_Make(buf, false, true);
+            if (tactic) {
+                DEV_DEBUG_INFO("Rules: Found AdvancedAITactic \"%s\".\n", buf);
+                ASSERT(tactic->IsNaval);
+            }
+            else {
+                DEV_DEBUG_WARNING("Rules: Error processing AdvancedAITactic \"%s\"!\n", buf);
             }
         }
     }

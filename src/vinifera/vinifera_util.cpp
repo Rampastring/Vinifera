@@ -296,7 +296,7 @@ void Vinifera_Draw_Version_Text(Surface *surface, bool pre_init)
         /**
          *  Draw the version string.
          */
-        // Simple_Text_Print(Vinifera_Version_Git_String(), *surface, surfrect, version_pos, *NormalDrawer, version_color, back_color, style);
+        Simple_Text_Print(Vinifera_Version_Git_String(), *surface, surfrect, version_pos, *NormalDrawer, version_color, back_color, style);
 
         /**
          *  Draw the warning string.
@@ -314,7 +314,7 @@ void Vinifera_Draw_Version_Text(Surface *surface, bool pre_init)
         /**
          *  Draw the vinifera name string.
          */
-        // Simple_Text_Print(Vinifera_Name_String(), *surface, surfrect, vinifera_pos, *NormalDrawer, version_color, back_color, style);
+        Simple_Text_Print(Vinifera_Name_String(), *surface, surfrect, vinifera_pos, *NormalDrawer, version_color, back_color, style);
 #else
 
         /**

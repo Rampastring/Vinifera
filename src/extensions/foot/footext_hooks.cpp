@@ -48,15 +48,20 @@
 #include "rulesext.h"
 #include "session.h"
 #include "team.h"
+#include "teamext.h"
 #include "teamtypeext.h"
+#include "terrain.h"
+#include "terraintype.h"
 #include "unit.h"
 #include "unitext.h"
 #include "unittype.h"
+#include "warheadtype.h"
 #include "weapontype.h"
 #include "extension.h"
 #include "fatal.h"
 #include "asserthandler.h"
 #include "debughandler.h"
+#include "msgbox.h"
 
 #include "hooker.h"
 #include "hooker_macros.h"
@@ -85,6 +90,7 @@ public:
     bool _Unlimbo(const Coord& coord, Dir256 dir);
     bool _Limbo();
     int  _Do_MISSION_HUNT();
+    int  _Do_MISSION_GUARD_AREA();
 private:
     void _Draw_Line(Coord& start_coord, Coord& end_coord, bool is_dashed, bool is_thick, bool is_dropshadow, unsigned line_color, unsigned drop_color, int rate) const;
 };
@@ -437,6 +443,8 @@ void _Vinifera_FootClass_Search_For_Tiberium_Check_Tiberium_Value_Of_Cell(FootCl
  */
 Cell FootClassExt::_Search_For_Tiberium(int rad, bool a2)
 {
+    Cell aiweightedcell = CELL_NONE;
+
     if (!Owner_HouseClass()->Is_Human_Player() &&
         RTTI == RTTI_UNIT &&
         ((UnitClass*)this)->Class->IsToHarvest &&
@@ -445,9 +453,11 @@ Cell FootClassExt::_Search_For_Tiberium(int rad, bool a2)
     {
         /**
          *  Use weighted tiberium-seeking algorithm for AI in multiplayer.
+         *  Record the returned cell so we can compare it to the regular algorithm's
+         *  results later on.
          */
 
-        return Search_For_Tiberium_Weighted(rad);
+        aiweightedcell = Search_For_Tiberium_Weighted(rad);
     }
 
     Coord center_coord = Center_Coord();
@@ -493,8 +503,29 @@ Cell FootClassExt::_Search_For_Tiberium(int rad, bool a2)
         if (besttiberiumvalue != -1)
             break;
     }
+    
+    if (aiweightedcell == CELL_NONE)
+        return besttiberiumcell;
 
-    return besttiberiumcell;
+    if (besttiberiumcell == CELL_NONE)
+        return aiweightedcell;
+
+    /**
+     *  The special AI algorithm is good for finding richer distant tiberium fields, 
+     *  such as blue tiberium and gems that the regular search might not be able to find.
+     *  However, if both have found the same kind of tiberium, the regular algorithm likely
+     *  gave a closer result.
+     */
+    if (Map[aiweightedcell].Overlay == Map[besttiberiumcell].Overlay)
+        return besttiberiumcell;
+
+    int distanceaiweighted = Distance(aiweightedcell.As_Coord());
+    int distanceregular = Distance(besttiberiumcell.As_Coord());
+
+    if (distanceaiweighted > distanceregular * 2 && distanceaiweighted > distanceregular + (CELL_LEPTON * 6))
+        return besttiberiumcell;
+
+    return aiweightedcell;
 }
 
 
@@ -805,11 +836,11 @@ bool Respectable_Target_Something_Nearby(FootClassExt* foot, Coord & coord, Thre
     **	Determine that if there is an existing target it is still legal
     **	and within range.
     */
-    if (foot->TarCom != NULL) {
+    if (foot->TarCom != nullptr) {
         if ((threat & THREAT_RANGE)) {
             WeaponSlotType primary = foot->What_Weapon_Should_I_Use(foot->TarCom);
             if (!foot->In_Range(foot->TarCom->Center_Coord(), primary)) {
-                foot->Assign_Target(NULL);
+                foot->Assign_Target(nullptr);
             }
         }
     }
@@ -818,14 +849,14 @@ bool Respectable_Target_Something_Nearby(FootClassExt* foot, Coord & coord, Thre
     **	If there is no target, then try to find one and assign it as
     **	the target for this unit.
     */
-    if (foot->TarCom == NULL) {
+    if (foot->TarCom == nullptr) {
         foot->Assign_Target(foot->Greatest_Threat(threat, coord, false));
     }
 
     /*
     **	Return with answer to question: Does this unit now have a target?
     */
-    return(foot->TarCom != NULL);
+    return(foot->TarCom != nullptr);
 }
 
 
@@ -837,9 +868,9 @@ bool Respectable_Target_Something_Nearby(FootClassExt* foot, Coord & coord, Thre
 int FootClassExt::_Do_MISSION_HUNT()
 {
     int delay = Current_Mission_Control().Normal_Delay() + Random_Pick(0, 2);
-    bool smarthunt = true;
+    bool smarthunt = RuleExtension->AdvancedAISmartHunt;
 
-    if (Team != nullptr)
+    if (smarthunt && Team != nullptr)
     {
         auto teamtypeext = Extension::Fetch(Team->Class);
         smarthunt = teamtypeext->SmartHunt;
@@ -862,27 +893,28 @@ int FootClassExt::_Do_MISSION_HUNT()
         // Without smart hunt, use original game code.
 
         if (!Target_Something_Nearby(PositionCoord, THREAT_NORMAL)) {
+
             Random_Animate();
             return delay;
         }
     }
 
     InfantryClass* infantry = RTTI == RTTI_INFANTRY ? (InfantryClass*)this : NULL;
-    if (infantry != NULL && infantry->Class->IsEngineer && !infantry->Class->IsBomber && !infantry->Has_Ability(ABILITY_C4)) {
+    if (infantry != nullptr && infantry->Class->IsEngineer && !infantry->Class->IsBomber && !infantry->Has_Ability(ABILITY_C4)) {
         Assign_Destination(TarCom);
         Assign_Mission(MISSION_CAPTURE);
         if (Ready_To_Commence()) {
             Commence();
         }
     }
-    else if (infantry != NULL && (infantry->Class->IsBomber || infantry->Has_Ability(ABILITY_C4)) && dynamic_cast<BuildingClass*>(TarCom)) {
+    else if (infantry != nullptr && (infantry->Class->IsBomber || infantry->Has_Ability(ABILITY_C4)) && dynamic_cast<BuildingClass*>(TarCom)) {
         Assign_Destination(TarCom);
         Assign_Mission(MISSION_SABOTAGE);
         if (Ready_To_Commence()) {
             Commence();
         }
     }
-    else if (infantry != NULL && infantry->Class->IsVehicleThief) {
+    else if (infantry != nullptr && infantry->Class->IsVehicleThief) {
         Assign_Destination(TarCom);
         Assign_Mission(MISSION_CAPTURE);
         if (Ready_To_Commence()) {
@@ -902,35 +934,60 @@ int FootClassExt::_Do_MISSION_HUNT()
             {
                 bool inrange = In_Range(targetcoord, weaponslot);
 
-                // If we have a target in range and we cannot fire while moving, then stop movement so we can fire.
-                if (inrange && RTTI != RTTI_AIRCRAFT && (RTTI != RTTI_UNIT || reinterpret_cast<const UnitTypeClass*>(TClass)->IsNoFireWhileMoving))
+                if (inrange)
                 {
-                    Assign_Destination(nullptr);
-                    approach_target = false;
-                }
-                else if (inrange && RTTI == RTTI_UNIT && !reinterpret_cast<const UnitTypeClass*>(TClass)->IsNoFireWhileMoving) 
-                {
-                    // Allow the AI to kite if it's not too much for the player's skill level.
-                    int kitechance = RuleExtension->AIKiteChance[House->Difficulty];
+                    int targetspeed = 0;
+                    int targetrange = 0;
+                    WeaponSlotType theirweaponslot = WEAPON_SLOT_PRIMARY;
+                    TechnoClass* tarcom_as_techno = ::As_Techno(TarCom);
 
-                    if (kitechance > 0 && (kitechance >= 100 || Percent_Chance(kitechance))) {
-                        // If the target is in range, we can fire while moving AND we outrange the target by at least a cell,
-                        // try to maximize our distance to the target.
+                    if (tarcom_as_techno != nullptr) {
+                        targetspeed = tarcom_as_techno->TClass->MaxSpeed;
 
-                        int distance = Distance(targetcoord);
-                        WeaponSlotType weaponslot = What_Weapon_Should_I_Use(TarCom);
-                        const WeaponTypeClass* ourweapon = TClass->Fetch_Weapon_Info(weaponslot).Weapon;
-                        int distancediff = std::abs(ourweapon->Range - distance);
+                        theirweaponslot = tarcom_as_techno->What_Weapon_Should_I_Use(this);
 
-                        // No point in moving unless we're at least a cell away from optimal distance
-                        if (distancediff > CELL_LEPTON_H && In_Range(targetcoord, weaponslot))
+                        if (theirweaponslot != WEAPON_SLOT_NONE) {
+                            const WeaponTypeClass* theirweapon = tarcom_as_techno->TClass->Fetch_Weapon_Info(theirweaponslot).Weapon;
+                            if (theirweapon != nullptr) {
+                                targetrange = theirweapon->Range;
+                            }
+                        }
+                    }
+
+                    int ourrange = ourweapon->Range;
+
+                    if (RTTI == RTTI_UNIT) 
+                    {
+                        const UnitTypeClass* unittype = reinterpret_cast<const UnitTypeClass*>(TClass);
+                        bool cankite = ((!unittype->IsNoFireWhileMoving && unittype->IsTurretEquipped) || (!Arm.Expired() && ourweapon->ROF > TICKS_PER_SECOND && unittype->MaxSpeed > targetspeed))
+                            && ourrange >= targetrange + CELL_LEPTON
+                            && In_Range(targetcoord, weaponslot)
+                            && tarcom_as_techno != nullptr;
+
+                        // If the target is immobile and we already outrange it, there is no need to kite.
+                        if (cankite && !::Is_Foot(TarCom)) {
+                            if (targetrange <= 0) {
+                                cankite = false;
+                            }
+                            else if (!reinterpret_cast<TechnoClass*>(TarCom)->In_Range(Center_Coord(), theirweaponslot)) {
+                                cankite = false;
+                            }
+                        }
+
+                        if (cankite)
                         {
-                            TechnoClass* tarcom_as_techno = ::As_Techno(TarCom);
-                            if (tarcom_as_techno != nullptr)
-                            {
-                                const WeaponTypeClass* theirweapon = tarcom_as_techno->TClass->Fetch_Weapon_Info(tarcom_as_techno->What_Weapon_Should_I_Use(this)).Weapon;
+                            // Allow the AI to kite if it's not too much for the player's skill level.
+                            int kitechance = RuleExtension->AIKiteChance[House->Difficulty];
 
-                                if (theirweapon != nullptr && ourweapon->Range > theirweapon->Range + CELL_LEPTON)
+                            if (kitechance > 0 && (kitechance >= 100 || Percent_Chance(kitechance)))
+                            {
+                                // If the target is in range, we can fire while moving AND we outrange the target by at least a cell,
+                                // try to maximize our distance to the target.
+
+                                int distance = Distance(targetcoord);
+                                int distancediff = std::abs(ourweapon->Range - distance);
+
+                                if (tarcom_as_techno != nullptr)
                                 {
                                     Dir256 dir = Direction256(targetcoord, PositionCoord);
                                     Cell maximumRangeCell = Coord_Move(targetcoord, DirType(dir), ourweapon->Range).As_Cell();
@@ -942,6 +999,63 @@ int FootClassExt::_Do_MISSION_HUNT()
                                     }
                                 }
                             }
+                        }
+
+                        // If we didn't end up kiting, just stop so we can fire - we are already in range.
+                        if (approach_target) {
+                            Assign_Destination(nullptr);
+                            approach_target = false;
+                        }
+                    }
+                    else if (RTTI == RTTI_INFANTRY)
+                    {
+                        // If we are significantly longer-ranged and faster than the enemy, we can kite them.
+                        bool cankite = (!Arm.Expired() && TClass->MaxSpeed > targetspeed)
+                            && ourrange >= targetrange + CELL_LEPTON
+                            && In_Range(targetcoord, weaponslot)
+                            && tarcom_as_techno != nullptr;
+
+                        // If the target is immobile and we already outrange it, there is no need to kite.
+                        if (cankite && !::Is_Foot(TarCom)) {
+                            if (targetrange <= 0) {
+                                cankite = false;
+                            }
+                            else if (!reinterpret_cast<TechnoClass*>(TarCom)->In_Range(Center_Coord(), theirweaponslot)) {
+                                cankite = false;
+                            }
+                        }
+
+                        if (cankite)
+                        {
+                            // Allow the AI to kite if it's not too much for the player's skill level.
+                            int kitechance = RuleExtension->AIKiteChance[House->Difficulty];
+
+                            if (kitechance > 0 && (kitechance >= 100 || Percent_Chance(kitechance)))
+                            {
+                                // If the target is in range, we can fire while moving AND we outrange the target by at least a cell,
+                                // try to maximize our distance to the target.
+
+                                int distance = Distance(targetcoord);
+                                int distancediff = std::abs(ourweapon->Range - distance);
+
+                                if (tarcom_as_techno != nullptr)
+                                {
+                                    Dir256 dir = Direction256(targetcoord, PositionCoord);
+                                    Cell maximumRangeCell = Coord_Move(targetcoord, DirType(dir), ourweapon->Range).As_Cell();
+
+                                    Cell nearbyloc = Map.Nearby_Location(maximumRangeCell, TClass->Speed, Map.Get_Cell_Zone(PositionCell, TClass->MZone, IsOnBridge), TClass->MZone, false, Point2D(1, 1), false, false, false, true, maximumRangeCell);
+                                    if (nearbyloc != CELL_NONE) {
+                                        Assign_Destination(&Map[nearbyloc]);
+                                        approach_target = false;
+                                    }
+                                }
+                            }
+                        }
+
+                        // If we didn't end up kiting, just stop so we can fire - we are already in range.
+                        if (approach_target) {
+                            Assign_Destination(nullptr);
+                            approach_target = false;
                         }
                     }
                 }
@@ -956,6 +1070,57 @@ int FootClassExt::_Do_MISSION_HUNT()
     return delay;
 }
 
+void FootClass_AI_Stuck_In_WarFactory_Check(FootClass* foot)
+{
+    if (foot->RTTI == RTTI_UNIT && foot->NavCom == nullptr && foot->Mission != MISSION_MOVE)
+    {
+        BuildingClass* bldg = Map[foot->Center_Coord()].Cell_Building();
+
+        if (bldg != nullptr && bldg->Class->IsWeaponsFactory) {
+            FootClassExtension* footext = Extension::Fetch(foot);
+
+            if (footext->WFStuckFrame <= 0) {
+                footext->WFStuckFrame = Frame;
+            }
+            else if (Frame > footext->WFStuckFrame + 1000) {
+                DEBUG_INFO("FootClass::AI: scattering unit that has been stuck in a war factory for too long\n");
+                footext->WFStuckFrame = Frame;
+                foot->Scatter(Coord(-1, -1, -1), true, true);
+            }
+        }
+    }
+}
+
+void FootClass_AI_Abandon_Invalid_Targets(FootClass* this_ptr)
+{
+    if (!this_ptr->House->Is_Human_Player())
+    {
+        if (this_ptr->TarCom != nullptr)
+        {
+            if (this_ptr->TarCom->RTTI == RTTI_CELL) {
+                if (reinterpret_cast<CellClass*>(this_ptr->TarCom)->Overlay == OVERLAY_NONE) {
+                    this_ptr->Assign_Target(nullptr);
+                }
+            }
+            else if (this_ptr->TarCom->RTTI == RTTI_TERRAIN) 
+            {
+                // Also stop firing if we are firing at a tree, but don't have a weapon that could destroy wood.
+                // OR if the tree is indestructible.
+
+                if (reinterpret_cast<TerrainClass*>(this_ptr->TarCom)->Class->IsImmune) {
+                    this_ptr->Assign_Target(nullptr);
+                }
+                else {
+                    WeaponSlotType wslot = this_ptr->What_Weapon_Should_I_Use(this_ptr->TarCom);
+
+                    if (wslot == WEAPON_SLOT_NONE || !this_ptr->TClass->Fetch_Weapon_Info(wslot).Weapon->WarheadPtr->IsWoodDestroyer) {
+                        this_ptr->Assign_Target(nullptr);
+                    }
+                }
+            }
+        }
+    }
+}
 
 /**
  *  There is a bug in the game where sometimes AI-owned units start firing at a wall,
@@ -971,11 +1136,9 @@ DECLARE_PATCH(_FootClass_AI_Hook_Patch)
 {
     GET_REGISTER_STATIC(FootClass*, this_ptr, esi);
 
-    if (this_ptr->TarCom != nullptr && this_ptr->TarCom->RTTI == RTTI_CELL && !this_ptr->House->Is_Human_Player()) {
-        if (reinterpret_cast<CellClass*>(this_ptr->TarCom)->Overlay == OVERLAY_NONE) {
-            this_ptr->Assign_Target(nullptr);
-        }
-    }
+    FootClass_AI_Abandon_Invalid_Targets(this_ptr);
+
+    // FootClass_AI_Stuck_In_WarFactory_Check(this_ptr);
 
     // Restore stolen bytes / code
     this_ptr->field_34A = false;
@@ -985,6 +1148,172 @@ DECLARE_PATCH(_FootClass_AI_Hook_Patch)
     }
 
     JMP(0x004A58C3);
+}
+
+
+/*
+**	Adjusts area guard mode for Advanced AI.
+**
+**  Author: Rampastring, ZivDero
+*/
+int FootClassExt::_Do_MISSION_GUARD_AREA()
+{
+    if (!House->Is_Human_Player() && NavQueue.Count() > 0 && NavCom == nullptr && NavQueue[0] == ArchiveTarget) {
+        AbstractClass* first = NavQueue[0];
+        if (first != nullptr) {
+            Assign_Destination(first);
+            NavQueue.Delete(0);
+            if (IsNavQueueLoop) {
+                NavQueue.Add(first);
+            }
+        }
+    }
+
+    /*
+    **
+    */
+    if (ArchiveTarget != nullptr && ArchiveTarget->RTTI == RTTI_CELL) {
+
+        BuildingClass* building = Map[ArchiveTarget->Center_Coord()].Cell_Building();
+        if (building != nullptr && House->Is_Ally(building->House) && !House->Is_Human_Player() && (RTTI != RTTI_UNIT || !reinterpret_cast<UnitClass*>(this)->Class->IsToHarvest)) {
+
+            Cell nearby = Map.Nearby_Location(PositionCell, SPEED_TRACK, Map.Get_Cell_Zone((Cell)ArchiveTarget->Center_Coord()));
+            if (nearby != CELL_NONE) {
+                Assign_Archive_Target(&Map[nearby]);
+            }
+        }
+    }
+
+    if (RTTI == RTTI_UNIT && reinterpret_cast<UnitClass*>(this)->Class->IsToHarvest) {
+        Assign_Mission(MISSION_HARVEST);
+        Commence();
+        return(1 + Random_Pick(1, 10));
+    }
+
+    /*
+    **	Ensure that the archive target is valid.
+    */
+    if (ArchiveTarget == nullptr && MissionQueue == MISSION_NONE) {
+        Assign_Archive_Target(&Map[(Coord&)PositionCoord]);
+    }
+
+    /*
+    **	If this is a bomber type infantry and the current target is a building, then go into
+    **	sabotage mode if not already.
+    */
+    // TODO dynamic_cast here should be As_InfantryClass and As_BuildingClass but doesn't match..
+    InfantryClass* infantry = dynamic_cast<InfantryClass*>(this);
+    if (!House->Is_Human_Player() && infantry != NULL && (infantry->Class->IsBomber || infantry->Has_Ability(ABILITY_C4)) && Mission != MISSION_SABOTAGE && dynamic_cast<BuildingClass*>(TarCom) != NULL) {
+        Assign_Mission(MISSION_SABOTAGE);
+        return(1);
+    }
+
+    /*
+    **	Make sure that the unit has not strayed too far from the home position.
+    **	If it has, then race back to it.
+    */
+    int maxrange = (int)(Threat_Range(1) * 0.75);
+
+    if (ArchiveTarget != nullptr) {
+
+        // Advanced AI: Invalidate our target if it is not in range.
+        if (RuleExtension->AdvancedAIAreaGuard && Team != nullptr && Extension::Fetch(Team)->IsAdvAITeam && TarCom != nullptr && !In_Range_Of(TarCom))
+        {
+            Assign_Target(nullptr);
+        }
+
+        if (!IsFiring && NavCom == nullptr && Distance(ArchiveTarget) > maxrange && 
+            (!RuleExtension->AdvancedAIAreaGuard || TarCom == nullptr))
+        {
+            Assign_Target(nullptr);
+            Assign_Destination(ArchiveTarget);
+        }
+
+        if (TarCom == nullptr) {
+            Target_Something_Nearby(ArchiveTarget->Center_Coord(), THREAT_RANGE);
+
+            if (TarCom == nullptr) {
+
+                Target_Something_Nearby(ArchiveTarget->Center_Coord(), THREAT_AREA);
+
+                if (TarCom != nullptr) {
+                    return(1);
+                }
+
+                Random_Animate();
+            }
+            else
+            {
+                Assign_Destination(nullptr);
+                return(1);
+            }
+        }
+        else {
+            Approach_Target();
+        }
+    }
+
+    int dtime = Current_Mission_Control().Normal_Delay();
+    if (RTTI == RTTI_AIRCRAFT) {
+        dtime *= 2;
+    }
+    return(dtime + Random_Pick(1, 5));
+}
+
+
+/**
+ *  #issue-202
+ *
+ *  For harvester queue jumping.
+ *  Make harvesters seek for a new refinery to unload into when their
+ *  existing refinery has dumped them for a different harvester.
+ *
+ *  @author: Rampastring
+ */
+DECLARE_PATCH(_FootClass_Mission_Enter_Seek_New_Refinery_After_Dropped)
+{
+    GET_REGISTER_STATIC(FootClass*, this_ptr, esi);
+    static UnitTypeClass* unittype;
+
+    /**
+     *  Check if we're a harvester.
+     */
+
+    if (this_ptr->What_Am_I() != RTTI_UNIT) {
+
+        /**
+         *  We're not a unit and so we can't be a harvester, don't change original behaviour.
+         */
+        goto original_code;
+    }
+
+    unittype = reinterpret_cast<UnitClass*>(this_ptr)->Class;
+
+    if (this_ptr->House->Is_Human_Player() || (!unittype->IsToHarvest && !unittype->IsToVeinHarvest)) {
+
+        /**
+         *  We're not a harvester, don't change original behaviour.
+         */
+        goto original_code;
+    }
+
+    /**
+     *  We're a harvester, try to find a new refinery instead of going idle.
+     */
+    this_ptr->Assign_Mission(MISSION_HARVEST);
+    goto commence_mission;
+
+    /**
+     *  Put the object into idle mode and continue on to commencing the mission.
+     */
+original_code:
+    this_ptr->Enter_Idle_Mode(false, true);
+
+    /**
+     *  Commences the given mission and exits the function afterwards.
+     */
+commence_mission:
+    JMP(0x004A49B1);
 }
 
 
@@ -1005,4 +1334,6 @@ void FootClassExtension_Hooks()
     Patch_Jump(0x004A2C70, &FootClassExt::_Unlimbo);
     Patch_Jump(0x004A5E80, &FootClassExt::_Limbo);
     Patch_Jump(0x004A1BE0, &FootClassExt::_Do_MISSION_HUNT);
+    Patch_Jump(0x004A2830, &FootClassExt::_Do_MISSION_GUARD_AREA);
+    Patch_Jump(0x004A49A3, &_FootClass_Mission_Enter_Seek_New_Refinery_After_Dropped);
 }

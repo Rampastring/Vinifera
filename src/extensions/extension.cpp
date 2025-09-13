@@ -1092,7 +1092,7 @@ void Extension::Free_Heaps()
     TiberiumExtensions.Clear();
     //TActionExtensions.Clear();                                                // Not yet implemented
     TEventExtensions.Clear();
-     WeaponTypeExtensions.Clear();
+    WeaponTypeExtensions.Clear();
     WarheadTypeExtensions.Clear();
     //WaypointExtensions.Clear();                                               // Not yet implemented
     //TubeExtensions.Clear();                                                   // Not yet implemented

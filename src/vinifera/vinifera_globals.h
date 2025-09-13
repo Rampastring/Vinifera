@@ -45,6 +45,7 @@ class RocketTypeClass;
 class MouseTypeClass;
 class ActionTypeClass;
 class PrerequisiteGroupClass;
+class AdvancedAITacticTypeClass;
 
 
 extern bool Vinifera_DeveloperMode;
@@ -124,6 +125,7 @@ extern DynamicVectorClass<RocketTypeClass *> RocketTypes;
 extern DynamicVectorClass<MouseTypeClass *> MouseTypes;
 extern DynamicVectorClass<ActionTypeClass *> ActionTypes;
 extern DynamicVectorClass<PrerequisiteGroupClass*> PrerequisiteGroups;
+extern DynamicVectorClass<AdvancedAITacticTypeClass*> AdvancedAITacticTypes;
 
 
 /**

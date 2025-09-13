@@ -55,6 +55,7 @@
 #include "beacon.h"
 #include "layer.h"
 #include "prerequisitegroup.h"
+#include "advaitactictype.h"
 #include "rockettype.h"
 
 
@@ -93,6 +94,11 @@ static void _Free_Heaps_Intercept()
      */
     while (RocketTypes.Count()) {
         delete RocketTypes[0];
+    }
+    Delete_Marked();
+
+    while (AdvancedAITacticTypes.Count()) {
+         delete AdvancedAITacticTypes[0];
     }
     Delete_Marked();
 

@@ -39,6 +39,13 @@
 class AircraftTypeClass;
 class BSurface;
 
+enum class TechnoTypeBuildability
+{
+    BUILDABILITY_NORMAL = 0,
+    BUILDABILITY_HUMAN_ONLY = 1,
+    BUILDABILITY_AI_ONLY = 2
+};
+
 
 class TechnoTypeClassExtension : public ObjectTypeClassExtension
 {
@@ -67,6 +74,18 @@ public:
     static ProductionFlags Get_Production_Flags(const TechnoClass* techno) { return Get_Production_Flags(techno->TClass); }
     static ProductionFlags Get_Production_Flags(const TechnoTypeClass* ttype) { return Get_Production_Flags(Extension::Fetch(ttype)); }
     static ProductionFlags Get_Production_Flags(const TechnoTypeClassExtension* ttype_ext);
+
+    int AntiNoneArmorValue() const;
+    int AntiLightArmorValue() const;
+    int AntiHeavyArmorValue() const;
+    int AntiNoneArmorValueAA() const;
+    int AntiLightArmorValueAA() const;
+    int AntiHeavyArmorValueAA() const;
+    int AntiAirValue(ArmorType armor) const;
+    int ArtilleryValue() const;
+    int DefensiveValue() const;
+    bool CategorizedAsLightlyArmored() const;
+    int Scale_Value_By_Properties(int value, double speedmultiplier = 1.0, double strengthmultiplier = 1.0, double cloakmultiplier = 1.0, double costweightmultiplier = 1.0);
 
 public:
     /**
@@ -365,4 +384,9 @@ public:
      *  Can this object pick up targets within its range automatically (opportunity fire)?
      */
     bool IsOpportunityFire;
+
+    /**
+     *  Specifies whether this object is available to be built by all players, only AI players, or only human players.
+     */
+    TechnoTypeBuildability Buildability;
 };

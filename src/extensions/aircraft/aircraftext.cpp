@@ -42,7 +42,8 @@
 AircraftClassExtension::AircraftClassExtension(const AircraftClass *this_ptr) :
     FootClassExtension(this_ptr),
     IsParadropReinforcement(false),
-    IsParadropAmmoReplenished(false)
+    IsParadropAmmoReplenished(false),
+    DockedFrame(-1)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("AircraftClassExtension::AircraftClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 

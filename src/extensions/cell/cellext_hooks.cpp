@@ -532,7 +532,11 @@ void Draw_Tib(CellClass* cellptr, TiberiumClass* tib, Point2D point, Rect* windo
     int variety = (cellptr->CellID.Y * cellptr->CellID.X) % tib->Variety;
     OverlayTypeClass* otype = OverlayTypes[tib->Overlay->HeapID + variety];
 
-    IsometricTileTypeClass* isotile = IsoTileTypes[cellptr->ITType];
+    IsometricTileType ittype = cellptr->ITType;
+    if (ittype == ISOTILE_NONE)
+        ittype = ISOTILE_CLEAR;
+
+    IsometricTileTypeClass* isotile = IsoTileTypes[ittype];
     IsometricTileTypeClassExtension* extension = Extension::Fetch(isotile);
     if (extension->TiberiumOverlays.Count() > 0 && extension->TiberiumOverlays[tib->HeapID] != OVERLAY_NONE) {
         otype = OverlayTypes[extension->TiberiumOverlays[tib->HeapID] + variety];

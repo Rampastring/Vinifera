@@ -273,7 +273,7 @@ DECLARE_PATCH(_TerrainClass_Unlimbo_No_Overlay_Erase_Patch)
      *  Stolen bytes/code.
      *  Skip erasing overlay if the terrain type does not spawn Tiberium.
      */
-    if (!terraintype->TiberiumToSpawn != TIBERIUM_NONE) {
+    if (!terraintype->IsTiberiumSpawn) {
         goto continue_function;
     }
 

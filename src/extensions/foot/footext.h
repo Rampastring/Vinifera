@@ -59,4 +59,6 @@ class FootClassExtension : public TechnoClassExtension
          *  The last known flight cell of this object, used by the AircraftTracker.
          */
         Cell LastFlightCell;
+
+        int WFStuckFrame;
 };

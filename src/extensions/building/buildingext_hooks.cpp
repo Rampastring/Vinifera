@@ -870,6 +870,61 @@ void BuildingClassExt::_Factory_AI()
                     TechnoTypeClass const* ttype = Extension::Fetch(House)->Suggest_New_Object(Class->ToBuild, btype_ext->IsNaval ? PRODFLAG_NAVAL : PRODFLAG_NONE);
 
                     /*
+                    **  Advanced AI also checks whether the object is build-limited.
+                    **  If yes and we have exceeded the limit, it requests a new type to build.
+                    */
+                    if (ttype != nullptr && ttype->BuildLimit > 0 && ttype->BuildLimit < INT_MAX) {
+
+                        int activequantity = 0;
+                        switch (ttype->RTTI) {
+                        case RTTI_INFANTRYTYPE:
+                            activequantity = House->IQuantity.Value(reinterpret_cast<const InfantryTypeClass*>(ttype)->HeapID);
+                            break;
+                        case RTTI_UNITTYPE:
+                            activequantity = House->UQuantity.Value(reinterpret_cast<const UnitTypeClass*>(ttype)->HeapID);
+                            break;
+                        case RTTI_BUILDINGTYPE:
+                            activequantity = House->BQuantity.Value(reinterpret_cast<const BuildingTypeClass*>(ttype)->HeapID);
+                            break;
+                        case RTTI_AIRCRAFTTYPE:
+                            activequantity = House->AQuantity.Value(reinterpret_cast<const AircraftTypeClass*>(ttype)->HeapID);
+                            break;
+                        default:
+                            break;
+                        }
+
+                        if (activequantity >= ttype->BuildLimit) {
+                            // We have already exceeded the build limit for this object. See if the house wants something else to be produced instead.
+
+                            switch (ttype->RTTI) {
+                            case RTTI_INFANTRYTYPE:
+                                House->BuildInfantry = INFANTRY_NONE;
+                                House->AI_Infantry();
+                                break;
+                            case RTTI_UNITTYPE:
+                                if (btype_ext->IsNaval)
+                                    Extension::Fetch(House)->BuildNavalUnit = UNIT_NONE;
+                                else
+                                    House->BuildUnit = UNIT_NONE;
+                                House->AI_Unit();
+                                break;
+                            case RTTI_BUILDINGTYPE:
+                                House->BuildStructure = STRUCT_NONE;
+                                House->AI_Building();
+                                break;
+                            case RTTI_AIRCRAFTTYPE:
+                                House->BuildAircraft = AIRCRAFT_NONE;
+                                House->AI_Aircraft();
+                                break;
+                            default:
+                                break;
+                            }
+
+                            ttype = Extension::Fetch(House)->Suggest_New_Object(Class->ToBuild, btype_ext->IsNaval ? PRODFLAG_NAVAL : PRODFLAG_NONE);
+                        }
+                    }
+
+                    /*
                     **  If a suitable object type was selected for production, then start
                     **  producing it now.
                     */
@@ -919,6 +974,13 @@ void BuildingClassExt::_Factory_AI()
                                     House->Production_Begun(Factory->Get_Object());
                                     Factory->Start(false);
                                 }
+                            }
+
+                            // Advanced AI: Don't overspend on aircraft.
+                            if (RuleExtension->AdvancedAIUnitProduction && ttype->RTTI == RTTI_AIRCRAFTTYPE && 
+                                House->Available_Money() < Rule->AIAlternateProductionCreditCutoff &&
+                                Extension::Fetch(House)->AdvAI_Is_Outnumbered()) {
+                                House->BuildAircraft = AIRCRAFT_NONE;
                             }
                         }
                     }
@@ -2087,6 +2149,7 @@ void BuildingClassExt::_Swizzle_Light_Source()
  *
  *  @author: 06/09/1994 JLB - Created.
  *           ZivDero - Adjustments for Tiberian Sun.
+ *           Rampastring - Adjustments for DTA's Advanced AI.
  */
 RadioMessageType BuildingClassExt::_Receive_Message(RadioClass* from, RadioMessageType message, long& param)
 {
@@ -2099,7 +2162,14 @@ RadioMessageType BuildingClassExt::_Receive_Message(RadioClass* from, RadioMessa
     case RADIO_CAN_LOAD:
         TechnoClass::Receive_Message(from, message, param);
         if (!House->Is_Ally(from)) return RADIO_STATIC;
-        if (Mission == MISSION_CONSTRUCTION || Mission == MISSION_DECONSTRUCTION || BState == BSTATE_CONSTRUCTION || (!ScenarioInit && In_Radio_Contact() && Contact_With_Whom() != from)) return RADIO_NEGATIVE;
+        if (Mission == MISSION_CONSTRUCTION ||
+            Mission == MISSION_DECONSTRUCTION ||
+            BState == BSTATE_CONSTRUCTION ||
+            (!ScenarioInit && In_Radio_Contact() && Contact_With_Whom() != from /* && (!Class->IsRefinery || !RuleExtension->IsUseAdvancedAI || House->Is_Human_Player())*/))
+        {
+            return RADIO_NEGATIVE;
+        }
+
         if (!IsOn) return RADIO_NEGATIVE;
         if (Class->IsCanUnitRepair) {
             if (from->RTTI == RTTI_UNIT || from->RTTI == RTTI_AIRCRAFT) {
@@ -2135,6 +2205,27 @@ RadioMessageType BuildingClassExt::_Receive_Message(RadioClass* from, RadioMessa
          *  @author: Rampastring
          */
         if (Class->IsDockUnload && from->RTTI == RTTI_UNIT && static_cast<UnitClass*>(from)->Class->IsToHarvest && static_cast<UnitClass*>(from)->Class->Dock.Is_Present(Class) && (ScenarioInit || !Cargo.Is_Something_Attached())) {
+
+            /*
+            **  Implements queue jumping for the Advanced AI.
+            **  !!! breaks unloading for AI harvesters for some reason !!!
+            */
+            // if (!House->Is_Human_Player() && RuleExtension->IsUseAdvancedAI && Contact_With_Whom() != from && Contact_With_Whom() != nullptr) {
+            //     int distance1 = Distance(Contact_With_Whom());
+            //     int distance2 = Distance(from);
+            // 
+            //     if (distance1 > distance2 + Cell_To_Lepton(7)) {
+            //         return RADIO_NEGATIVE;
+            //     }
+            // 
+            //     /**
+            //      *  The harvester that sent us the message is significantly closer to us than
+            //      *  our old assigned harvester. Tell the old harvester to figure out a new
+            //      *  purpose for their life and accept the new harvester by returning RADIO_ROGER.
+            //      */
+            //     Transmit_Message(RADIO_OVER_OUT, Contact_With_Whom());
+            // }
+
             return RADIO_ROGER;
         }
 
@@ -2480,7 +2571,8 @@ static BuildingClass* our_buildings[1000];
 static int our_building_count = 0;
 
 
-void Mark_Expansion_As_Done(HouseClass* house) {
+void Mark_Expansion_As_Done(HouseClass* house) 
+{
     HouseClassExtension* ext = Extension::Fetch(house);
 
     if (ext->NextExpansionPointLocation.X == 0 || ext->NextExpansionPointLocation.Y == 0)
@@ -2514,8 +2606,6 @@ int Try_Place(BuildingClass* building, Cell cell)
         building->Assign_Mission(MISSION_CONSTRUCTION);
         building->Commence();
 
-        int close_enough = 7;
-
         // If we just placed down our first barracks, then set our team timer to 0
         // so we can immediately start producing infantry.
         // Do not do this on Easy mode to avoid overwhelming the player.
@@ -2531,9 +2621,13 @@ int Try_Place(BuildingClass* building, Cell cell)
         // If yes, check if we were expanding. If yes, the expanding is done.
         // If not, but we're close to an expansion field, then flag us to build a refinery as our next building.
         if (building->Class->IsRefinery) {
-            if (ext->NextExpansionPointLocation.X != 0 && ext->NextExpansionPointLocation.Y != 0) {
+            if (ext->NextExpansionPointLocation != CELL_NONE) {
                 BuildingClassExtension* buildingext = Extension::Fetch(building);
                 buildingext->AssignedExpansionPoint = ext->NextExpansionPointLocation;
+                ext->DefensePlacementLocation = building->Center_Coord().As_Cell();
+            }
+            else if (ext->ArchivedExpansionPointLocation != CELL_NONE) {
+                ext->ArchivedExpansionPointLocation = CELL_NONE;
             }
 
             Mark_Expansion_As_Done(owner);
@@ -2541,7 +2635,7 @@ int Try_Place(BuildingClass* building, Cell cell)
         } 
         else if (ext->NextExpansionPointLocation.X > 0 &&
             ext->NextExpansionPointLocation.Y > 0 &&
-            ::Distance(building->Center_Coord().As_Cell(), ext->NextExpansionPointLocation) < close_enough) 
+            ::Distance(building->Center_Coord().As_Cell(), ext->NextExpansionPointLocation) < RuleExtension->AdvancedAIExpansionCloseEnough)
         {
             ext->ShouldBuildRefinery = true;
         }
@@ -2871,9 +2965,15 @@ int Refinery_Placement_Cell_Value(Cell cell, BuildingClass* building)
     int value = 0;
 
     // If we have nowhere to expand, then just try placing it somewhere central, hopefully it's safe there.
-    if (houseext->NextExpansionPointLocation.X <= 0 || houseext->NextExpansionPointLocation.Y <= 0) {
-        Cell center = owner->Base_Center();
-        value = ::Distance(cell, center);
+    if (houseext->NextExpansionPointLocation == CELL_NONE) {
+
+        if (houseext->ArchivedExpansionPointLocation != CELL_NONE) {
+            value = ::Distance(cell, houseext->ArchivedExpansionPointLocation);
+        }
+        else {
+            Cell center = owner->Base_Center();
+            value = ::Distance(cell, center);
+        }
     }
     else {
         // For refinery placement, we can basically make the value equal to the distance
@@ -2901,6 +3001,7 @@ Cell Get_Best_Refinery_Placement_Position(BuildingClass* building)
 {
     int adjacency = building->Class->Adjacent + 1 + 1;
     Rect basearea = Get_Base_Rect(adjacency, building->Class->Width(), building->Class->Height());
+    HouseClassExtension* houseext = Extension::Fetch(building->House);
     return Find_Best_Building_Placement_Cell(basearea, building, Refinery_Placement_Cell_Value, 1);
 }
 
@@ -3018,8 +3119,13 @@ int Towards_Expansion_Placement_Cell_Value(Cell cell, BuildingClass* building)
     HouseClassExtension* houseext = Extension::Fetch(owner);
 
     // If we have nowhere to expand, then just try placing it somewhere that's far from our base.
+    // Unless it's a war factory - then place it near base center.
     if (houseext->NextExpansionPointLocation.X <= 0 || houseext->NextExpansionPointLocation.Y <= 0) {
         Cell center = owner->Base_Center();
+        if (building->Class->ToBuild != RTTI_UNITTYPE) {
+            return ::Distance(cell, center);
+        }
+
         return SHRT_MAX - ::Distance(cell, center);
     }
 
@@ -3164,37 +3270,54 @@ int Helipad_Placement_Cell_Value(Cell cell, BuildingClass* building)
     return Far_From_Enemy_Placement_Position_Value(cell, building);
 }
 
+Cell Get_Best_Tech_Center_Placement_Position(BuildingClass* building)
+{
+    if (building->House->LATime > 0 && building->House->LATime + (TICKS_PER_MINUTE * 2) > Frame) {
+        int adjacency = building->Class->Adjacent + 1;
+
+        Rect basearea = Get_Base_Rect(adjacency, building->Class->Width(), building->Class->Height());
+
+        return Find_Best_Building_Placement_Cell(basearea, building, Far_From_Enemy_Placement_Position_Value);
+    }
+
+    return Get_Best_Expansion_Placement_Position(building);
+}
+
 /**
  *  Calculates the best factory placement location.
  */
 Cell Get_Best_Factory_Placement_Position(BuildingClass* building)
 {
-    bool isnaval = building->Class->ToBuild == RTTI_UNITTYPE && building->Class->Speed == SPEED_FLOAT;
-
-    int adjacency = building->Class->Adjacent + 1;
-
-    Rect basearea = Get_Base_Rect(adjacency, building->Class->Width(), building->Class->Height());
-
     if (building->Class->ToBuild == RTTI_INFANTRYTYPE)
     {
-        return Find_Best_Building_Placement_Cell(basearea, building, Barracks_Placement_Cell_Value);
+        return Get_Best_Expansion_Placement_Position(building);
+        // return Find_Best_Building_Placement_Cell(basearea, building, Barracks_Placement_Cell_Value);
     }
     else if (building->Class->ToBuild == RTTI_UNITTYPE)
     {
+        bool isnaval = building->Class->ToBuild == RTTI_UNITTYPE && building->Class->Speed == SPEED_FLOAT;
+
         if (isnaval)
         {
+            int adjacency = building->Class->Adjacent + 1;
+
+            Rect basearea = Get_Base_Rect(adjacency, building->Class->Width(), building->Class->Height());
+
             return Find_Best_Building_Placement_Cell(basearea, building, NavalYard_Placement_Cell_Value);
         }
 
-        return Find_Best_Building_Placement_Cell(basearea, building, WarFactory_Placement_Cell_Value);
+        return Get_Best_Expansion_Placement_Position(building);
+        // return Find_Best_Building_Placement_Cell(basearea, building, WarFactory_Placement_Cell_Value);
     }
     else if (building->Class->ToBuild == RTTI_AIRCRAFTTYPE)
     {
-        return Find_Best_Building_Placement_Cell(basearea, building, Helipad_Placement_Cell_Value);
+        return Get_Best_Expansion_Placement_Position(building);
+        // return Find_Best_Building_Placement_Cell(basearea, building, Helipad_Placement_Cell_Value);
     }
     else
     {
-        return Find_Best_Building_Placement_Cell(basearea, building, Near_Base_Center_Placement_Position_Value);
+        return Get_Best_Expansion_Placement_Position(building);
+        // return Find_Best_Building_Placement_Cell(basearea, building, Near_Base_Center_Placement_Position_Value);
     }
 }
 
@@ -3202,7 +3325,27 @@ static Cell attackcell;
 
 int Near_AttackCell_Cell_Value(Cell cell, BuildingClass* building)
 {
-    return Modify_Rating_By_Allied_Building_Proximity(cell, building, ::Distance(cell, attackcell));
+    // Place near our most recently damaged building.
+    // Secondarily, consider distance to primary enemy (that's the most likely direction the attack came from, after all).
+    int enemydistance = Get_Distance_To_Primary_Enemy(cell, building->House);
+
+    return Modify_Rating_By_Allied_Building_Proximity(cell, building, ::Distance(cell, attackcell) * 100 + enemydistance);
+}
+
+int Near_Defense_Point_Cell_Value(Cell cell, BuildingClass* building)
+{
+    HouseClassExtension* ext = Extension::Fetch(building->House);
+
+    int enemydistance = Get_Distance_To_Primary_Enemy(cell, building->House);
+
+    if (ext->DefensePlacementLocation != CELL_NONE) {
+        return Modify_Rating_By_Allied_Building_Proximity(cell, building, ::Distance(cell, ext->DefensePlacementLocation) * 100 + enemydistance);
+    }
+
+    // Fallback
+    Point2D mapcenter = Rectangle_Center_Point(Map.LocalRect);
+    Cell mapcenter_cell = Cell(mapcenter.X, mapcenter.Y);
+    return Modify_Rating_By_Allied_Building_Proximity(cell, building, enemydistance);
 }
 
 Cell Get_Best_Defense_Placement_Position(BuildingClass* building)
@@ -3222,20 +3365,29 @@ Cell Get_Best_Defense_Placement_Position(BuildingClass* building)
 
             if (!otherbuilding->IsActive ||
                 otherbuilding->IsInLimbo ||
-                otherbuilding->Class->IsInvisibleInGame ||
-                otherbuilding->House != owner) {
+                otherbuilding->Class->IsInvisibleInGame) {
                 continue;
             }
 
             if (otherbuilding->Strength < otherbuilding->Class->MaxStrength) {
-                attackcell = otherbuilding->Get_Cell();
+                attackcell = otherbuilding->Center_Coord().As_Cell();
                 break;
             }
         }
     }
 
     if (attackcell.X > 0 && attackcell.Y > 0) {
-        return Find_Best_Building_Placement_Cell(basearea, building, Near_AttackCell_Cell_Value);
+
+        Cell bestcell;
+        BuildingClass* cellbldg = Map[attackcell].Cell_Building();
+        if (cellbldg != nullptr && cellbldg->Class->IsConstructionYard)
+            bestcell = Find_Best_Building_Placement_Cell(basearea, building, Near_ConYard_Placement_Position_Value);
+        else
+            bestcell = Find_Best_Building_Placement_Cell(basearea, building, Near_AttackCell_Cell_Value);;
+
+        // Reset the last attacked time so the AI doesn't start spamming needlessly many defenses.
+        owner->LATime = 0;
+        return bestcell;
     }
 
     // Special behaviour if we are under danger of getting rushed.
@@ -3249,6 +3401,13 @@ Cell Get_Best_Defense_Placement_Position(BuildingClass* building)
         return Find_Best_Building_Placement_Cell(basearea, building, Near_Refinery_Placement_Position_Value);
     }
 
+    // If we have just expanded, then place the defense near the expansion building.
+    if (houseext->DefensePlacementLocation != CELL_NONE) {
+        Cell best = Find_Best_Building_Placement_Cell(basearea, building, Near_Defense_Point_Cell_Value);
+        houseext->DefensePlacementLocation = Cell(0, 0);
+        return best;
+    }
+
     // If we are expanding, then it's likely we should build defenses towards the expansion node.
     // However, only so if we are not under immediate threat.
     if (houseext->NextExpansionPointLocation.X > 0 && houseext->NextExpansionPointLocation.Y > 0 && Percent_Chance(50)) {
@@ -3260,8 +3419,13 @@ Cell Get_Best_Defense_Placement_Position(BuildingClass* building)
         enemy = Houses[owner->Enemy];
     }
 
+    // Advanced defenses are less likely to end up in the backline.
+    int backlinedivisor = 2;
+    if (Rule->BuildPDefense.Is_Present(building->Class))
+        backlinedivisor = 3;
+
     // Place some defenses to the backline.
-    if (Percent_Chance(20)) {
+    if (Percent_Chance(20 / backlinedivisor)) {
         return Find_Best_Building_Placement_Cell(basearea, building, Near_ConYard_Placement_Position_Value);
     }
 
@@ -3269,7 +3433,7 @@ Cell Get_Best_Defense_Placement_Position(BuildingClass* building)
     enemy = Find_Closest_Opponent(owner);
 
     // Place some defenses around the center of our base to defend against cheese and flank attacks.
-    if (enemy == nullptr || Percent_Chance(30)) {
+    if (enemy == nullptr || Percent_Chance(30 / backlinedivisor)) {
         return Find_Best_Building_Placement_Cell(basearea, building, Near_Base_Center_Defense_Placement_Position_Value);
     }
 
@@ -3305,13 +3469,16 @@ Cell Get_Best_Placement_Position(BuildingClass* building)
         return Get_Best_Sensor_Placement_Position(building);
     }
 
+    if (Rule->BuildTech.Is_Present(building->Class)) {
+        return Get_Best_Tech_Center_Placement_Position(building);
+    }
+
     return Get_Best_Expansion_Placement_Position(building);
 }
 
 int BuildingClass_Exit_Object_Custom_Position(BuildingClass* building)
 {
     HouseClass* owner = building->House;
-    HouseClassExtension* ext = Extension::Fetch(owner);
 
     our_building_count = 0;
 
@@ -3352,7 +3519,7 @@ DECLARE_PATCH(_BuildingClass_Exit_Object_Seek_Building_Position)
     static int retvalue;
     retvalue = 0;
 
-    if (!RuleExtension->IsUseAdvancedAI || base->Class->PowersUpBuilding[0] != '\0') {
+    if (!RuleExtension->AdvancedAIBaseBuilding || base->Class->PowersUpBuilding[0] != '\0') {
 
         // Stolen bytes / code
         _asm { mov eax, [esi+0ECh]}
@@ -3477,6 +3644,133 @@ AbstractClass* BuildingClassExt::_Greatest_Threat(ThreatType threat, Coord & coo
     return TechnoClass::Greatest_Threat(threat, coord, b);
 }
 
+/**
+ *  #issue-202
+ *
+ *  For harvester queue jumping.
+ *  Don't return RADIO_NEGATIVE if a refinery is already in radio contact
+ *  with a unit that is different from the one that sent us the message.
+ *
+ *  @author: Rampastring
+ */
+DECLARE_PATCH(_BuildingClass_Receive_Message_Harvester_Queue_Jump_No_Ignoring_If_In_Contact_Patch)
+{
+    GET_REGISTER_STATIC(BuildingClass*, building, esi);
+
+    if (building->Class->IsRefinery && RuleExtension->IsUseAdvancedAI && !building->House->Is_Human_Player()) {
+        goto skip_returning_negative;
+    }
+
+    /**
+     *  We're not a refinery, don't skip the check.
+     */
+    goto original_behaviour;
+
+
+    /**
+     *  Skip the (!ScenarioInit && In_Radio_Contact()) and following (Contact_With_Whom() != from)
+     *  condition and related code for the refinery and continue function
+     *  execution from beyond that point.
+     */
+skip_returning_negative:
+    JMP(0x0042697B);
+
+
+    /**
+     *  Stolen bytes / code, perform the check.
+     */
+original_behaviour:
+    if (ScenarioInit) {
+        JMP(0x00426962);
+    }
+
+    JMP(0x00426953);
+}
+
+
+/**
+ *  #issue-202
+ *
+ *  For harvester queue jumping.
+ *  If we're a refinery and the harvester contacting us is closer to us than a
+ *  potentially existing harvester heading towards us, allow the new harvester
+ *  to take priority and tell the old harvester to go do something else.
+ * 
+ *  !!! WARNING: Only enabled for Advanced AI.
+ *  Will cause desyncs if enabled for human players (cursor hover-on code calls this).
+ *
+ *  @author: Rampastring
+ */
+DECLARE_PATCH(_BuildingClass_Receive_Message_Harvester_Queue_Jump_Allow_Replacing_Old_Harv_If_Closer_Patch)
+{
+    GET_REGISTER_STATIC(BuildingClass*, building, esi);
+    GET_REGISTER_STATIC(TechnoClass*, message_sender, edi);
+    static int queue_jump_distance;
+    static int old_harvester_distance;
+    static int new_harvester_distance;
+    static TechnoClass* old_harvester;
+
+    if (ScenarioInit) {
+        /**
+         *  Stolen bytes / code, return RADIO_ROGER if ScenarioInit is set.
+         */
+    return_roger_scenarioinit:
+        JMP(0x0042707B);
+    }
+
+
+    if (building->Cargo.Is_Something_Attached()) {
+
+        /**
+         *  We're not free (perhaps a harvester is unloading), return RADIO_STATIC.
+         */
+    return_static:
+        _asm { mov  eax, [RADIO_STATIC] }
+        JMP_REG(ecx, 0x004271CA);
+    }
+
+    /**
+     *  Check if we're already in radio contact with another harvester
+     *  than the one that sent us the message.
+     *  If not, we can simply accept the new harvester.
+     */
+    old_harvester = building->Contact_With_Whom();
+
+    if (old_harvester != nullptr && old_harvester != message_sender) {
+
+        /**
+         *  Get distance to the old harvester and distance
+         *  to the new harvester and compare the distances.
+         */
+        old_harvester_distance = building->Distance(old_harvester);
+        new_harvester_distance = building->Distance(message_sender);
+
+        queue_jump_distance = 7;
+
+        if (!RuleExtension->IsUseAdvancedAI || message_sender->House->Is_Human_Player() || new_harvester_distance + Cell_To_Lepton(queue_jump_distance) > old_harvester_distance) {
+
+            /**
+             *  The new harvester is not significantly closer to us than the old one,
+             *  exit the function and return RADIO_NEGATIVE.
+             */
+        return_negative:
+            JMP(0x0042696C);
+        }
+
+        /**
+         *  The harvester that sent us the message is significantly closer to us than
+         *  our old assigned harvester. Tell the old harvester to figure out a new
+         *  purpose for their life and accept the new harvester by returning RADIO_ROGER.
+         */
+        building->Transmit_Message(RADIO_OVER_OUT, old_harvester);
+    }
+
+    /**
+     *  Exits the function and returns RADIO_ROGER.
+     */
+return_roger:
+    JMP(0x004269BD);
+}
 
 /**
  *  Main function for patching the hooks.
@@ -3539,4 +3833,6 @@ void BuildingClassExtension_Hooks()
     Patch_Jump(0x0042CAB9, &_BuildingClass_Exit_Object_Factory_Busy_Customized_Alternate_Factory_Seeking_Logic);
     Patch_Byte(0x00432786 + 1, 0x00); // Change "true" to "false" in Create_Bullet call in Mission_Missile to disable combat light from nukes
     Patch_Jump(0x0042E0E0, &BuildingClassExt::_Greatest_Threat);
+    Patch_Jump(0x0042694A, &_BuildingClass_Receive_Message_Harvester_Queue_Jump_No_Ignoring_If_In_Contact_Patch);
+    Patch_Jump(0x00426A71, &_BuildingClass_Receive_Message_Harvester_Queue_Jump_Allow_Replacing_Old_Harv_If_Closer_Patch);
 }

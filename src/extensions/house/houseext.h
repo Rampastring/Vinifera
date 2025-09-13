@@ -28,8 +28,94 @@
 #pragma once
 
 #include "abstractext.h"
+#include "advaitactictype.h"
 #include "house.h"
 #include "housetype.h"
+#include "technotypeext.h"
+
+template <typename T> struct AdvAITacticInfo
+{
+    AdvAITacticInfo() { }
+
+    AdvAITacticInfo(T tactic, int selectionframe, int duration)
+    {
+        Tactic = tactic;
+        SelectionFrame = selectionframe;
+        Duration = duration;
+    }
+
+    T Tactic;
+    int SelectionFrame;
+    int Duration;
+
+    int EndFrame()
+    {
+        return SelectionFrame + Duration;
+    }
+};
+
+struct AttemptedBuildingCaptureStruct
+{
+    AttemptedBuildingCaptureStruct() { }
+    
+    AttemptedBuildingCaptureStruct(Cell buildingloc, int frame)
+    {
+        BuildingLocation = buildingloc;
+        Frame = frame;
+    }
+
+    int operator==(const AttemptedBuildingCaptureStruct& q) const { return std::memcmp(this, &q, sizeof(q)) == 0; }
+    int operator!=(const AttemptedBuildingCaptureStruct& q) const { return std::memcmp(this, &q, sizeof(q)) != 0; }
+
+    Cell BuildingLocation;
+    int Frame;
+};
+
+struct EnemyStrengthStruct
+{
+    EnemyStrengthStruct() { }
+
+    int None;
+    int Light;
+    int Heavy;
+
+    int Total() const { return None + Light + Heavy; }
+
+    void Clear()
+    {
+        None = 0;
+        Light = 0;
+        Heavy = 0;
+    }
+
+    void Add_Techno_Type(TechnoTypeClassExtension* technotypeext)
+    {
+        None += technotypeext->AntiNoneArmorValue();
+        Light += technotypeext->AntiLightArmorValue();
+        Heavy += technotypeext->AntiHeavyArmorValue();
+    }
+
+    void Add_Techno_Type_Half_Weight(TechnoTypeClassExtension* technotypeext)
+    {
+        None += technotypeext->AntiNoneArmorValue() / 2;
+        Light += technotypeext->AntiLightArmorValue() / 2;
+        Heavy += technotypeext->AntiHeavyArmorValue() / 2;
+    }
+
+    void Add_Techno_Type_AntiAir(TechnoTypeClassExtension* technotypeext)
+    {
+        None += technotypeext->AntiNoneArmorValueAA();
+        Light += technotypeext->AntiLightArmorValueAA();
+        Heavy += technotypeext->AntiHeavyArmorValueAA();
+    }
+};
+
+enum class AdvancedAINavalOnlyState
+{
+    NOT_CHECKED = 0,
+    NORMAL = 1,
+    NAVAL_ONLY = 2
+};
 
 
 class DECLSPEC_UUID(UUID_HOUSE_EXTENSION)
@@ -90,6 +176,34 @@ public:
     static HouseClass* House_At_Spawn_Point(WAYPOINT waypoint);
     static HouseClass* House_From_HousesType(HousesType house);
 
+    bool AdvAI_Is_Outnumbered() const;
+    bool AdvAI_Is_Disadvantaged() const;
+    void Assign_AdvAI_Tactic(AdvAITacticType tactic, int expected_duration);
+    void Assign_AdvAI_Air_Tactic(AdvAIAirTacticType airtactic, int expected_duration);
+    void Assign_AdvAI_Naval_Tactic(AdvAINavalTacticType navaltactic, int expected_duration);
+    TeamClass* Get_Team_In_Production(int& id, RTTIType for_type, ProductionFlags prodflags) const;
+    void Fill_Owned_Buildings_List(DynamicVectorClass<const BuildingTypeClass*>& owned) const;
+    bool _AI_Has_Prerequisites(const TechnoTypeClass* type, DynamicVectorClass<const BuildingTypeClass*>& owned, int ownedcount) const;
+    int Get_Building_Capture_Attempt_Index_For(BuildingClass* building) const;
+    bool Is_Valid_Building_For_Capturing(BuildingClass* building, Cell zonecell, bool & okintheory) const;
+    void Add_Building_Capture_Attempt(BuildingClass* building);
+    bool Has_One_Of(DynamicVectorClass<BuildingTypeClass*> buildingtypes) const;
+    bool Has_Barracks() const;
+    bool Has_War_Factory() const;
+    bool Has_Naval_Yard() const;
+    bool Has_Helipad() const;
+    bool Has_Construction_Yard() const;
+    bool Has_Radar() const;
+    bool Has_Tech_Center() const;
+    bool Enemy_Building_Scan(DynamicVectorClass<BuildingTypeClass*>& list, int threatvalue) const;
+    bool AdvAI_Enemy_Has_Vulnerable_Buildings(DynamicVectorClass<BuildingTypeClass*>& list) const;
+    bool AdvAI_Enemy_Has_Lightly_Defended_Buildings(DynamicVectorClass<BuildingTypeClass*>& list) const;
+    void AdvAI_Bias_Team_Strength_Ratios_By_Enemy_Strength(TeamClass* team) const;
+    void AdvAI_Set_Ground_Team_Desired_Ratios(TeamClass* team, AdvAITacticType tacticoverride = AdvAITacticType::TACTIC_NONE) const;
+    void AdvAI_Set_Aircraft_Team_Desired_Ratios(TeamClass* team) const;
+    void AdvAI_Set_Naval_Team_Desired_Ratios(TeamClass* team) const;
+    bool AdvAI_Is_Recently_Attacked() const;
+
 public:
     /**
      *  Replacement Tiberium storage.
@@ -130,6 +244,8 @@ public:
      */
     Cell NextExpansionPointLocation;
 
+    Cell ArchivedExpansionPointLocation;
+
     /**
      *  Locations that we should never expand towards.
      *  Basically, locations that are unreachable.
@@ -141,6 +257,11 @@ public:
      *  If yes, the AI should build a refinery.
      */
     bool ShouldBuildRefinery;
+
+    /**
+     *  The next planned defense placement location.
+     */
+    Cell DefensePlacementLocation;
 
     /**
      *  Set when the AI has built its first barracks during the game.
@@ -177,5 +298,59 @@ public:
      */
     int NextOilRefineryCaptureCheckFrame;
 
+    /**
+     *  Next frame where this house should give orders to its engineers.
+     */
     int NextEngineerCheckFrame;
+
+    /**
+     *  Currently chosen tactic for the Advanced AI.
+     */
+
+    AdvAITacticInfo<AdvAITacticType> AdvAIGroundTactic;
+    AdvAITacticInfo<AdvAIAirTacticType> AdvAIAirTactic;
+    AdvAITacticInfo<AdvAINavalTacticType> AdvAINavalTactic;
+
+    int AdvAILastExecutionFrameForTactic[TACTIC_COUNT];
+
+    /**
+     *  Frame when Advanced AI last executed a tactic.
+     */
+    int AdvAILastTacticExecutionFrame;
+
+    int EnemyNoneStrength;
+    int EnemyLightStrength;
+    int EnemyHeavyStrength;
+    int EnemyArtilleryStrength;
+    int EnemyBaseDefenseStrength;
+    int EnemyNavalStrength;
+    EnemyStrengthStruct EnemyAntiGroundStrength;
+    EnemyStrengthStruct EnemyAntiAirStrength;
+    EnemyStrengthStruct EnemyAntiNavalStrength;
+    int EnemyHarvesterCount;
+    int EnemyRefineryCount;
+    bool EnemyHasSensors;
+
+    int LastHarvesterBuildFrame;
+
+    int LastUnitValueDebugPrintFrame;
+    int LastInfantryValueDebugPrintFrame;
+    int LastAircraftValueDebugPrintFrame;
+    int LastNavalValueDebugPrintFrame;
+
+    AttemptedBuildingCaptureStruct AttemptedBuildingCaptures[50];
+    int AttemptedBuildingCaptureCount;
+
+    UnitType AdvAILastBuiltUnit;
+    int AdvAILastBuiltUnitCount;
+    InfantryType AdvAILastBuiltInfantry;
+    int AdvAILastBuiltInfantryCount;
+
+    int FactionSpecificTacticalValues[10];
+
+    int AdvAIFunValue;
+
+    int AdvAILastUndeployableUnitCheckFrame;
+
+    AdvancedAINavalOnlyState IsNavalOnly;
 };

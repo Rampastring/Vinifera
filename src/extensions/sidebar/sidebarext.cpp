@@ -619,7 +619,7 @@ bool SidebarClassExtension::TabButtonClass::Draw_Me(bool forced)
             colorscheme = ColorSchemes[colorschemetype];
         }
 
-        SidebarSurface->Draw_Rect(hover_rect, DSurface::Build_Hicolor_Pixel(ColorSchemes[colorschemetype]->HSV.operator RGBClass()));
+        SidebarSurface->Draw_Rect(hover_rect, DSurface::Build_Hicolor_Pixel(colorscheme->HSV.operator RGBClass()));
     }
 
     IsDrawn = true;

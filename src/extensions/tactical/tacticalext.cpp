@@ -593,7 +593,7 @@ void TacticalExtension::Render_Post()
  */
 void TacticalExtension::Draw_Message(int index, const char *text, ColorSchemeType color)
 {
-    static WWFontClass* _font = nullptr;
+    static FontClass* _font = nullptr;
 
     TextPrintType style = TPF_DROPSHADOW | TPF_6PT_GRAD | TPF_SOLIDBLACK_BG;
 
@@ -602,15 +602,15 @@ void TacticalExtension::Draw_Message(int index, const char *text, ColorSchemeTyp
     }
 
     int text_width = -1;
-    unsigned color_black = DSurface::RGB_To_Pixel(0, 0, 0);
+    unsigned color_black = DSurface::Build_Hicolor_Pixel(0, 0, 0);
     RGBClass rgb_black(0, 0, 0);
     unsigned int background_tint = UIControls->TextLabelBackgroundTransparency;
 
     Rect draw_rect;
-    _font->String_Pixel_Rect(text, &draw_rect);
+    _font->String_Pixel_Bounds(text, draw_rect);
 
-    int font_width = _font->Get_Font_Width();
-    int font_height = _font->Get_Font_Height();
+    int font_width = _font->Get_Width();
+    int font_height = _font->Get_Height();
 
     int base_y_pos = TacticalRect.Y;
     int base_x_pos = 0;
@@ -644,9 +644,9 @@ void TacticalExtension::Draw_Message(int index, const char *text, ColorSchemeTyp
 
     //CompositeSurface->Fill_Rect(CompositeSurface->Get_Rect(), fill_rect, color_black);
     CompositeSurface->Fill_Rect_Trans(fill_rect, rgb_black, background_tint);
-
-    Simple_Text_Print(text, CompositeSurface, &CompositeSurface->Get_Rect(),
-        &text_draw_point, ColorSchemes[color], COLOR_TBLACK, style);
+    
+    Simple_Text_Print(text, *CompositeSurface, CompositeSurface->Get_Rect(),
+        text_draw_point, ColorSchemes[color], COLOR_TBLACK, style, 1);
 }
 
 
@@ -673,7 +673,7 @@ void TacticalExtension::Draw_Messages()
  */
 void TacticalExtension::Draw_Strengthen_Info()
 {
-    static WWFontClass* _font = nullptr;
+    static FontClass* _font = nullptr;
 
     if (!RuleExtension->IsStrengtheningEnabled) {
         return;
@@ -687,7 +687,7 @@ void TacticalExtension::Draw_Strengthen_Info()
 
     char fullbuff[128];
     int text_width = -1;
-    unsigned color_black = DSurface::RGB_To_Pixel(0, 0, 0);
+    unsigned color_black = DSurface::Build_Hicolor_Pixel(0, 0, 0);
     RGBClass rgb_black(0, 0, 0);
     int background_tint = 50;
 
@@ -695,10 +695,10 @@ void TacticalExtension::Draw_Strengthen_Info()
     std::snprintf(fullbuff, sizeof(fullbuff), "Strength: %.2f", value);
 
     Rect draw_rect;
-    _font->String_Pixel_Rect(fullbuff, &draw_rect);
+    _font->String_Pixel_Bounds(fullbuff, draw_rect);
 
-    int font_width = _font->Get_Font_Width();
-    int font_height = _font->Get_Font_Height();
+    int font_width = _font->Get_Width();
+    int font_height = _font->Get_Height();
 
     int y_pos = TacticalRect.Y + TacticalRect.Height - (font_height + 2) + 3;
 
@@ -715,8 +715,8 @@ void TacticalExtension::Draw_Strengthen_Info()
     //CompositeSurface->Fill_Rect(CompositeSurface->Get_Rect(), fill_rect, color_black);
     CompositeSurface->Fill_Rect_Trans(fill_rect, rgb_black, background_tint);
 
-    Fancy_Text_Print(fullbuff, CompositeSurface, &CompositeSurface->Get_Rect(),
-        &text_draw_point, ColorSchemes[PlayerPtr->Scheme], COLOR_TBLACK, style);
+    Fancy_Text_Print(fullbuff, *CompositeSurface, CompositeSurface->Get_Rect(),
+        text_draw_point, ColorSchemes[PlayerPtr->Scheme], COLOR_TBLACK, style);
 }
 
 

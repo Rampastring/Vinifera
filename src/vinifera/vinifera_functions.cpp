@@ -56,6 +56,7 @@
 #include "actiontype.h"
 #include "debughandler.h"
 #include "asserthandler.h"
+#include "advaitactictype.h"
 #include <string>
 
 #include "aircrafttracker.h"
@@ -856,6 +857,7 @@ bool Vinifera_Register_Com_Objects()
     REGISTER_CLASS(ArmorTypeClass);
     REGISTER_CLASS(RocketTypeClass);
     REGISTER_CLASS(PrerequisiteGroupClass);
+    REGISTER_CLASS(AdvancedAITacticTypeClass);
 
     /**
      *  Other new entities.

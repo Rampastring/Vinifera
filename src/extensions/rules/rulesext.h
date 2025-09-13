@@ -65,12 +65,14 @@ public:
     bool MPlayer(CCINIClass& ini);
     bool AudioVisual(CCINIClass& ini);
     bool CombatDamage(CCINIClass& ini);
-    bool AI(CCINIClass& ini);
     bool Weapons(CCINIClass& ini);
     bool Armors(CCINIClass& ini);
     bool Rockets(CCINIClass& ini);
     bool Tiberiums(CCINIClass& ini);
     bool PrerequisiteGroups(CCINIClass& ini);
+    bool AdvancedAIGroundTactics(CCINIClass& ini);
+    bool AdvancedAIAirTactics(CCINIClass& ini);
+    bool AdvancedAINavalTactics(CCINIClass& ini);
 
     static bool Set_Voxel_Light_Angle(float azimuth, float elevation, float offset);
 
@@ -244,7 +246,81 @@ public:
     TypeList<BuildingTypeClass*> BuildNavalYard;
 
     /**
+     *  Specifies the distance to a Tiberium tree that is considered "close enough" for building a refinery near the tree.
+     */
+    int AdvancedAIExpansionCloseEnough;
+
+    /**
+     *  Specifies the maximum distance that a refinery without an assigned expansion point 
+     *  can have to a Tiberium tree for the tree to be considered occupied.
+     */
+    int AdvancedAIFieldOccupyMaximumDistance;
+
+    /**
      *  Percent chance that the AI will kite at any given level.
      */
     TypeList<int> AIKiteChance;
+
+    TypeList<int> AdvancedAITacticSelectionDelay;
+
+    TypeList<int> AdvancedAIIonCannonRandomizationFactors;
+
+    int AdvancedAIExpansionDistanceComparisonRandomness;
+
+    /**
+     *  Maximum threat value that a building's cell can have for it to be considered viable for sneak attacks.
+     */
+    int AdvancedAIVulnerableBuildingMaxThreat;
+
+    /**
+     *  Maximum threat value that a building's cell can have for it to be considered viable for attacks that can handle only light resistance.
+     */
+    int AdvancedAILightlyDefendedBuildingMaxThreat;
+
+    /**
+     *  Percentual value of how much the AI lowers the preference for building a unit if
+     *  a unit of the same type already exists in the team. Cumulative.
+     */
+    double AdvancedAISameUnitAntiBias;
+
+
+    double AdvancedAIOverweightedArmorTypeAntiBias;
+
+    /**
+     *  Multiplier to value of each weapon. Determines the balance between preferring offensive and defensive value of units.
+     */
+    int AdvancedAIOffensiveWeaponValueMultiplier;
+
+    /**
+     *  If the Advanced AI has a war factory, it will skip building infantry if the highest-scoring infantry is not valued
+     *  above this threshold.
+     */
+    int AdvancedAISkipInfantryProductionValueThreshold;
+
+    /**
+     *  If the Advanced AI has a war factory, it has a chance of skipping building 
+     *  infantry for some time if the highest-scoring infantry is not valued above this threshold.
+     */
+    int AdvancedAIConditionalSkipInfantryProductionValueThreshold;
+
+    /**
+     *  If lacking this many or more anti-ground defenses, the AI should prioritize building base defenses instead of economy and production.
+     */
+    int AdvancedAICriticalBaseDefenseDeficiencyThreshold;
+
+    bool AdvancedAIIonCannonTargeting;
+
+    bool AdvancedAINukeTargeting;
+
+    bool AdvancedAIBaseBuilding;
+
+    bool AdvancedAIUnitProduction;
+
+    bool AdvancedAIAreaGuard;
+
+    bool AdvancedAISmartHunt;
+
+    bool AdvancedAIAircraftTargeting;
+
+    bool AdvancedAIAircraftReuse;
 };

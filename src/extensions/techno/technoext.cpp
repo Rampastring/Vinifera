@@ -34,6 +34,7 @@
 #include "housetype.h"
 #include "building.h"
 #include "buildingtype.h"
+#include "bullettype.h"
 #include "rules.h"
 #include "rulesext.h"
 #include "voc.h"
@@ -55,6 +56,9 @@
 #include "teamtype.h"
 #include "unit.h"
 #include "weapontype.h"
+#include "verses.h"
+#include "warheadtype.h"
+#include "warheadtypeext.h"
 
 
 /**

@@ -77,4 +77,9 @@ AircraftClassExtension final : public FootClassExtension
          *  above the paradrop point.
          */
         bool IsParadropAmmoReplenished;
+
+        /**
+         *  Records the frame when the Advanced AI system noticed this aircraft entered a dock building.
+         */
+        int DockedFrame;
 };

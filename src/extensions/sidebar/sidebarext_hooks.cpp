@@ -1462,6 +1462,7 @@ bool StripClassExt::_AI(KeyNumType& input, Point2D const&)
 
                         case RTTI_BUILDING:
                             SidebarExtension->TabButtons[ID].Start_Flashing();
+                            Speak(VOX_CONSTRUCTION);
                             break;
 
                         default:

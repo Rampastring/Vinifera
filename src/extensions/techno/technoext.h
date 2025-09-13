@@ -37,6 +37,28 @@ class TechnoTypeClass;
 class TechnoTypeClassExtension;
 
 
+typedef enum ViniferaThreatType {
+    VINIFERA_THREAT_NORMAL = 0x0000,		// Any distance threat scan?
+    VINIFERA_THREAT_RANGE = 0x0001,			// Limit scan to weapon range?
+    VINIFERA_THREAT_AREA = 0x0002,			// Limit scan to general area (twice weapon range)?
+    VINIFERA_THREAT_AIR = 0x0004,			// Scan for air units?
+    VINIFERA_THREAT_INFANTRY = 0x0008,		// Scan for infantry units?
+    VINIFERA_THREAT_VEHICLES = 0x0010,		// Scan for vehicles?
+    VINIFERA_THREAT_BUILDINGS = 0x0020,	// Scan for buildings?
+    VINIFERA_THREAT_TIBERIUM = 0x0040,		// Limit scan to Tiberium processing objects?
+    VINIFERA_THREAT_BOATS = 0x0080,			// Scan for gunboats?
+    VINIFERA_THREAT_CIVILIANS = 0x0100,	// Consider civilians to be primary target?
+    VINIFERA_THREAT_CAPTURE = 0x0200,		// Consider capturable buildings only?
+    VINIFERA_THREAT_FAKES = 0x0400,			// Consider fake buildings a greater target?
+    VINIFERA_THREAT_POWER = 0x0800,			// Consider power generating facilities a greater target?
+    VINIFERA_THREAT_FACTORIES = 0x1000,	// Consider factories a greater target?
+    VINIFERA_THREAT_BASE_DEFENSE = 0x2000,	// Consider base defense buildings a greater target?
+    VINIFERA_THREAT_ALLIES = 0x4000,
+    VINIFERA_THREAT_HARVESTERS = 0x8000      // Limit scan to harvesters only
+} ViniferaThreatType;
+DEFINE_ENUMERATION_BITWISE_OPERATORS(ViniferaThreatType);
+DEFINE_ENUMERATION_OPERATORS(ViniferaThreatType);
+
 class TechnoClassExtension : public RadioClassExtension
 {
     public:
