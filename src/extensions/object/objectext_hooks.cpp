@@ -100,9 +100,9 @@ bool ObjectClassExt::_Paradrop(Coord const& coord)
         /**
          *  Can't move here, don't try paradropping here.
          */
-        if (Is_Techno() && !cellptr->Is_Clear_To_Move(TClass->Speed, false, false, Map.Get_Cell_Zone(ucoord.As_Cell(), TClass->MZone, IsOnBridge), TClass->MZone)) {
-            return false;
-        }
+        // if (Is_Techno() && !cellptr->Is_Clear_To_Move(TClass->Speed, false, false, Map.Get_Cell_Zone(ucoord.As_Cell(), TClass->MZone, IsOnBridge), TClass->MZone)) {
+        //     return false;
+        // }
 
         if (Unlimbo(ucoord, DIR_S)) {
 
