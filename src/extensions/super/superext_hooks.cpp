@@ -120,68 +120,101 @@ void SuperClassExt::_Do_DropPods(Cell* cell)
 	char buffer[24];
 
 	sprintf(buffer, "PARADROPINF_%d", this->House->HeapID);
-	const TeamTypeClass* ttype = TeamTypeClass::Find_Or_Make(buffer);
+	
+	TeamTypeClass* ttype = nullptr;
+
+	for (int i = 0; i < TeamTypes.Count(); i++)
+	{
+		if (!strcasecmp(buffer, TeamTypes[i]->IniName.c_str()))
+		{
+			ttype = TeamTypes[i];
+			break;
+		}
+	}
 
 	if (ttype == nullptr) {
-		TeamTypeClass* newteamtype = new TeamTypeClass();
+		ttype = new TeamTypeClass();
 
-		if (newteamtype != nullptr) {
-			newteamtype->IniName.assign(buffer);
+		if (ttype != nullptr) {
+			ttype->IniName.assign(buffer);
 			// ttype->IsTransient = true;
-			newteamtype->IsPrebuilt = false;
-			newteamtype->IsReinforcable = false;
-			newteamtype->IsSuicide = true;
-			newteamtype->Origin = WAYPT_SPECIAL;
-			newteamtype->Script = const_cast<ScriptTypeClass*>(ScriptTypeClass::Find_Or_Make("PARADROPINF_SCRIPT"));
+			ttype->IsPrebuilt = false;
+			ttype->IsReinforcable = false;
+			ttype->IsSuicide = true;
+			ttype->Origin = WAYPT_SPECIAL;
 
-			if (newteamtype->Script == nullptr) {
-				ScriptTypeClass* newscripttype = new ScriptTypeClass();
-
-				if (newscripttype == nullptr)
-					return;
-
-				newscripttype->IniName.assign("PARADROPINF_SCRIPT");
-				newscripttype->MissionCount = 2;
-				newscripttype->MissionList[0].Mission = SMISSION_ATT_WAYPT;
-				newscripttype->MissionList[0].Data.Value = WAYPT_SPECIAL;
-				newscripttype->MissionList[1].Mission = SMISSION_DO;
-				newscripttype->MissionList[1].Data.Mission = MISSION_RETREAT;
-
-				newteamtype->Script = newscripttype;
+			ScriptTypeClass* script = nullptr;
+			for (int i = 0; i < ScriptTypes.Count(); i++)
+			{
+				if (!strcasecmp("PARADROPINF_SCRIPT", ScriptTypes[i]->IniName.c_str()))
+				{
+					script = ScriptTypes[i];
+					break;
+				}
 			}
 
-			newteamtype->TaskForce = const_cast<TaskForceClass*>(TaskForceClass::Find_Or_Make("PARADROPINF_TASKFORCE"));
+			if (script == nullptr) {
+				script = new ScriptTypeClass();
 
-			if (newteamtype->TaskForce == nullptr) {
-				TaskForceClass* newtaskforce = new TaskForceClass();
-
-				if (newtaskforce == nullptr)
+				if (script == nullptr)
 					return;
 
-				newtaskforce->IniName.assign("PARADROPINF_TASKFORCE");
-				newtaskforce->ClassCount = 2;
-				newtaskforce->Members[0].Class = InfantryTypeClass::Find_Or_Make("E1");
-				newtaskforce->Members[0].Quantity = AircraftTypeClass::Find_Or_Make("BADGER")->Max_Passengers();
-				newtaskforce->Members[1].Class = AircraftTypeClass::Find_Or_Make("BADGER");
-				newtaskforce->Members[1].Quantity = 1;
+				script->IniName.assign("PARADROPINF_SCRIPT");
+				script->MissionCount = 2;
+				script->MissionList[0].Mission = SMISSION_ATT_WAYPT;
+				script->MissionList[0].Data.Value = WAYPT_SPECIAL;
+				script->MissionList[1].Mission = SMISSION_DO;
+				script->MissionList[1].Data.Mission = MISSION_RETREAT;
 
-				newteamtype->TaskForce = newtaskforce;
+				ttype->Script = script;
 			}
 
-			newteamtype->House = this->House;
-			ttype = newteamtype;
+			ttype->Script = script;
+
+			TaskForceClass* taskforce = nullptr;
+
+			for (int i = 0; i < TaskForces.Count(); i++)
+			{
+				if (!strcasecmp("PARADROPINF_TASKFORCE", TaskForces[i]->IniName.c_str()))
+				{
+					taskforce = TaskForces[i];
+					break;
+				}
+			}
+
+			if (taskforce == nullptr) {
+				taskforce = new TaskForceClass();
+
+				if (taskforce == nullptr)
+					return;
+
+				taskforce->IniName.assign("PARADROPINF_TASKFORCE");
+				taskforce->ClassCount = 2;
+				taskforce->Members[0].Class = InfantryTypeClass::Find_Or_Make("E1");
+				taskforce->Members[0].Quantity = AircraftTypeClass::Find_Or_Make("BADGER")->Max_Passengers();
+				taskforce->Members[1].Class = AircraftTypeClass::Find_Or_Make("BADGER");
+				taskforce->Members[1].Quantity = 1;
+			}
+
+			ttype->TaskForce = taskforce;
+			ttype->House = this->House;
 		}
 	}
 
 	if (ttype != NULL) {
 		ScenExtension->Waypoint[WAYPT_SPECIAL] = Map.Nearby_Location(*cell, SPEED_FOOT, -1, MZONE_INFANTRY, false, Point2D(1, 1), true, false, false, false, Cell());
-		if (Do_Reinforcements(ttype)) {
+		if (Map.In_Local_Radar(ScenExtension->Waypoint[WAYPT_SPECIAL]) && Do_Reinforcements(ttype)) {
 
 			// Mark the aircraft as a loaner so it is able to exit the map
 			AircraftClass* spawnedAircraft = Aircrafts[Aircrafts.Count() - 1];
 			spawnedAircraft->IsALoaner = true;
 			AircraftClassExtension* aircraftext = Extension::Fetch(spawnedAircraft);
 			aircraftext->IsParadropReinforcement = true;
+		}
+		else
+		{
+			// TODO does not work, SW timer is likely depleted after this function has finished executing
+			this->Forced_Charge(false);
 		}
 	}
 

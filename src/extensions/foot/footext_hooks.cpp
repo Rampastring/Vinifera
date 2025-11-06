@@ -47,6 +47,8 @@
 #include "rules.h"
 #include "rulesext.h"
 #include "session.h"
+#include "script.h"
+#include "scripttype.h"
 #include "team.h"
 #include "teamext.h"
 #include "teamtypeext.h"
@@ -1099,6 +1101,15 @@ void FootClass_AI_Abandon_Invalid_Targets(FootClass* this_ptr)
         {
             if (this_ptr->TarCom->RTTI == RTTI_CELL) {
                 if (reinterpret_cast<CellClass*>(this_ptr->TarCom)->Overlay == OVERLAY_NONE) {
+
+                    // Make an exception for attacking waypoints.
+                    if (this_ptr->Team != nullptr && this_ptr->Team->Script->CurrentMission > -1 &&
+                        this_ptr->Team->Script->CurrentMission < this_ptr->Team->Script->Class->MissionCount &&
+                        this_ptr->Team->Script->Class->MissionList[this_ptr->Team->Script->CurrentMission].Mission == SMISSION_ATT_WAYPT)
+                    {
+                        return;
+                    }
+
                     this_ptr->Assign_Target(nullptr);
                 }
             }

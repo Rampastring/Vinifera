@@ -80,6 +80,7 @@ public:
     void _Draw_Voxel(unsigned int frame, int key, Rect& rect, Point2D& point, const Matrix3D& other_matrix, int color, int flags);
     void _Rotation_AI();
     void _Approach_Target();
+    bool _Limbo(void);
 };
 
 
@@ -1500,6 +1501,26 @@ set_mission_delay_and_return:
 }
 
 
+// Vinifera has a bug where the "Flagged" value of UnitClass gets corrupted.
+// This leads to a crash in UnitClassExt::Limbo because the game assumes the unit
+// is carrying a flag, while it is not.
+// Work around the crash by checking for Special.IsCaptureTheFlag.
+bool UnitClassExt::_Limbo(void)
+{
+    if (FootClass::Limbo()) {
+        return true;
+
+        if (Scen->Special.IsCaptureTheFlag && Flagged != HOUSE_NONE && Flagged < Houses.Count())
+        {
+            Houses[Flagged]->Flag_Attach(Get_Cell());
+            Flagged = HOUSE_NONE;
+        }
+    }
+
+    return false;
+}
+
+
 /**
  *  Main function for patching the hooks.
  */
@@ -1531,6 +1552,7 @@ void UnitClassExtension_Hooks()
     Patch_Jump(0x0064E560, &UnitClassExt::_Rotation_AI);
     Patch_Jump(0x00656F99, &_UnitClass_Can_Fire_IsOmniFire_Patch);
     Patch_Jump(0x006571E0, &UnitClassExt::_Approach_Target);
+    Patch_Jump(0x00659270, &UnitClassExt::_Limbo);
 
     Patch_Byte(0x00658961, 0xEB); // Allow pre-placed units to have missions in multiplayer, change JZ to JMP
 
