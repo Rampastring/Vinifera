@@ -869,7 +869,7 @@ bool Respectable_Target_Something_Nearby(FootClassExt* foot, Coord & coord, Thre
 */
 int FootClassExt::_Do_MISSION_HUNT()
 {
-    int delay = Current_Mission_Control().Normal_Delay() + Random_Pick(0, 2);
+    int delay = Current_Mission_Control().Normal_Delay();
     bool smarthunt = RuleExtension->AdvancedAISmartHunt;
 
     if (smarthunt && Team != nullptr)
@@ -881,14 +881,22 @@ int FootClassExt::_Do_MISSION_HUNT()
     if (smarthunt) {
         // First, try to target something in range.
         // Prefer focusing on targets that are actually threatening - mobile objects and base defenses.
-        if (!Respectable_Target_Something_Nearby(this, PositionCoord, THREAT_RANGE | THREAT_AIR | THREAT_INFANTRY | THREAT_VEHICLES | THREAT_BASE_DEFENSE)) {
+
+        ThreatType threat = THREAT_RANGE | THREAT_INFANTRY | THREAT_VEHICLES | THREAT_BASE_DEFENSE;
+        if (Anti_Air() > 0) {
+            threat = threat | THREAT_AIR;
+        }
+
+        if (!Respectable_Target_Something_Nearby(this, PositionCoord, threat)) {
+
+            delay += 7 + Random_Pick(0, 5);
 
             // If it failed, then try to target something far away.
             if (!Respectable_Target_Something_Nearby(this, PositionCoord, THREAT_NORMAL)) {
 
                 // If there's truly nothing to target, we're done.
                 Random_Animate();
-                return delay;
+                return delay + TICKS_PER_SECOND + Random_Pick(0, 5);
             }
         }
     } else {
@@ -897,7 +905,7 @@ int FootClassExt::_Do_MISSION_HUNT()
         if (!Target_Something_Nearby(PositionCoord, THREAT_NORMAL)) {
 
             Random_Animate();
-            return delay;
+            return delay + Random_Pick(0, 2);
         }
     }
 
@@ -1060,6 +1068,14 @@ int FootClassExt::_Do_MISSION_HUNT()
                             approach_target = false;
                         }
                     }
+                }
+                else
+                {
+                    int dist = ::Distance(Center_Coord(), targetcoord);
+                    if (dist > ourweapon->Range * 3 && dist > CELL_LEPTON * 20)
+                        delay += TICKS_PER_SECOND * 6 + Random_Pick(0, 30);
+                    else
+                        delay += TICKS_PER_SECOND + Random_Pick(0, 2);
                 }
             }
         }
