@@ -34,11 +34,13 @@
 #include "building.h"
 #include "cell.h"
 #include "foot.h"
+#include "footext.h"
 #include "house.h"
 #include "rulesext.h"
 #include "tag.h"
 #include "taskforce.h"
 #include "technotypeext.h"
+#include "weapontype.h"
 #include "extension.h"
 #include "iomap.h"
 #include "fatal.h"
@@ -574,8 +576,10 @@ enum TargetPropertyType
 
 /*
 **  Fixes a bug where the AI does not ignore buildings in limbo when selecting a BwP target.
+**  Also makes BwP scan respect TargetZoneScanType.
 **
-**  @author: tomsons26/ZivDero for original code, Rampastring for fixing the aforementioned bug.
+**  @author: tomsons26/ZivDero for original code, Rampastring for fixing the aforementioned bug
+**           and implementing TargetZoneScanType functionality.
 */
 BuildingClass* _Pick_Building_With_Property(BuildingTypeClass* type, HouseClass* house, FootClass* unit, TargetPropertyType prop, bool only_enemy)
 {
@@ -583,6 +587,9 @@ BuildingClass* _Pick_Building_With_Property(BuildingTypeClass* type, HouseClass*
 	BuildingClass* best_same_ptr = nullptr;
 	int best_dist = -1;
 	BuildingClass* best_ptr = nullptr;
+
+	TargetZoneScanType tzst = Extension::Fetch(unit->TClass)->TargetZoneScan;
+	int ourzone = Map.Get_Cell_Zone(unit->Center_Coord().As_Cell(), unit->TClass->MZone, true);
 
 	for (int index = 0; index < Buildings.Count(); index++) {
 
@@ -597,6 +604,45 @@ BuildingClass* _Pick_Building_With_Property(BuildingTypeClass* type, HouseClass*
 		bool same_house = hptr == house;
 
 		if (ptr->Class == type && (same_house || !unit->House->Is_Ally(ptr->House))) {
+
+			if (tzst == TargetZoneScanType::TZST_SAME) {
+				int targetzone = Map.Get_Cell_Zone(ptr->Center_Coord().As_Cell(), unit->TClass->MZone, false);
+				if (targetzone != ourzone) {
+					continue;
+				}
+			}
+			else if (tzst == TargetZoneScanType::TZST_INRANGE)
+			{
+				// If the zone is different, only allow targeting if we can reach the target from our zone.
+
+				int targetzone = Map.Get_Cell_Zone(ptr->Center_Coord().As_Cell(), unit->TClass->MZone, false);
+
+				if (ourzone != targetzone) 
+				{
+					Cell nearbycell = Map.Nearby_Location(ptr->Center_Coord().As_Cell(),
+						unit->TClass->Speed,
+						/*Phobos has -1 here*/ ourzone,
+						unit->TClass->MZone,
+						false, Point2D(1, 1), true, false, false, unit->TClass->Speed != SPEED_FLOAT);
+
+					if (nearbycell == CELL_NONE) {
+						// We couldn't find a valid cell to reach the target from
+						continue;
+					}
+
+					int distance = ::Distance(nearbycell, ptr->Center_Coord().As_Cell());
+
+					WeaponSlotType weaponslot = unit->What_Weapon_Should_I_Use(ptr);
+					auto weaponinfo = unit->Get_Weapon(weaponslot);
+					if (weaponinfo->Weapon == nullptr) {
+						continue;
+					}
+
+					if ((distance * CELL_LEPTON_W) >= weaponinfo->Weapon->Range) {
+						continue;
+					}
+				}
+			}
 
 			int dist = -1;
 
