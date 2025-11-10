@@ -132,7 +132,8 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AdvancedAIAreaGuard(false),
     AdvancedAISmartHunt(true),
     AdvancedAIAircraftTargeting(false),
-    AdvancedAIAircraftReuse(false)
+    AdvancedAIAircraftReuse(false),
+    IsBeachIsCrush(false)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
 
@@ -765,6 +766,7 @@ bool RulesClassExtension::General(CCINIClass &ini)
     }
 
     AIKiteChance = ini.Get_Integers(GENERAL, "AIKiteChance", AIKiteChance);
+    IsBeachIsCrush = ini.Get_Bool(GENERAL, "BeachIsCrush", IsBeachIsCrush);
 
     return true;
 }
@@ -800,7 +802,6 @@ bool RulesClassExtension::AudioVisual(CCINIClass &ini)
     VoxUnitPromoted = ini.Get_VoxType(AUDIOVISUAL, "VoxUnitPromoted", VoxUnitPromoted);
     EliteFlashTimer = ini.Get_Int(AUDIOVISUAL, "EliteFlashTimer", EliteFlashTimer);
 
-    
     PlaceBeaconSound = ini.Get_VocType(AUDIOVISUAL, "PlaceBeaconSound", PlaceBeaconSound);
     PlaceBeaconVoice = ini.Get_VoxType(AUDIOVISUAL, "PlaceBeaconVoice", PlaceBeaconVoice);
     DetectBeaconVoice = ini.Get_VoxType(AUDIOVISUAL, "DetectBeaconVoice", DetectBeaconVoice);
