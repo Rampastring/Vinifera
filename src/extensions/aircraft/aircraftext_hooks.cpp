@@ -45,7 +45,6 @@
 #include "extension.h"
 #include "voc.h"
 #include "mouse.h"
-#include "team.h"
 #include "building.h"
 #include "fatal.h"
 #include "debughandler.h"
