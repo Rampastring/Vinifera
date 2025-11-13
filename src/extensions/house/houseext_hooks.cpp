@@ -825,16 +825,19 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
             }
         }
 
-        // If we have no tech center, then build one
-        for (int i = 0; i < Rule->BuildTech.Count(); i++) {
-            BuildingTypeClass* techcenter = Rule->BuildTech[i];
-            if (AdvAI_Can_Build_Building(house, techcenter, true)) {
-                if (house->ActiveBQuantity.Value((StructType)techcenter->Fetch_Heap_ID()) < 1) {
-                    DEBUG_INFO("AdvAI: Making AI build %s because it does not have a tech center.\n",
-                        techcenter->IniName.c_str());
+        // If we have no tech center, then build one if we are allowed to
+        if (Frame > RuleExtension->AdvancedAINoTechCenterBeforeFrame)
+        {
+            for (int i = 0; i < Rule->BuildTech.Count(); i++) {
+                BuildingTypeClass* techcenter = Rule->BuildTech[i];
+                if (AdvAI_Can_Build_Building(house, techcenter, true)) {
+                    if (house->ActiveBQuantity.Value((StructType)techcenter->Fetch_Heap_ID()) < 1) {
+                        DEBUG_INFO("AdvAI: Making AI build %s because it does not have a tech center.\n",
+                            techcenter->IniName.c_str());
 
-                    houseext->AdvAIFunValue = 1;
-                    return techcenter;
+                        houseext->AdvAIFunValue = 1;
+                        return techcenter;
+                    }
                 }
             }
         }
@@ -876,12 +879,10 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
                 continue;
 
             if (BuildingTypes[i]->CanAIBuildThis && i != our_anti_infantry_defense && i != our_anti_vehicle_defense && i != our_anti_air_defense) {
-                if (AdvAI_Can_Build_Building(house, BuildingTypes[i], false)) {
-                    if (house->ActiveBQuantity.Value((StructType)i) < 1) {
-                        DEBUG_INFO("AdvAI: Making AI build %s because it has AIBuildThis=yes and the AI has none.\n",
-                            BuildingTypes[i]->IniName.c_str());
-                        return BuildingTypes[i];
-                    }
+                if (house->ActiveBQuantity.Value((StructType)i) < 1 && AdvAI_Can_Build_Building(house, BuildingTypes[i], true)) {
+                    DEBUG_INFO("AdvAI: Making AI build %s because it has AIBuildThis=yes and the AI has none.\n",
+                        BuildingTypes[i]->IniName.c_str());
+                    return BuildingTypes[i];
                 }
             }
         }

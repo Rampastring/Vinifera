@@ -324,6 +324,8 @@ public:
 
     bool AdvancedAIAircraftReuse;
 
+    int AdvancedAINoTechCenterBeforeFrame;
+
     /**
      *  Is LandType Beach considered as "requires crushing" for passability purposes, as opposed to water?
      */

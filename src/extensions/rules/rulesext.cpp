@@ -133,6 +133,7 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AdvancedAISmartHunt(true),
     AdvancedAIAircraftTargeting(false),
     AdvancedAIAircraftReuse(false),
+    AdvancedAINoTechCenterBeforeFrame(10000),
     IsBeachIsCrush(false)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
@@ -876,6 +877,7 @@ bool RulesClassExtension::AI(CCINIClass& ini)
     AdvancedAISmartHunt = ini.Get_Bool(AI, "AdvancedAISmartHunt", AdvancedAISmartHunt);
     AdvancedAIAircraftTargeting = ini.Get_Bool(AI, "AdvancedAIAircraftTargeting", AdvancedAIAircraftTargeting);
     AdvancedAIAircraftReuse = ini.Get_Bool(AI, "AdvancedAIAircraftReuse", AdvancedAIAircraftReuse);
+    AdvancedAINoTechCenterBeforeFrame = ini.Get_Int(AI, "AdvancedAINoTechCenterBeforeFrame", AdvancedAINoTechCenterBeforeFrame);
 
     BuildNavalYard = ::TGet_TypeList(ini, AI, "BuildNavalYard", BuildNavalYard);
 
