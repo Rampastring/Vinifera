@@ -212,7 +212,7 @@ bool TeamClassExt::_Add(FootClass* obj)
     obj->Member = Member;
     Member = obj;
     obj->Team = this;
-    obj->Group = Class->Group;
+    obj->Group = Get_Group(Class);
 
     /*
     **	If a common trigger is designated for this team type, then attach the
@@ -352,14 +352,8 @@ bool TeamClassExt::_Remove(FootClass* obj, int typeindex)
 		**	If this (remaining) member is initiated, then keep a record of this.
 		*/
 		//initiated |= curr->IsInitiated;
-		if (initiated) {
+		if (curr->IsInitiated) {
 			initiated = true;
-		}
-		else {
-			initiated = false;
-			if (curr->IsInitiated) {
-				initiated = true;
-			}
 		}
 
 		prev = curr;
@@ -397,6 +391,11 @@ bool TeamClassExt::_Remove(FootClass* obj, int typeindex)
 }
 
 
+/**
+ *  TeamClass::Recalc_Strength reimplementation for Advanced AI.
+ *
+ *  Author: Original implementation by tomsons26/ZivDero, adjustments by Rampastring
+ */
 bool TeamClassExt::_Recalc_Strength()
 {
 	TeamClassExtension* teamext = Extension::Fetch(this);
@@ -413,7 +412,7 @@ bool TeamClassExt::_Recalc_Strength()
 
 	if (Total > 0) {
 
-		if (RuleExtension->AdvancedAIUnitProduction && !teamext->IsAdvAITeam) {
+		if (!RuleExtension->AdvancedAIUnitProduction || !teamext->IsAdvAITeam) {
 			IsFullStrength = (Total == desired);
 			if (IsFullStrength) {
 				IsHasBeen = true;
@@ -700,5 +699,6 @@ void TeamClassExtension_Hooks()
     Patch_Jump(0x00623780, &TeamClassExt::_Add);
 	Patch_Jump(0x00623A00, &TeamClassExt::_Remove);
 	Patch_Jump(0x00625B90, &TeamClassExt::_TMission_ATTACK);
+	Patch_Jump(0x00623680, &TeamClassExt::_Recalc_Strength);
 	Patch_Jump(0x006271F0, &_Pick_Building_With_Property);
 }
