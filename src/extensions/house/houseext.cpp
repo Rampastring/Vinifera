@@ -1290,7 +1290,7 @@ int AdvancedAI_AI_Naval_Unit(HouseClass* house)
             int value = teamext->AdvAI_Get_Object_Value_For_Team(unittype, debugprint);
 
             if (debugprint) {
-                DEBUG_INFO("    %s: %d\n", unittype->IniName, value);
+                DEBUG_INFO("    %s: %d\n", unittype->IniName.c_str(), value);
             }
 
             if (value > highestvalue) {
@@ -1302,7 +1302,7 @@ int AdvancedAI_AI_Naval_Unit(HouseClass* house)
 
     if (mostvaluable != UNIT_NONE) {
         if (debugprint) {
-            DEBUG_INFO("    Selected: %s\n", UnitTypes[mostvaluable]->IniName);
+            DEBUG_INFO("    Selected: %s\n", UnitTypes[mostvaluable]->IniName.c_str());
         }
 
         houseext->BuildNavalUnit = mostvaluable;
