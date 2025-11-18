@@ -96,11 +96,21 @@ int TechnoTypeClassExt::_Max_Pips() const
  *  #issue-90
  *
  *  Disables the bugged bonus range for arcing projectiles.
+ *  Also, gives two cells of extra range to aircraft to make them
+ *  better at hitting units that they are chasing.
  *
  *  Author: Rampastring
  */
 DECLARE_PATCH(_TechnoTypeClass_In_Range_Disable_Arcing_Bonus_Range_Patch)
 {
+    GET_REGISTER_STATIC(int, range, edi);
+    GET_STACK_STATIC(TechnoTypeClass*, this_ptr, esp, 0x14);
+    if (this_ptr->RTTI == RTTI_AIRCRAFTTYPE)
+    {
+        range += CELL_LEPTON * 2;
+        _asm { mov  edi, dword ptr ds : range }
+    }
+
     JMP(0x0063D6AA);
 }
 
@@ -111,4 +121,5 @@ DECLARE_PATCH(_TechnoTypeClass_In_Range_Disable_Arcing_Bonus_Range_Patch)
 void TechnoTypeClassExtension_Hooks()
 {
     Patch_Jump(0x0063D460, &TechnoTypeClassExt::_Max_Pips);
+    Patch_Jump(0x0063D5A7, &_TechnoTypeClass_In_Range_Disable_Arcing_Bonus_Range_Patch);
 }
