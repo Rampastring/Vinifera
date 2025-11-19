@@ -483,7 +483,7 @@ MouseType MouseTypeClass::From_Name(const char *name)
 {
     ASSERT(name != nullptr);
 
-    if (Wstring(name) == "<none>" || Wstring(name) == "none") {
+    if (std::string_view(name) == "<none>" || std::string_view(name) == "none") {
         return MOUSE_NORMAL;
     }
 
@@ -519,7 +519,7 @@ MouseTypeClass *MouseTypeClass::Find_Or_Make(const char *name)
 {
     ASSERT(name != nullptr);
 
-    if (Wstring(name) == "<none>" || Wstring(name) == "none") {
+    if (std::string_view(name) == "<none>" || std::string_view(name) == "none") {
         return nullptr;
     }
 
