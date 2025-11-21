@@ -130,7 +130,7 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AdvancedAIBaseBuilding(false),
     AdvancedAIUnitProduction(false),
     AdvancedAIAreaGuard(false),
-    AdvancedAISmartHunt(true),
+    AdvancedAISmartHunt(false),
     AdvancedAIAircraftTargeting(false),
     AdvancedAIAircraftReuse(false),
     AdvancedAINoTechCenterBeforeFrame(10000),
