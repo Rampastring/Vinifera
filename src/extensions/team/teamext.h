@@ -120,7 +120,8 @@ TeamClassExtension final : public AbstractClassExtension
         int CurrentCost;
         bool IsTransportTeam;
         int MaxInfantry;
-        AdvAITacticType AdvAITactic;
+        AdvAITacticType AdvAIGroundTacticType;
+        AdvancedAITacticTypeClass* AdvAITactic;
         bool IsAircraftTeam;
         bool IsBiasedForEnemyStrength;
         bool PenalizeSameTypeUnits;

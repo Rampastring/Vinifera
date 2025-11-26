@@ -252,4 +252,5 @@ public:
     int FrameBasedDurationIncreaseMax;
     bool IsAir;
     bool IsNaval;
+    int MaxInstances;
 };

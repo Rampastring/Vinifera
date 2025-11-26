@@ -35,6 +35,8 @@
 #include "unit.h"
 #include "ccini.h"
 #include "tibsun_inline.h"
+#include "vinifera_globals.h"
+#include "vinifera_saveload.h"
 #include "wwcrc.h"
 #include "extension.h"
 #include "asserthandler.h"
@@ -80,7 +82,8 @@ TeamClassExtension::TeamClassExtension(const TeamClass *this_ptr) :
     CurrentCost(0),
     IsTransportTeam(false),
     MaxInfantry(-1),
-    AdvAITactic(AdvAITacticType::TACTIC_NONE),
+    AdvAIGroundTacticType(AdvAITacticType::TACTIC_NONE),
+    AdvAITactic(nullptr),
     IsAircraftTeam(false),
     IsBiasedForEnemyStrength(false),
     PenalizeSameTypeUnits(false),
@@ -151,6 +154,8 @@ HRESULT TeamClassExtension::Load(IStream *pStm)
     }
 
     new (this) TeamClassExtension(NoInitClass());
+
+    VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP(AdvAITactic, "AdvAITactic");
 
     return hr;
 }
@@ -374,7 +379,7 @@ int TeamClassExtension::AdvAI_Get_Object_Value_For_Team(TechnoTypeClass* technot
         DEBUG_INFO("        Info for %s: AntiNone: %d, AntiLight: %d, AntiHeavy: %d, Artillery: %d", technotype->IniName.c_str(), antinonevalue, antilightvalue, antiheavyvalue, artilleryvalue);
     }
 
-    if (AdvAITactic == AdvAITacticType::TACTIC_APC_ATTACK && technotype->RTTI == RTTI_INFANTRYTYPE) {
+    if (AdvAIGroundTacticType == AdvAITacticType::TACTIC_APC_ATTACK && technotype->RTTI == RTTI_INFANTRYTYPE) {
         if (reinterpret_cast<InfantryTypeClass*>(technotype)->IsBomber) {
             antilightvalue += 1000;
         }

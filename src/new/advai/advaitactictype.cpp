@@ -70,7 +70,8 @@ AdvancedAITacticTypeClass::AdvancedAITacticTypeClass(const char* name) :
     FrameBasedDurationIncreaseMax(0),
     FrameBasedDurationTimeStep(0),
     IsAir(false),
-    IsNaval(false)
+    IsNaval(false),
+    MaxInstances(-1)
 {
     ASSERT_FATAL_PRINT(name != nullptr, "Invalid name for AdvAITacticType!");
 
@@ -934,7 +935,7 @@ TeamTypeClass* Find_Or_Make_Anti_Refineries_TeamType(HouseClass* house, bool sui
     return teamtype;
 }
 
-TeamClass* AdvAI_Create_Team(HouseClass* house, TeamTypeClass* teamtype, RTTIType fortype, int maxcost = -1, bool transport = false, AdvAITacticType forcedtactic = TACTIC_NONE)
+TeamClass* AdvAI_Create_Team(HouseClass* house, AdvancedAITacticTypeClass* tactic, TeamTypeClass* teamtype, RTTIType fortype, int maxcost = -1, bool transport = false, AdvAITacticType forcedtactictype = TACTIC_NONE)
 {
     if (teamtype == nullptr) {
         DEBUG_INFO("AdvAI_Create_Team called with null teamtype\n");
@@ -950,7 +951,8 @@ TeamClass* AdvAI_Create_Team(HouseClass* house, TeamTypeClass* teamtype, RTTITyp
 
     TeamClassExtension* teamext = Extension::Fetch(team);
     teamext->IsAdvAITeam = true;
-    teamext->AdvAITactic = forcedtactic != TACTIC_NONE ? forcedtactic : Extension::Fetch(house)->AdvAIGroundTactic.Tactic;
+    teamext->AdvAITactic = tactic;
+    teamext->AdvAIGroundTacticType = forcedtactictype != TACTIC_NONE ? forcedtactictype : Extension::Fetch(house)->AdvAIGroundTactic.Tactic;
     Extension::Fetch(house)->AdvAI_Set_Ground_Team_Desired_Ratios(team);
 
     if (maxcost > 0)
@@ -1042,7 +1044,7 @@ TeamTypeClass* Find_Or_Make_Aircraft_Vs_Refineries_TeamType(HouseClass* house, b
     return Find_Or_Make_Aircraft_TeamType(buffer, house, Find_Or_Make_Attack_Refineries_Script(), suicidal);
 }
 
-TeamClass* AdvAI_Create_Aircraft_Team(HouseClass* house, TeamTypeClass* teamtype, int maxcost = -1)
+TeamClass* AdvAI_Create_Aircraft_Team(HouseClass* house, AdvancedAITacticTypeClass* tactic, TeamTypeClass* teamtype, int maxcost = -1)
 {
     if (teamtype == nullptr) {
         DEBUG_INFO("AdvAI_Create_Aircraft_Team called with null teamtype\n");
@@ -1058,10 +1060,11 @@ TeamClass* AdvAI_Create_Aircraft_Team(HouseClass* house, TeamTypeClass* teamtype
 
     TeamClassExtension* teamext = Extension::Fetch(team);
     teamext->IsAdvAITeam = true;
+    teamext->AdvAITactic = tactic;
     teamext->IsAircraftTeam = true;
     teamext->NoInfantry = true;
     teamext->NoVehicles = true;
-    teamext->AdvAITactic = Extension::Fetch(house)->AdvAIGroundTactic.Tactic;
+    teamext->AdvAIGroundTacticType = Extension::Fetch(house)->AdvAIGroundTactic.Tactic;
     Extension::Fetch(house)->AdvAI_Set_Aircraft_Team_Desired_Ratios(team);
 
     if (maxcost > 0)
@@ -1070,7 +1073,7 @@ TeamClass* AdvAI_Create_Aircraft_Team(HouseClass* house, TeamTypeClass* teamtype
     return team;
 }
 
-TeamClass* AdvAI_Create_Naval_Team(HouseClass* house, TeamTypeClass* teamtype, int maxcost = -1)
+TeamClass* AdvAI_Create_Naval_Team(HouseClass* house, AdvancedAITacticTypeClass* tactic, TeamTypeClass* teamtype, int maxcost = -1)
 {
     if (teamtype == nullptr) {
         DEBUG_INFO("AdvAI_Create_Naval_Team called with null teamtype\n");
@@ -1087,9 +1090,10 @@ TeamClass* AdvAI_Create_Naval_Team(HouseClass* house, TeamTypeClass* teamtype, i
     TeamClassExtension* teamext = Extension::Fetch(team);
     teamext->ProdFlags = PRODFLAG_NAVAL;
     teamext->IsAdvAITeam = true;
+    teamext->AdvAITactic = tactic;
     teamext->NoAircraft = true;
     teamext->NoInfantry = true;
-    teamext->AdvAITactic = Extension::Fetch(house)->AdvAIGroundTactic.Tactic;
+    teamext->AdvAIGroundTacticType = Extension::Fetch(house)->AdvAIGroundTactic.Tactic;
 
     Extension::Fetch(house)->AdvAI_Set_Naval_Team_Desired_Ratios(team);
 
@@ -1103,6 +1107,31 @@ bool AdvancedAITacticTypeClass::Process(HouseClass* house)
 {
     if (house->Class->HeapID != House) {
         return false;
+    }
+
+    HouseClassExtension* houseext = Extension::Fetch(house);
+
+    if (MaxInstances > -1) {
+
+        int currentinstances = 0;
+
+        for (int i = 0; i < Teams.Count(); i++)
+        {
+            TeamClass* team = Teams[i];
+
+            if (team->House != house)
+                continue;
+
+            TeamClassExtension* teamext = Extension::Fetch(team);
+
+            if (teamext->AdvAITactic == this) {
+                currentinstances++;
+            }
+        }
+
+        if (currentinstances >= MaxInstances) {
+            return false;
+        }
     }
 
     for (int i = 0; i < Conditions.Count(); i++)
@@ -1261,7 +1290,7 @@ bool AdvancedAITacticTypeClass::Process(HouseClass* house)
                 return false;
             }
 
-            AdvAI_Create_Aircraft_Team(house, teamtype, advaiteamtype.MaxCost);
+            AdvAI_Create_Aircraft_Team(house, this, teamtype, advaiteamtype.MaxCost);
         }
         else if (IsNaval)
         {
@@ -1276,7 +1305,7 @@ bool AdvancedAITacticTypeClass::Process(HouseClass* house)
                 return false;
             }
 
-            AdvAI_Create_Naval_Team(house, teamtype, advaiteamtype.MaxCost);
+            AdvAI_Create_Naval_Team(house, this, teamtype, advaiteamtype.MaxCost);
         }
         else
         {
@@ -1316,7 +1345,7 @@ bool AdvancedAITacticTypeClass::Process(HouseClass* house)
                 return false;
             }
 
-            AdvAI_Create_Team(house, teamtype, advaiteamtype.LimitToRTTI, advaiteamtype.MaxCost, advaiteamtype.IsTransportTeam, advaiteamtype.ForcedTacticType);
+            AdvAI_Create_Team(house, this, teamtype, advaiteamtype.LimitToRTTI, advaiteamtype.MaxCost, advaiteamtype.IsTransportTeam, advaiteamtype.ForcedTacticType);
         }
     }
 
@@ -1720,6 +1749,7 @@ bool AdvancedAITacticTypeClass::Read_INI(CCINIClass& ini)
     FrameBasedDurationIncrease = ini.Get_Int(IniName, "FrameBasedDurationIncrease", FrameBasedDurationIncrease);
     FrameBasedDurationTimeStep = ini.Get_Int(IniName, "FrameBasedDurationTimeStep", FrameBasedDurationTimeStep);
     FrameBasedDurationIncreaseMax = ini.Get_Int(IniName, "FrameBasedDurationIncreaseMax", FrameBasedDurationIncreaseMax);
+    MaxInstances = ini.Get_Int(IniName, "MaxInstances", MaxInstances);
 
     return true;
 }
