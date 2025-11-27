@@ -108,7 +108,8 @@ HouseClassExtension::HouseClassExtension(const HouseClass* this_ptr) :
     AdvAILastBuiltInfantryCount(0),
     AdvAILastUndeployableUnitCheckFrame(0),
     AdvAIFunValue(0),
-    IsNavalOnly(AdvancedAINavalOnlyState::NOT_CHECKED)
+    IsNavalOnly(AdvancedAINavalOnlyState::NOT_CHECKED),
+    LastNavalOnlyCheckFrame(-1)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("HouseClassExtension::HouseClassExtension - 0x%08X\n", (uintptr_t)(This()));
 
@@ -863,8 +864,6 @@ TechnoTypeClass const* HouseClassExtension::Suggest_New_Object(RTTIType objectty
     return techno;
 }
 
-
-
 TeamClass* HouseClassExtension::Get_Team_In_Production(int& id, RTTIType for_type, ProductionFlags prodflags) const
 {
     if (id < 0) {
@@ -944,11 +943,15 @@ int AdvancedAI_AI_Unit_Start_Rush_Counter(HouseClass* house)
     UnitType mostvaluable = UNIT_NONE;
     int highestvalue = -1;
 
-    // Build a list of all infantry that we can build, alongside their scores for our current tactic.
+    // Build a list of all units that we can build, alongside their scores for our current tactic.
     for (int i = 0; i < UnitTypes.Count(); i++)
     {
         UnitTypeClass* unittype = UnitTypes[i];
         UnitTypeClassExtension* unittypeext = Extension::Fetch(unittype);
+
+        if (unittypeext->IsNaval) {
+            continue;
+        }
 
         if ((unittype->Ownable & (1 << house->ActLike)) == (1 << house->ActLike) &&
             house->Can_Build(unittype, false, true) && houseext->_AI_Has_Prerequisites(unittype, owned_buildings, owned_buildings.Count())) {
@@ -1134,7 +1137,8 @@ int AdvancedAI_AI_Unit(HouseClass* house)
  */
 int HouseClassExtension::AI_Unit()
 {
-    if (This()->BuildUnit != UNIT_NONE) return TICKS_PER_SECOND;
+    HouseClass* this_ptr = This();
+    if (this_ptr->BuildUnit != UNIT_NONE) return TICKS_PER_SECOND;
 
     if (RuleExtension->AdvancedAIUnitProduction) {
         return AdvancedAI_AI_Unit(This());

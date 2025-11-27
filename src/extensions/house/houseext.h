@@ -353,4 +353,6 @@ public:
     int AdvAILastUndeployableUnitCheckFrame;
 
     AdvancedAINavalOnlyState IsNavalOnly;
+
+    int LastNavalOnlyCheckFrame;
 };

@@ -622,7 +622,8 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
     if (house->Class->HeapID == 2 && Frame > 20000)
         optimal_defense_count++;
 
-    bool isfun = houseext->AdvAIFunValue > 90 && Frame < (int)(6400 * house->BuildSpeedBias) && (house->Class->HeapID == 1 || house->Class->HeapID == 3);
+    // Disabled for now.
+    bool isfun = false; // houseext->AdvAIFunValue > 90 && Frame < (int)(6400 * house->BuildSpeedBias) && (house->Class->HeapID == 1 || house->Class->HeapID == 3);
 
     // If we are under attack, prioritize defense.
     if (houseext->AdvAI_Is_Recently_Attacked()) {
@@ -1714,8 +1715,8 @@ void AdvAI_Tactic_Selection_AI(HouseClass* house)
 
     HouseClassExtension* houseext = Extension::Fetch(house);
 
-    // If we haven't even produced a barracks yet, there is nothing to do.
-    if (!houseext->HasBuiltFirstBarracks) {
+    // If we have no ground based factories, there is nothing to do.
+    if (!houseext->Has_Barracks() && !houseext->Has_War_Factory()) {
         return;
     }
 
@@ -1803,7 +1804,7 @@ void AdvAI_Team_Maintenance_AI(HouseClass* house)
         TeamClassExtension* teamext = Extension::Fetch(team);
 
         if (!team->IsForcedActive && teamext->IsBiasedForEnemyStrength && !teamext->IsAircraftTeam && teamext->ProdFlags == PRODFLAG_NONE)
-            Extension::Fetch(house)->AdvAI_Set_Ground_Team_Desired_Ratios(team, teamext->AdvAITactic);
+            Extension::Fetch(house)->AdvAI_Set_Ground_Team_Desired_Ratios(team, teamext->AdvAIGroundTacticType);
 
         teamext->AdvAI_Team_Maintenance_AI();
     }
@@ -1926,9 +1927,11 @@ void AdvAI_Check_Naval_Only(HouseClass* house)
 {
     HouseClassExtension* houseext = Extension::Fetch(house);
 
+    houseext->LastNavalOnlyCheckFrame = Frame;
+
     // Check if there are no enemy technos on the same land-passable zone with our first object.
 
-    int ourzone = 0;
+    int ourzone = -1;
 
     // First, find our zone.
     // Take it from the first land object owned by us that we find.
@@ -1946,6 +1949,10 @@ void AdvAI_Check_Naval_Only(HouseClass* house)
 
         ourzone = Map.Get_Cell_Zone(techno->PositionCell, MZONE_DESTROYER);
         break;
+    }
+
+    if (ourzone < 0) {
+        return;
     }
 
     // Then, scan all enemy objects and check whether any are on the same zone with us.
@@ -2018,7 +2025,8 @@ void AdvAI_HouseClass_Expert_AI(HouseClass* house)
     }
 
     // If we haven't yet checked whether this is a "naval-only" map, check that now.
-    if (houseext->IsNavalOnly == AdvancedAINavalOnlyState::NOT_CHECKED) {
+    // Also re-check it periodically in case the situation changes.
+    if (houseext->IsNavalOnly == AdvancedAINavalOnlyState::NOT_CHECKED || Frame > houseext->LastNavalOnlyCheckFrame + 5000) {
         AdvAI_Check_Naval_Only(house);
     }
 
@@ -2438,7 +2446,7 @@ int AdvancedAI_AI_Infantry(HouseClass* house)
     InfantryType mostvaluable = INFANTRY_NONE;
     int highestvalue = 0;
 
-    if (teamext->AdvAITactic == AdvAITacticType::TACTIC_DEFEND && !AdvAI_Is_Disadvantaged(house))
+    if (teamext->AdvAIGroundTacticType == AdvAITacticType::TACTIC_DEFEND && !AdvAI_Is_Disadvantaged(house))
     {
         return TICKS_PER_SECOND;
     }
