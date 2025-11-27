@@ -30,7 +30,6 @@
  *
  ******************************************************************************/
 #include "mapview.h"
-#include <iterator>
 
 
 MapViewOfFileClass::MapViewOfFileClass(const wchar_t *fileName) :

@@ -25,11 +25,13 @@
  *                 If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
+
 #include "vinifera_savever.h"
+
+#include <comdef.h>
+
 #include "savever.h"
 #include "debughandler.h"
-#include <comdef.h>
-#include <iterator>
 
 
 /**

@@ -34,7 +34,6 @@
  ******************************************************************************/
 #include "blowstraw.h"
 #include "asserthandler.h"
-#include <cstring>
 
 
 int BlowStraw::Get(void * source, int slen)

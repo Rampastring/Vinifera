@@ -32,8 +32,6 @@
 #include "session.h"
 #include "asserthandler.h"
 #include "debughandler.h"
-#include <cstring>
-#include <crtdbg.h>
 
 #include "hooker.h"
 #include "hooker_macros.h"
