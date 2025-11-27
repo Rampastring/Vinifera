@@ -152,4 +152,36 @@ void MultiScoreExtension_Hooks()
      */
     static const char *TEXT_LOSER = "Loser";
     Patch_Dword(0x00568A05+1, (uintptr_t)TEXT_LOSER); // +1 skips "mov eax," opcode
+
+    // Make some MSEngine anims faster - Rampastring
+
+    // Restate
+    Patch_Byte(0x005C0618, 0x02);
+
+    // MultiScore (animation rates)
+    Patch_Byte(0x005686A4 + 1, 0x02);
+    Patch_Byte(0x00568C45 + 1, 0x02);
+    Patch_Byte(0x00568DE5 + 1, 0x02);
+    Patch_Byte(0x0056901A + 1, 0x02);
+    Patch_Byte(0x00569248 + 1, 0x02);
+    Patch_Byte(0x00569471 + 1, 0x02);
+    Patch_Byte(0x0056969A + 1, 0x02);
+    Patch_Byte(0x005698CB + 1, 0x02);
+    Patch_Byte(0x00569AA5 + 1, 0x02);
+
+    // MultiScore (wait delays)
+    Patch_Byte(0x005682E0 + 1, 0x16);
+    Patch_Byte(0x0056832D + 1, 0x16);
+    Patch_Byte(0x0056837A + 1, 0x16);
+    Patch_Byte(0x00568776 + 1, 0x01); // Sadly can't make this any faster or the game freezes...
+    Patch_Byte(0x00569069 + 1, 0x03);
+    Patch_Byte(0x0056929A + 1, 0x03);
+    Patch_Byte(0x005694C3 + 1, 0x03);
+    Patch_Byte(0x005696EC + 1, 0x03);
+    Patch_Byte(0x0056991D + 1, 0x03);
+    Patch_Byte(0x00569991 + 1, 0x0F);
+    Patch_Byte(0x00569AF4 + 1, 0x03);
+    Patch_Byte(0x00569B9A + 1, 0x0F);
+    Patch_Byte(0x00569E66 + 1, 0x01); // Sadly can't make this any faster or the game freezes...
+    Patch_Byte(0x0056A4DA + 1, 0x01); // Sadly can't make this any faster or the game freezes...
 }
