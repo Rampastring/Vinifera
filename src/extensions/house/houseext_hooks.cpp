@@ -3419,10 +3419,15 @@ void HouseClassExt::_Active_Add(TechnoClass const* techno)
  *  Interception of Find_Build_Location. This allows us to find a suitable building
  *  location for the specific buildings, such as the Naval Yard.
  *
- *  @author: CCHyper
+ *  @author: CCHyper, Rampastring
  */
 Cell HouseClassExt::_Find_Build_Location(BuildingTypeClass* btype, int(__fastcall* callback)(int, Cell&, int, int), int a3)
 {
+    // Rampastring: fix edge case crash where this function is called with null btype
+    if (btype == nullptr) {
+        return Cell(0, 0);
+    }
+
     /**
      *  Find the type class extension instance.
      */
