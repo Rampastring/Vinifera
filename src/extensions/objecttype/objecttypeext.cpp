@@ -107,8 +107,11 @@ HRESULT ObjectTypeClassExtension::Load(IStream *pStm)
     new (&NoSpawnVoxelIndex) VoxelIndexClass;
     new (&WaterVoxelIndex) VoxelIndexClass;
 
-    NoSpawnVoxel.Clear();
-    WaterVoxel.Clear();
+    NoSpawnVoxel.MotionLibrary = nullptr;
+    NoSpawnVoxel.VoxelLibrary = nullptr;
+
+    WaterVoxel.MotionLibrary = nullptr;
+    WaterVoxel.VoxelLibrary = nullptr;
 
     Fetch_Voxel_Image(GraphicName.c_str());
     

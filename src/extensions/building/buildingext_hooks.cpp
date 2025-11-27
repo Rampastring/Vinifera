@@ -696,7 +696,7 @@ ActionType BuildingClassExt::_What_Action(ObjectClass const* object, bool disall
         if (!Can_Player_Move()) {
             action = ACTION_SELECT;
         } else if (Class->ToBuild == RTTI_INFANTRYTYPE || Class->ToBuild == RTTI_UNITTYPE || Class->ToBuild == RTTI_AIRCRAFTTYPE) {
-            bool altdown = WWKeyboard->Down(Options.KeyForceMove1) || WWKeyboard->Down(Options.KeyForceMove2);
+            bool altdown = Keyboard->Down(Options.KeyForceMove1) || Keyboard->Down(Options.KeyForceMove2);
             if (!altdown) {
                 action = ACTION_SELECT;
             } else {
@@ -1607,7 +1607,7 @@ DECLARE_PATCH(_BuildingClass_Draw_Spied_Cameo_Palette_Patch)
         pcxrect.Width = technotypeext->CameoImageSurface->Get_Width();
         pcxrect.Height = technotypeext->CameoImageSurface->Get_Height();
 
-        SpriteCollection.Draw(pcxrect, *LogicSurface, *technotypeext->CameoImageSurface);
+        SpriteCollection.Draw(pcxrect, *LogicalSurface, *technotypeext->CameoImageSurface);
 
     } else {
 
@@ -1619,7 +1619,7 @@ DECLARE_PATCH(_BuildingClass_Draw_Spied_Cameo_Palette_Patch)
          *  Original code used NormalDrawer, which is the old Red Alert shape
          *  drawer, so we need to use CameoDrawer here for the correct palette.
          */
-        Draw_Shape(*LogicSurface, *CameoDrawer, cameo_shape, 0, *pos_xy, *window_rect, SHAPE_CENTER|SHAPE_WIN_REL|SHAPE_ALPHA|SHAPE_NORMAL);
+        Draw_Shape(*LogicalSurface, *CameoDrawer, cameo_shape, 0, *pos_xy, *window_rect, SHAPE_CENTER|SHAPE_WIN_REL|SHAPE_ALPHA|SHAPE_NORMAL);
     }
 
     END_STACK_FRAME()

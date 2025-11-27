@@ -563,7 +563,7 @@ void Draw_Tib(CellClass* cellptr, TiberiumClass* tib, Point2D point, Rect* windo
         Emergency_Exit(0);
     }
 
-    Draw_Shape(*LogicSurface, *cellptr->Drawer, sdata, cellptr->OverlayData, point, *window, (ShapeFlags_Type)(SHAPE_CENTER | SHAPE_WIN_REL | SHAPE_ALPHA | SHAPE_Z_READ_WRITE),
+    Draw_Shape(*LogicalSurface, *cellptr->Drawer, sdata, cellptr->OverlayData, point, *window, (ShapeFlags_Type)(SHAPE_CENTER | SHAPE_WIN_REL | SHAPE_ALPHA | SHAPE_Z_READ_WRITE),
         nullptr, -2 - height, ZGRAD_GROUND, cellptr->TileBrightness, nullptr, 0, Point2D(0, 0));
 }
 
