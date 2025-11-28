@@ -1097,7 +1097,7 @@ bool AircraftClassExt::_Enter_Idle_Mode(bool initial, bool a2)
         else {
             Assign_Destination(NULL);
             Assign_Target(NULL);
-            if (false && !House->Is_Human_Player() && Team == NULL && Is_Weapon_Equipped()) {
+            if (!RuleExtension->AdvancedAIAircraftReuse && !House->Is_Human_Player() && Team == nullptr && Is_Weapon_Equipped()) {
                 mission = MISSION_GUARD_AREA;
             }
             else {
@@ -1276,7 +1276,7 @@ int AircraftClassExt::_Do_MISSION_GUARD(void)
         }
     }
 
-    if (Ammo != -1 && Ammo < (Class->MaxAmmo / 2) && In_Radio_Contact()) {
+    if (Ammo != -1 && Ammo < Class->MaxAmmo && In_Radio_Contact()) {
         if (Contact_With_Whom()->RTTI == RTTI_BUILDING && ((BuildingClass*)Contact_With_Whom())->Class->IsCanUnitReload) {
             return(1);
         }
@@ -1311,7 +1311,8 @@ int AircraftClassExt::_Do_MISSION_GUARD(void)
     **	shield of their base.
     */
     if ((!RuleExtension->AdvancedAIAircraftReuse || House->Class->IsMultiplayPassive) &&
-        !House->Is_Human_Player() && House->State != STATE_ATTACKED) {
+        !House->Is_Human_Player() && House->State != STATE_ATTACKED)
+    {
         AbstractClass* target = House->Find_Juicy_Target(PositionCoord);
     
         if (target != NULL) {
