@@ -3043,8 +3043,18 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
         return(false);
     }
 
-    if (object->RTTI == RTTI_BUILDING && ((BuildingClass*)object)->Class->IsInvisibleInGame) {
-        return(false);
+    if (object->RTTI == RTTI_BUILDING) {
+
+        const BuildingClass* bldg = reinterpret_cast<const BuildingClass*>(object);
+
+        if (bldg->Class->IsInvisibleInGame)
+            return(false);
+
+        // Port over ts-patches hack that makes buildings not targeted by default if they have a weapon with a range of 0.
+        const WeaponTypeClass* bldgweapon = bldg->Class->Fetch_Weapon_Info(WEAPON_SLOT_PRIMARY).Weapon;
+        if (bldgweapon != nullptr && bldgweapon->Range == 0) {
+            return false;
+        }
     }
 
     /*
