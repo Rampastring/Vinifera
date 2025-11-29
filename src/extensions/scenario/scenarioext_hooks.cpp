@@ -384,6 +384,20 @@ int Scan_Place_Object_Proxy(ObjectClass* obj, Cell const& cell)
 }
 
 
+/// <summary>
+/// Helper to avoid smashing stack.
+/// </summary>
+void Save_Spawn_Waypoint_Helper(HouseClass* house, Cell centroid)
+{
+    Extension::Fetch(house)->Set_Spawn_Point(centroid);
+
+    // The game was supposed to have done this but there's something wrong in ts-patches
+    // so we take it upon ourselves to do this properly.
+    house->Center = centroid.As_Coord();
+    ASSERT(house->Center == centroid.As_Coord());
+}
+
+
 /**
  *  Save the waypoint at which the house was spawned
  *  so that we can later fetch it using this number.
@@ -393,11 +407,12 @@ int Scan_Place_Object_Proxy(ObjectClass* obj, Cell const& cell)
 DECLARE_PATCH(_Create_Units_Save_Spawn_Waypoint_Patch)
 {
     GET_REGISTER_STATIC(HouseClass*, house, edi);
+    GET_STACK_STATIC(Cell, centroid, esp, 0x20);
     static bool bases;
 
     _asm pushad
 
-    Extension::Fetch(house)->Set_Spawn_Point(house->Center);
+    Save_Spawn_Waypoint_Helper(house, centroid);
     bases = Session.Options.Bases;
 
     _asm popad
