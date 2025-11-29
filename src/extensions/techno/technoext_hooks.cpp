@@ -128,6 +128,7 @@ public:
     void _AI_Abandon_Detour();
     bool _Can_Deploy_Now() const;
     bool _Evaluate_Object(ThreatType method, int mask, int range, TechnoClass const* object, int& value, int zone, Coord & coord) const;
+    int _Anti_Air() const;
 };
 
 
@@ -3285,6 +3286,49 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
 }
 
 
+/// <summary>
+/// Custom TechnoClass::Anti_Air implementation.
+/// Fixes a bug where a unit believes it is not AA-capable when its primary weapon has no AA capability,
+/// even when its secondary weapon is AA-capable.
+/// </summary>
+int TechnoClassExt::_Anti_Air(void) const
+{
+    assert(IsActive);
+
+    if (Is_Weapon_Equipped()) {
+
+        WeaponTypeClass const* weapon = PrimaryWeapon;
+        BulletTypeClass const* bullet = weapon->Bullet;
+        WarheadTypeClass const* warhead = weapon->WarheadPtr;
+
+        if (bullet->IsAntiAircraft) {
+            int value = ((weapon->Attack * warhead->Modifier[ARMOR_ALUMINUM]) * weapon->Range) / weapon->ROF;
+
+            if (TClass->Is_Two_Shooter()) {
+                value *= 2;
+            }
+            return value / 50;
+        }
+
+        // If the primary weapon is not AA-capable, check if we have a secondary weapon that is AA-capable.
+        weapon = SecondaryWeapon;
+        if (weapon)
+        {
+            bullet = weapon->Bullet;
+            warhead = weapon->WarheadPtr;
+
+            if (bullet->IsAntiAircraft)
+            {
+                int value = ((weapon->Attack * warhead->Modifier[ARMOR_ALUMINUM]) * weapon->Range) / weapon->ROF;
+
+                return value / 50;
+            }
+        }
+    }
+    return(0);
+}
+
+
 /**
  *  Main function for patching the hooks.
  */
@@ -3339,4 +3383,5 @@ void TechnoClassExtension_Hooks()
     Patch_Jump(0x0062A970, &TechnoClassExt::_Time_To_Build);
     Patch_Jump(0x0062FD70, &TechnoClassExt::_Assign_Target);
     Patch_Jump(0x0062D0F0, &TechnoClassExt::_Evaluate_Object);
+    Patch_Jump(0x006380F0, &TechnoClassExt::_Anti_Air);
 }
