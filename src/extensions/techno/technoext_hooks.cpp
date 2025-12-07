@@ -3361,6 +3361,26 @@ int TechnoClassExt::_Anti_Air(void) const
 
 
 /**
+ *  Fixes a bug where placed buildings are not revealed for allies.
+ *
+ *  Author: Rampastring
+ */
+DECLARE_PATCH(_TechnoClass_Revealed_Look_For_Allies_Patch)
+{
+    GET_REGISTER_STATIC(TechnoClass*, this_ptr, esi);
+    if (this_ptr->IsOwnedByPlayer || (Session.Type != GAME_NORMAL && Rule->IsAllyReveal && this_ptr->House->Is_Ally(PlayerPtr)))
+    {
+        // Tell the object to "look", revealing shroud around the object based on its sight range
+        JMP(0x0062AB9F);
+    }
+
+    // Player discovered a previously hidden object that wasn't owned by them or revealed by alliance,
+    // trigger TEVENT_DISCOVERED
+    JMP(0x0062AB68);
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void TechnoClassExtension_Hooks()
@@ -3416,4 +3436,5 @@ void TechnoClassExtension_Hooks()
     Patch_Jump(0x0062D0F0, &TechnoClassExt::_Evaluate_Object);
     Patch_Jump(0x006380F0, &TechnoClassExt::_Anti_Air);
     Patch_Jump(0x00631365, _TechnoClass_Fire_At_No_Reveal_When_Firing_At_Spawned_Unit_Patch);
+    Patch_Jump(0x0062AB5E, _TechnoClass_Revealed_Look_For_Allies_Patch);
 }
