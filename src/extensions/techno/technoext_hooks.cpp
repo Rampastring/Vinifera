@@ -87,6 +87,7 @@
 #include "tibsun_functions.h"
 #include "utracker.h"
 #include "aircraft.h"
+#include "aircraftext.h"
 #include "houseext.h"
 #include "vox.h"
 
@@ -2791,6 +2792,36 @@ DECLARE_PATCH(_TechnoClass_Fire_At_Spawn_Manager_Patch)
 }
 
 
+void Reveal_Techno_On_Fire(TechnoClass* techno, ObjectClass* target)
+{
+    // Do not reveal if the target is a spawned aircraft.
+    if (target->RTTI == RTTI_AIRCRAFT && Extension::Fetch(reinterpret_cast<AircraftClass*>(target))->SpawnOwner != nullptr)
+    {
+        return;
+    }
+
+    HouseClass* target_owner = target->Owner_HouseClass();
+    if (target_owner != nullptr && target_owner->Is_Player_Control())
+    {
+        Map.Sight_From(techno->Center_Coord(), 2, target_owner);
+    }
+}
+
+
+/**
+ *  Patches the map not to get revealed when player-owned spawned objects are targeted.
+ *
+ *  @author: Rampastring
+ */
+DECLARE_PATCH(_TechnoClass_Fire_At_No_Reveal_When_Firing_At_Spawned_Unit_Patch)
+{
+    GET_REGISTER_STATIC(ObjectClass*, target, eax);
+    GET_REGISTER_STATIC(TechnoClass*, this_ptr, esi);
+    Reveal_Techno_On_Fire(this_ptr, target);
+    JMP(0x0063139F);
+}
+
+
 /**
  *  #issue-1033
  *
@@ -3384,4 +3415,5 @@ void TechnoClassExtension_Hooks()
     Patch_Jump(0x0062FD70, &TechnoClassExt::_Assign_Target);
     Patch_Jump(0x0062D0F0, &TechnoClassExt::_Evaluate_Object);
     Patch_Jump(0x006380F0, &TechnoClassExt::_Anti_Air);
+    Patch_Jump(0x00631365, _TechnoClass_Fire_At_No_Reveal_When_Firing_At_Spawned_Unit_Patch);
 }
