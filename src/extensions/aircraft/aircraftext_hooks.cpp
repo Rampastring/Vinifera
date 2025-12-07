@@ -1329,6 +1329,35 @@ int AircraftClassExt::_Do_MISSION_GUARD(void)
 }
 
 
+void Reveal_Around_Aircraft(AircraftClass* aircraft)
+{
+    if (Extension::Fetch(aircraft)->SpawnOwner != nullptr) {
+        return;
+    }
+
+    // Don't reveal if attacking aircraft sight range has been specified as 0 in Rules.
+    // The original game did not have this check (though maybe it has one in MapClass::Sight_From).
+    if (Rule->AttackingAircraftSightRange <= 0) {
+        return;
+    }
+
+    Map.Sight_From(aircraft->PositionCoord, Rule->AttackingAircraftSightRange, aircraft->House);
+}
+
+
+/**
+ *  Patch to prevent spawned aircraft from revealing terrain when they fire.
+ *
+ *  Author: Rampastring
+ */
+DECLARE_PATCH(_AircraftClass_Fire_At_No_Reveal_On_Fire_For_Spawned_Aircraft_Patch)
+{
+    GET_REGISTER_STATIC(AircraftClass*, this_ptr, edi);
+    Reveal_Around_Aircraft(this_ptr);
+    JMP(0x0040A1C8);
+}
+
+
 /**
  *  Main function for patching the hooks.
  */
@@ -1374,4 +1403,5 @@ void AircraftClassExtension_Hooks()
     Patch_Jump(0x0040917A, &_AircraftClass_AI_Hook_Patch);
     Patch_Jump(0x0040B310, &AircraftClassExt::_Enter_Idle_Mode);
     Patch_Jump(0x0040DD10, &AircraftClassExt::_Do_MISSION_GUARD);
+    Patch_Jump(0x0040A195, &_AircraftClass_Fire_At_No_Reveal_On_Fire_For_Spawned_Aircraft_Patch);
 }
