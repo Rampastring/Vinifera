@@ -634,6 +634,27 @@ DECLARE_PATCH(_InfantryClass_Doing_AI_Fix_Invalid_Facing_Set)
 
 
 /**
+ *  Fixes an exploit where hijackers are able to hijack vehicles of their allies.
+ *
+ *  Author: Rampastring
+ */
+DECLARE_PATCH(_InfantryClass_What_Action_Prevent_Hijacking_Allied_Vehicles_Patch)
+{
+    GET_REGISTER_STATIC(TechnoClass*, target, esi);
+    GET_REGISTER_STATIC(InfantryClass*, this_ptr, edi);
+
+    if (this_ptr->House->Is_Ally(target))
+    {
+        // The target is allied to the hijacker. Move on.
+        JMP(0x004D72B7);
+    }
+
+    // Move to harvester truce check.
+    JMP(0x004D7277);
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void InfantryClassExtension_Hooks()
@@ -654,6 +675,7 @@ void InfantryClassExtension_Hooks()
     Patch_Jump(0x004D35F9, &_InfantryClass_Per_Cell_Process_Engineer_Capture_Damage_Patch);
     Patch_Jump(0x004D3F5D, &_InfantryClass_Per_Cell_Process_Tiberium_Damage_Patch);
     Patch_Jump(0x004D8BE4, &_InfantryClass_Doing_AI_Fix_Invalid_Facing_Set);
+    Patch_Jump(0x004D7267, &_InfantryClass_What_Action_Prevent_Hijacking_Allied_Vehicles_Patch);
 
     Patch_Jump(0x004D90B0, &InfantryClassExt::_Get_Image_Data);
 }
