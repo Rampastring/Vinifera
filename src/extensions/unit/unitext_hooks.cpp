@@ -1522,6 +1522,34 @@ bool UnitClassExt::_Limbo(void)
 
 
 /**
+ *  Prevents deploying hijacked units that have a build limit.
+ *
+ *  Author: Rampastring
+ */
+DECLARE_PATCH(_UnitClass_What_Action_ACTION_SELF_Prevent_Deploying_Hijacked_Build_Limited_Vehicles_Patch)
+{
+    GET_REGISTER_STATIC(UnitClass*, this_ptr, esi);
+    GET_REGISTER_STATIC(UnitTypeClass*, unittype, eax);
+
+    // Stolen bytes / code.
+    if (unittype->DeploysInto == nullptr)
+    {
+        JMP_REG(ecx, 0x00656344);
+    }
+
+    // Do not allow deploying if this unit has been hijacked and it would deploy into a build-limited unit.
+    if (unittype->BuildLimit < INT_MAX && this_ptr->EnteredByInfType != INFANTRY_NONE)
+    {
+        _asm { mov  [esp+28h], ACTION_NO_DEPLOY }
+        JMP_REG(ecx, 0x0065618E);
+    }
+
+    // Continue deployability checks.
+    JMP(0x0065602B);
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void UnitClassExtension_Hooks()
@@ -1553,6 +1581,7 @@ void UnitClassExtension_Hooks()
     Patch_Jump(0x00656F99, &_UnitClass_Can_Fire_IsOmniFire_Patch);
     Patch_Jump(0x006571E0, &UnitClassExt::_Approach_Target);
     Patch_Jump(0x00659270, &UnitClassExt::_Limbo);
+    Patch_Jump(0x0065601D, &_UnitClass_What_Action_ACTION_SELF_Prevent_Deploying_Hijacked_Build_Limited_Vehicles_Patch);
 
     Patch_Byte(0x00658961, 0xEB); // Allow pre-placed units to have missions in multiplayer, change JZ to JMP
 
