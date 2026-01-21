@@ -134,7 +134,8 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AdvancedAIAircraftTargeting(false),
     AdvancedAIAircraftReuse(false),
     AdvancedAINoTechCenterBeforeFrame(10000),
-    IsBeachIsCrush(false)
+    IsBeachIsCrush(false),
+    IsAIDetectDisguise(true)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
 
@@ -308,6 +309,7 @@ void RulesClassExtension::Object_CRC(CRCEngine &crc) const
     crc(StrengthenBuildingValueMultiplier);
     crc(IsStrengtheningEnabled);
     crc(BuildNavalYard.Count());
+    crc(IsAIDetectDisguise);
 }
 
 
@@ -880,6 +882,7 @@ bool RulesClassExtension::AI(CCINIClass& ini)
     AdvancedAINoTechCenterBeforeFrame = ini.Get_Int(AI, "AdvancedAINoTechCenterBeforeFrame", AdvancedAINoTechCenterBeforeFrame);
 
     BuildNavalYard = ::TGet_TypeList(ini, AI, "BuildNavalYard", BuildNavalYard);
+    IsAIDetectDisguise = ini.Get_Bool(AI, "AIDetectDisguise", IsAIDetectDisguise);
 
     return true;
 }

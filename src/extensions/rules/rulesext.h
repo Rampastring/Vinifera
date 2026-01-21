@@ -330,4 +330,6 @@ public:
      *  Is LandType Beach considered as "requires crushing" for passability purposes, as opposed to water?
      */
     bool IsBeachIsCrush;
+
+    bool IsAIDetectDisguise;
 };
