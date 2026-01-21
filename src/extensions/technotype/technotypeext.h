@@ -389,4 +389,6 @@ public:
      *  Specifies whether this object is available to be built by all players, only AI players, or only human players.
      */
     TechnoTypeBuildability Buildability;
+
+    bool IsDetectDisguise;
 };
