@@ -39,6 +39,7 @@
 #include "tagtype.h"
 #include "house.h"
 #include "housetype.h"
+#include "language.h"
 #include "target.h"
 #include "voc.h"
 #include "tibsun_globals.h"
@@ -49,6 +50,7 @@
 #include "tiberium.h"
 #include "tiberiumext.h"
 #include "fatal.h"
+#include "fetchres.h"
 #include "debughandler.h"
 #include "asserthandler.h"
 #include "tibsun_inline.h"
@@ -69,6 +71,7 @@ static DECLARE_EXTENDING_CLASS_AND_PAIR(InfantryClass)
 {
 public:
     const ShapeSet* _Get_Image_Data() const;
+    const char* _Full_Name(void) const;
 };
 
 
@@ -101,6 +104,36 @@ const ShapeSet* InfantryClassExt::_Get_Image_Data() const
 
     return ObjectClass::Get_Image_Data();
 };
+
+
+/**
+ *  Fetches the full name for this infantry unit.
+ *
+ *  This implementation adds support for side-specific disguises and also fixes
+ *  a bug in the original game where friendly Spies were shown as disguised.
+ *
+ *  @author: tomsons26/ZivDero, Rampastring
+ */
+const char* InfantryClassExt::_Full_Name(void) const
+{
+    assert(IsActive);
+
+    if (IsTechnician) {
+        return Fetch_String(TXT_TECHNICIAN);
+    }
+
+    if (Class->IsDisguised && !House->Is_Ally(PlayerPtr) && Rule->Disguise != NULL)
+    {
+        const auto disguise = SideClassExtension::Get_Disguise(House);
+        if (disguise) {
+            return disguise->GivenName.c_str();
+        }
+
+        return Rule->Disguise->GivenName.c_str();
+    }
+
+    return Class->GivenName.c_str();
+}
 
 
 /**
@@ -681,4 +714,5 @@ void InfantryClassExtension_Hooks()
     Patch_Jump(0x004D7267, &_InfantryClass_What_Action_Prevent_Hijacking_Allied_Vehicles_Patch);
 
     Patch_Jump(0x004D90B0, &InfantryClassExt::_Get_Image_Data);
+    Patch_Jump(0x004D77A0, &InfantryClassExt::_Full_Name);
 }
