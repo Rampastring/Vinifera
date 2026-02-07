@@ -332,4 +332,9 @@ public:
     bool IsBeachIsCrush;
 
     bool IsAIDetectDisguise;
+
+    /**
+     *  Distance to consider "close enough" for TEVENT_NEAR_WAYPOINT.
+     */
+    int ComesNearWaypointDistance;
 };

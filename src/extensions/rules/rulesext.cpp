@@ -135,7 +135,8 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AdvancedAIAircraftReuse(false),
     AdvancedAINoTechCenterBeforeFrame(10000),
     IsBeachIsCrush(false),
-    IsAIDetectDisguise(true)
+    IsAIDetectDisguise(true),
+    ComesNearWaypointDistance(CELL_LEPTON_W * 5)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
 
@@ -770,6 +771,7 @@ bool RulesClassExtension::General(CCINIClass &ini)
 
     AIKiteChance = ini.Get_Integers(GENERAL, "AIKiteChance", AIKiteChance);
     IsBeachIsCrush = ini.Get_Bool(GENERAL, "BeachIsCrush", IsBeachIsCrush);
+    ComesNearWaypointDistance = ini.Get_Int(GENERAL, "ComesNearWaypointDistance", ComesNearWaypointDistance);
 
     return true;
 }
