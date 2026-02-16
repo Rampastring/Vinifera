@@ -114,7 +114,8 @@ TechnoTypeClassExtension::TechnoTypeClassExtension(const TechnoTypeClass *this_p
     BuildTimeMultiplier(1.0f),
     IsOpportunityFire(false),
     Buildability(TechnoTypeBuildability::BUILDABILITY_NORMAL),
-    IsDetectDisguise(false)
+    IsDetectDisguise(false),
+    IronCurtainPriorityTarget(false)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("TechnoTypeClassExtension::TechnoTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
@@ -303,6 +304,7 @@ void TechnoTypeClassExtension::Object_CRC(CRCEngine &crc) const
     crc(BuiltAt.Count());
     crc(IsOpportunityFire);
     crc(IsDetectDisguise);
+    crc(IronCurtainPriorityTarget);
 }
 
 
@@ -441,6 +443,7 @@ bool TechnoTypeClassExtension::Read_INI(CCINIClass &ini)
     BuiltAt = TGet_TypeList(ini, ini_name, "BuiltAt", BuiltAt);
     IsOpportunityFire = ini.Get_Bool(ini_name, "OpportunityFire", IsOpportunityFire);
     IsDetectDisguise = ini.Get_Bool(ini_name, "DetectDisguise", IsDetectDisguise);
+    IronCurtainPriorityTarget = ini.Get_Bool(ini_name, "IronCurtainPriorityTarget", IronCurtainPriorityTarget);
 
     char buffer[32];
     if (ini.Get_String(ini_name, "Buildability", buffer, std::size(buffer)) > 0)
@@ -849,4 +852,3 @@ int TechnoTypeClassExtension::Get_Jumpjet_Cloak_Detection_Radius() const {
     }
     return Rule->JumpjetCloakDetectionRadius;
 }
-

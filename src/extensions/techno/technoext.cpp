@@ -76,7 +76,8 @@ TechnoClassExtension::TechnoClassExtension(const TechnoClass *this_ptr) :
     LastTargetFrame(Frame),
     IsToResetBurst(false),
     BurstResetTimer(),
-    LastVeterancy(RANK_NONE)
+    LastVeterancy(RANK_NONE),
+    IronCurtainTimer()
 {
     //if (this_ptr) EXT_DEBUG_TRACE("TechnoClassExtension::TechnoClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 
@@ -640,6 +641,29 @@ Coord TechnoClassExtension::Fire_Coord(WeaponSlotType which, TPoint3D<int> offse
     Coord render_coord = This()->Render_Coord();
 
     return { render_coord.X + static_cast<int>(fire_coord.X), render_coord.Y - static_cast<int>(fire_coord.Y), render_coord.Z + static_cast<int>(fire_coord.Z) };
+}
+
+
+/**
+ *  Applies Iron Curtain to the unit. Can optionally skip legality checks.
+ *
+ *  @author: Rampastring
+ */
+bool TechnoClassExtension::Iron_Curtain_Me(bool forced)
+{
+    if (!forced)
+    {
+        HouseClassExtension* houseext = Extension::Fetch(This()->House);
+
+        if (!houseext->Can_Use_Iron_Curtain())
+        {
+            return false;
+        }
+    }
+
+    IronCurtainTimer = RuleExtension->IronCurtainDuration;
+    Static_Sound(VocClass::From_Name("IRONCUR9"), This()->Center_Coord());
+    return true;
 }
 
 

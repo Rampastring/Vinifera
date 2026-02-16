@@ -48,6 +48,7 @@
 #include "house.h"
 #include "housetype.h"
 #include "houseext.h"
+#include "lightconvert.h"
 #include "rules.h"
 #include "rulesext.h"
 #include "tiberium.h"
@@ -130,6 +131,8 @@ public:
     bool _Can_Deploy_Now() const;
     bool _Evaluate_Object(ThreatType method, int mask, int range, TechnoClass const* object, int& value, int zone, Coord & coord) const;
     int _Anti_Air() const;
+    int _Apparent_Brightness(int brightness) const;
+    void _Flashing_AI();
 };
 
 
@@ -2294,36 +2297,14 @@ DECLARE_PATCH(_TechnoClass_Draw_Health_Bars_Unit_Draw_Pos_Patch)
     JMP_REG(esi, 0x0062C5DF);
 }
 
-
-/**
- *  #issue-411
- * 
- *  Implements IsAffectsAllies for WarheadTypes.
- * 
- *  @note: This patch does not replace "stolen" code as per our implementation
- *         rules, this is because the call to ObjectClass::Take_Damage that follows
- *         is too much of a risk to not have correctly implemented.
- * 
- *  @author: CCHyper
- */
-DECLARE_PATCH(_TechnoClass_Take_Damage_IsAffectsAllies_Patch)
+static bool Should_Take_Damage(TechnoClass* this_ptr, TechnoClass* source, const WarheadTypeClass* warhead, int damage)
 {
-    GET_REGISTER_STATIC(TechnoClass *, this_ptr, esi);
-    GET_STACK_STATIC(int *, damage, esp, 0xEC);
-    GET_STACK_STATIC(int, distance, esp, 0xF0);
-    GET_STACK_STATIC(const WarheadTypeClass *, warhead, esp, 0xF4);
-    GET_STACK_STATIC(TechnoClass *, source, esp, 0xF8);
-    GET_STACK_STATIC8(bool, forced, esp, 0xFC);
-    GET_STACK_STATIC(int, a6, esp, 0x100);
-    static WarheadTypeClassExtension *warheadtypeext;
-    static ResultType result;
-
     if (warhead) {
 
         /**
          *  Is the warhead that hit us one that affects units allied with its firing owner?
          */
-        warheadtypeext = Extension::Fetch(warhead);
+        WarheadTypeClassExtension* warheadtypeext = Extension::Fetch(warhead);
         if (!warheadtypeext->IsAffectsAllies) {
 
             /**
@@ -2331,12 +2312,59 @@ DECLARE_PATCH(_TechnoClass_Take_Damage_IsAffectsAllies_Patch)
              *  the damage amount and return that we took no damage.
              */
             if (source && source->House->Is_Ally(this_ptr->House)) {
-                *damage = 0;
-                goto return_RESULT_NONE;
+                return false;
             }
-
         }
 
+    }
+
+    /**
+     *  If this unit is shielded by the Iron Curtain, no damage should be dealt.
+     */
+    TechnoClassExtension* technoext = Extension::Fetch(this_ptr);
+    if (technoext->IronCurtainTimer > 0)
+    {
+        return false;
+    }
+
+    /**
+     *  If this unit is a priority for shielding with the Iron Curtain and it would take major damage, shield it.
+     */
+    TechnoTypeClassExtension* technotypeext = Extension::Fetch(this_ptr->TClass);
+    if (technotypeext->IronCurtainPriorityTarget && this_ptr->Strength - damage <= Rule->ConditionYellow * this_ptr->TClass->MaxStrength)
+    {
+        if (technoext->Iron_Curtain_Me(false))
+        {
+            Extension::Fetch(this_ptr->House)->Expend_Iron_Curtain();
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ *  #issue-411
+ * 
+ *  Implements IsAffectsAllies for WarheadTypes as well as the Iron Curtain effect for Technos.
+ * 
+ *  @note: This patch does not replace "stolen" code as per our implementation
+ *         rules, this is because the call to ObjectClass::Take_Damage that follows
+ *         is too much of a risk to not have correctly implemented.
+ * 
+ *  @author: CCHyper, Rampastring
+ */
+DECLARE_PATCH(_TechnoClass_Take_Damage_Intercept_Patch)
+{
+    GET_REGISTER_STATIC(TechnoClass *, this_ptr, esi);
+    GET_STACK_STATIC(int *, damage, esp, 0xEC);
+    GET_STACK_STATIC(const WarheadTypeClass *, warhead, esp, 0xF4);
+    GET_STACK_STATIC(TechnoClass *, source, esp, 0xF8);
+    GET_STACK_STATIC(int, a6, esp, 0x100);
+
+    if (!Should_Take_Damage(this_ptr, source, warhead, *damage)) {
+        *damage = 0;
+        goto return_RESULT_NONE;
     }
 
     /**
@@ -3390,6 +3418,70 @@ DECLARE_PATCH(_TechnoClass_Revealed_Look_For_Allies_Patch)
 
 
 /**
+ *  Implements flashing for the Iron Curtain.
+ *
+ *  Author: tomsons26/ZivDero for original function code, Rampastring for Iron Curtain effect.
+ */
+int TechnoClassExt::_Apparent_Brightness(int brightness) const
+{
+    TechnoClassExtension* technoext = Extension::Fetch(this);
+    
+    if (technoext->IronCurtainTimer > 0)
+    {
+        int index = (technoext->IronCurtainTimer.Value() / RuleExtension->IronCurtainFlashRate) % RuleExtension->IronCurtainPulseTable.Count();
+        int extra = RuleExtension->IronCurtainPulseTable[index] * RuleExtension->IronCurtainFlashIntensityMultiplier;
+        int total = brightness + extra;
+        if (total < 0)
+            total = 0;
+    
+        return total;
+    }
+
+    if (((FlashCount / 2) % 2) == 1) {
+        return(brightness > 1500 ? 500 : 2000);
+    }
+    else {
+        return(brightness);
+    }
+}
+
+
+void TechnoClassExt::_Flashing_AI()
+{
+    int flash = FlashCount;
+    unsigned b = ((FlashCount / 2) % 2) == 1;
+    TechnoClassExtension* technoext = Extension::Fetch(this);
+
+    if (FlasherClass::Process() || technoext->IronCurtainTimer > 0) {
+        Mark(MARK_CHANGE);
+    }
+
+    if (RTTI == RTTI_BUILDING && (technoext->IronCurtainTimer > 0 || (flash && flash != FlashCount)))
+    {
+        unsigned b2 = ((FlashCount / 2) % 2) == 1;
+        if (b != (unsigned char)b2) {
+            TacticalMap->Register_Dirty_Area(entry_118(), false);
+            ((BuildingClass*)this)->Update_Anim_Appearance();
+        }
+    }
+}
+
+/**
+ *  Makes the game redraw an object while it is flashing with the Iron Curtain effect.
+ *
+ *  Author: Rampastring
+ */
+DECLARE_PATCH(_TechnoClass_AI_Iron_Curtain_Flash_Redraw_Patch)
+{
+    GET_REGISTER_STATIC(TechnoClassExt*, this_ptr, esi);
+
+    this_ptr->_Flashing_AI();
+
+    JMP(0x0062ED7A);
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void TechnoClassExtension_Hooks()
@@ -3399,7 +3491,7 @@ void TechnoClassExtension_Hooks()
     Patch_Jump(0x0063105C, &_TechnoClass_Fire_At_Weapon_Anim_Patch);
     Patch_Jump(0x0062F6B7, &_TechnoClass_Is_Ready_To_Uncloak_Cloak_Stop_BugFix_Patch);
     Patch_Jump(0x0062E6F0, &_TechnoClass_Null_House_Warning_Patch);
-    Patch_Jump(0x006328DE, &_TechnoClass_Take_Damage_IsAffectsAllies_Patch);
+    Patch_Jump(0x006328DE, &_TechnoClass_Take_Damage_Intercept_Patch);
     Patch_Jump(0x0062C5D5, &_TechnoClass_Draw_Health_Bars_Unit_Draw_Pos_Patch);
     Patch_Jump(0x0062C55B, &_TechnoClass_Draw_Health_Bars_Infantry_Draw_Pos_Patch);
     Patch_Jump(0x0062DD70, &_TechnoClass_Greatest_Threat_Infantry_Mechanic_Patch);
@@ -3446,4 +3538,6 @@ void TechnoClassExtension_Hooks()
     Patch_Jump(0x006380F0, &TechnoClassExt::_Anti_Air);
     Patch_Jump(0x00631365, _TechnoClass_Fire_At_No_Reveal_When_Firing_At_Spawned_Unit_Patch);
     Patch_Jump(0x0062AB5E, _TechnoClass_Revealed_Look_For_Allies_Patch);
+    Patch_Jump(0x00639C70, &TechnoClassExt::_Apparent_Brightness);
+    Patch_Jump(0x0062ECE3, &_TechnoClass_AI_Iron_Curtain_Flash_Redraw_Patch);
 }

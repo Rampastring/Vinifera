@@ -204,6 +204,9 @@ public:
     void AdvAI_Set_Naval_Team_Desired_Ratios(TeamClass* team) const;
     bool AdvAI_Is_Recently_Attacked() const;
 
+    bool Can_Use_Iron_Curtain() const;
+    void Expend_Iron_Curtain();
+
 public:
     /**
      *  Replacement Tiberium storage.
@@ -355,4 +358,6 @@ public:
     AdvancedAINavalOnlyState IsNavalOnly;
 
     int LastNavalOnlyCheckFrame;
+
+    CDTimerClass<FrameTimerClass> IronCurtainAvailabilityTimer;
 };

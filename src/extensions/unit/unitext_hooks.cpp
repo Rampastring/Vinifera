@@ -31,6 +31,8 @@
 #include "vinifera_globals.h"
 #include "tibsun_globals.h"
 #include "tibsun_functions.h"
+#include "bullettype.h"
+#include "drawshape.h"
 #include "tag.h"
 #include "unittypeext.h"
 #include "technotype.h"
@@ -42,6 +44,7 @@
 #include "unitext.h"
 #include "unittype.h"
 #include "unittypeext.h"
+#include "tactical.h"
 #include "tag.h"
 #include "target.h"
 #include "rules.h"
@@ -62,6 +65,7 @@
 #include "verses.h"
 #include "warheadtypeext.h"
 #include "weapontype.h"
+#include "msgbox.h"
 
 
 /**
@@ -81,6 +85,7 @@ public:
     void _Rotation_AI();
     void _Approach_Target();
     bool _Limbo(void);
+    void _Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightness);
 };
 
 
@@ -233,7 +238,7 @@ void UnitClassExt::_Draw_Voxel(unsigned int frame, int key, Rect& rect, Point2D&
         cache = &Class->VoxelIndex;
     }
 
-    Draw_Voxel(*voxel, frame, key, *cache, rect, point, matrix, color, flags);
+    Draw_Voxel(*voxel, frame, key, cache, rect, point, matrix, color, flags);
 }
 
 
@@ -1548,6 +1553,279 @@ DECLARE_PATCH(_UnitClass_What_Action_ACTION_SELF_Prevent_Deploying_Hijacked_Buil
     JMP(0x0065602B);
 }
 
+inline WeaponInfoStruct const& Get_Class_Weapon_Data(TechnoClass* techno, WeaponSlotType which = WEAPON_SLOT_PRIMARY)
+{
+    if (techno->Crew.Is_Elite() && which == 0) {
+        return techno->TClass->Fetch_Weapon_Info(WEAPON_SLOT_ELITE);
+    }
+
+    return techno->TClass->Fetch_Weapon_Info(which);
+}
+
+Matrix3D Get_Isometric_View_Matrix(void)
+{
+    return IsometricViewMatrix;
+}
+
+/**
+ *  Custom shape drawing implementation for units.
+ *  Enables custom facing count support as well as optional remap color changing for the Iron Curtain effect.
+ *
+ *  Authors:
+ *  - tomsons26 and ZivDero for original function code
+ *  - CCHyper for custom facing count support
+ *  - Rampastring for Icon Curtain effect
+ */
+void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightness)
+{
+    assert(IsActive);
+
+    int shapenum;                // Working shape number.
+    ShapeSet const* shapefile;  // Working shape file pointer.
+    //int			facing = Dir_To_32(PrimaryFacing);
+    //int			tfacing = Dir_To_32(SecondaryFacing);
+    //DirType		rotation = DIR_N;
+    //int			scale = 0x0100;
+
+    /*
+    **	Verify the legality of the unit class.
+    */
+    shapefile = (ShapeSet const*)Get_Image_Data();
+    bool barrel_above_turret = true;
+
+    if (Class->IsSmallVisceroid || Class->IsLargeVisceroid) {
+        // if (SnoBeeMode) {
+        //     if (Class->IsSmallVisceroid) {
+        //         shapefile = (ShapeSet const*)UnitTypeClass::SmallVisceroidShapes;
+        //     }
+        //     else {
+        //         shapefile = (ShapeSet const*)UnitTypeClass::LargeVisceroidShapes;
+        //     }
+        //     shapenum = PrimaryFacing.Current().As_Dir8();
+        //     switch (shapenum) {
+        //     case FACING_N:
+        //     case FACING_NE:
+        //         shapenum = 2;
+        //         break;
+        //     case FACING_SE:
+        //         shapenum = 4;
+        //         break;
+        //     case FACING_S:
+        //     case FACING_SW:
+        //         shapenum = 6;
+        //         break;
+        //     case FACING_NW:
+        //         shapenum = 0;
+        //         break;
+        //     default:
+        //         break;
+        //     }
+        //     //#TODO what..
+        //     shapenum = (((Frame + (Fetch_ID() >> 1)) & 1) + shapenum);
+        // }
+        // else {
+            shapenum = Fetch_Stage();
+            if (shapenum >= 90) {
+                shapenum -= 90;
+                shapefile = (ShapeSet const*)Class->AltImage;
+            }
+        // }
+        Draw_Object(shapefile, shapenum, xdrawpoint, xcliprect, DIR_N, 256, 0, ZGRAD_90DEG, false, brightness);
+        return;
+    }
+
+    if (Class->IsJellyfish || Class->IsLimpetDrone) {
+        int zoff = 0;
+        if (Class->IsJellyfish) {
+            zoff = -TacticalMap->Z_Lepton_To_Pixel(PositionCoord.Z);
+        }
+        Draw_Object(shapefile, Fetch_Stage(), xdrawpoint, xcliprect, DIR_N, 256, 0, ZGRAD_90DEG, false, brightness);
+        return;
+    }
+
+    shapenum = Facing_To_Frame_Number(PrimaryFacing, Class->Facings);
+
+    if (Locomotion->Is_Moving()) {
+        shapenum = Class->StartWalkFrame + shapenum * Class->WalkFrames + TotalFramesWalked % Class->WalkFrames;
+    }
+    else {
+        if (FiringSyncDelay >= 0) {
+            shapenum = Class->StartFiringFrame + FiringSyncDelay / 2 + shapenum * Class->FiringFrames;
+        }
+        else {
+            if (DeathCounter >= 0) {
+                int v14 = DeathCounter / Class->DeathFrameRate;
+                int StartDeathFrame = Class->StartDeathFrame;
+                int v16 = Class->DeathFrames - 1;
+                if (v14 >= v16) {
+                    v14 = v16;
+                }
+                shapenum = v14 + StartDeathFrame;
+            }
+            else if (field_34D) {
+                if (Class->StandingFrames == 0) {
+                    shapenum = Class->StartWalkFrame + shapenum * Class->WalkFrames;
+                }
+                else {
+                    shapenum = Class->StartStandFrame + shapenum * Class->StandingFrames;
+                }
+            }
+        }
+    }
+
+    UnitClassExtension* unitext = Extension::Fetch(this);
+    ColorSchemeType oldscheme = House->Scheme;
+
+    if (RuleExtension->IronCurtainChangeRemap && unitext->IronCurtainTimer > 0)
+    {
+        House->Scheme = Fetch_Scheme_Index_By_Name("IronCurtain", 63);
+        if (House->Scheme < 0) {
+            DEBUG_ERROR("IronCurtainChangeRemap= is set to true, but a color named IronCurtain does not exist!\n");
+            WWMessageBox().Process("IronCurtainChangeRemap= is set to true, but a color named IronCurtain does not exist!", 0, TXT_OK);
+        }
+    }
+    
+    /*
+    **	If there is a turret, then it must be rendered as well. This may include
+    **	firing animation if required.
+    */
+    if (Class->IsTurretEquipped) {
+
+        Point2D drawpoint = xdrawpoint;
+        if (IsOnCarryall) {
+            drawpoint.Y -= 14;
+        }
+
+        // Draws shadow
+        Draw_Shape(*LogicalSurface, *NormalDrawer, shapefile, shapenum + shapefile->Get_Count() / 2, drawpoint, xcliprect, ShapeFlags_Type(SHAPE_DARKEN | SHAPE_CENTER | SHAPE_WIN_REL | SHAPE_ALPHA | SHAPE_FLAT), NULL, Get_Z_Adjustment() - 2);
+
+        Surface* old_surface = LogicalSurface;
+        Matrix3D nmtx;
+        Point2D pt(80, 80);
+        LogicalSurface = EightBitSurface;
+
+        Rect srect = LogicalSurface->Get_Rect();
+        field_36F = true;
+        SomeUnitDrawRect = RECT_NONE;
+
+        if (Class->AuxVoxel2.VoxelLibrary != NULL && Class->AuxVoxel2.MotionLibrary != NULL) {
+            int key = -1;
+            Matrix3D mtx = Locomotion->Draw_Matrix(&key);
+            mtx.Translate_X(Class->TurretOffset / 8);
+            double sec = SecondaryFacing.Current().As_Radian32();
+            double pri = PrimaryFacing.Current().As_Radian32();
+            mtx.Rotate_Z(sec - pri);
+
+            /*
+            **	A recoiling turret moves "backward".
+            */
+            if (IsInRecoilState) {
+                mtx.Translate_X(-2);
+            }
+
+            nmtx = mtx;
+
+            Vector3 trans = mtx.Get_Translation();
+            nmtx.Translate(-trans);
+
+            Vector3 flh = Vector3(Get_Class_Weapon_Data(this).FireFLH.X / -8, 0, Get_Class_Weapon_Data(this).FireFLH.Z / -8);
+            nmtx.Translate(-flh);
+
+            FacingClass face = BarrelFacing;
+            if (PrimaryWeapon->Bullet->IsInvisible) {
+                Dir256 dir256 = face.Current().As_Dir256();
+                if (dir256 > 64 && dir256 <= 128) {
+                    dir256 = (Dir256)((dir256 - 64) / 3 + 64);
+                }
+                else {
+                    dir256 = (Dir256)((64 - dir256) / 3 + 64);
+                }
+                face.Set(DirType(dir256));
+            }
+
+            nmtx.Rotate_Y(-face.Current().As_Radian32());
+            nmtx.Translate(flh);
+            nmtx.Translate(trans);
+            if (SecondaryFacing.Current().As_Weirderer() > 0) {
+                barrel_above_turret = true;
+                if (SecondaryFacing.Current().As_Weirderer() >= 3) {
+                    barrel_above_turret = true;
+                }
+                else {
+                    barrel_above_turret = false;
+                }
+            }
+            else {
+                barrel_above_turret = false;
+            }
+        }
+
+        // Draw the main shape
+        Draw_Object(shapefile, shapenum, pt, srect, DIR_N, 256, -1, ZGRAD_GROUND, 0, brightness, NULL, 0, Point2D(0, 0), ShapeFlags_Type(SHAPE_ALPHA | SHAPE_FLAT));
+
+        // The the voxel barrel below the turret at certain angles
+        if (Class->AuxVoxel2.VoxelLibrary != NULL && Class->AuxVoxel2.MotionLibrary != NULL && !barrel_above_turret) {
+            Draw_Voxel(Class->AuxVoxel2, 0, -1, nullptr, srect, pt, Get_Isometric_View_Matrix() * nmtx, -1, ShapeFlags_Type(SHAPE_FLAT | SHAPE_ALPHA));
+        }
+
+        // Draw the turret shape
+
+        /**
+        *  #issue-393
+        *
+        *  Allow the custom turret facings.
+        *
+        *  @author: CCHyper
+        */
+        UnitTypeClassExtension* unittypeext = Extension::Fetch(Class);
+        int turret_facings = unittypeext->TurretFacings;
+
+        /**
+         *  Fetch the frame index for current turret facing.
+         */
+        int turret_shape_number = Facing_To_Frame_Number(SecondaryFacing, turret_facings);
+        int start_turret_frame = Class->Facings * Class->WalkFrames;
+
+        /**
+         *  #issue-389
+         *
+         *  Allow the starting turret frame index to be defined.
+         *
+         *  @author: CCHyper
+         */
+        int frame_number;
+        if (unittypeext && unittypeext->StartTurretFrame != -1) {
+            frame_number = unittypeext->StartTurretFrame + (turret_shape_number % turret_facings);
+        }
+        else {
+            frame_number = start_turret_frame + (turret_shape_number % turret_facings);
+        }
+
+        Dir32 d = SecondaryFacing.Current().As_Dir32();
+        Draw_Object(shapefile, frame_number, pt, srect, DIR_N, 256, 0, ZGRAD_GROUND, false, brightness, NULL, 0, Point2D(0, 0), ShapeFlags_Type(SHAPE_PLAIN | SHAPE_ALPHA | SHAPE_FLAT));
+
+        // The the voxel barrel above the turret at other angles
+        if (Class->AuxVoxel2.VoxelLibrary != NULL && Class->AuxVoxel2.MotionLibrary != NULL && barrel_above_turret) {
+            Draw_Voxel(Class->AuxVoxel2, 0, -1, 0, srect, pt, Get_Isometric_View_Matrix() * nmtx, -1, ShapeFlags_Type(SHAPE_FLAT | SHAPE_ALPHA));
+        }
+
+        Unit_Blit_Voxel(*old_surface, xdrawpoint, xcliprect, entry_344(1000));
+        LogicalSurface->Fill_Rect(SomeUnitDrawRect, 0);
+        LogicalSurface = old_surface;
+        field_36F = false;
+
+    }
+    else {
+        static int _zadj = 0;
+        Draw_Object(shapefile, shapenum, xdrawpoint, xcliprect, DIR_N, 256, _zadj, Get_Z_Gradient(), 0, brightness, NULL, 0, Point2D(), SHAPE_NORMAL);
+    }
+
+    if (RuleExtension->IronCurtainChangeRemap && unitext->IronCurtainTimer > 0)
+    {
+        House->Scheme = oldscheme;
+    }
+}
+
 
 /**
  *  Main function for patching the hooks.
@@ -1582,6 +1860,7 @@ void UnitClassExtension_Hooks()
     Patch_Jump(0x006571E0, &UnitClassExt::_Approach_Target);
     Patch_Jump(0x00659270, &UnitClassExt::_Limbo);
     Patch_Jump(0x0065601D, &_UnitClass_What_Action_ACTION_SELF_Prevent_Deploying_Hijacked_Build_Limited_Vehicles_Patch);
+    Patch_Jump(0x00653090, &UnitClassExt::_Draw_Shape);
 
     Patch_Byte(0x00658961, 0xEB); // Allow pre-placed units to have missions in multiplayer, change JZ to JMP
 

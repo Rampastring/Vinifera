@@ -94,6 +94,8 @@ class TechnoClassExtension : public RadioClassExtension
         bool Can_Opportunity_Fire() const;
         bool Opportunity_Fire();
 
+        bool Iron_Curtain_Me(bool forced);
+
     private:
         const TechnoTypeClass *Techno_Type_Class() const;
         const TechnoTypeClassExtension *Techno_Type_Class_Ext() const;
@@ -144,4 +146,9 @@ class TechnoClassExtension : public RadioClassExtension
          *  Used to determine when a unit has ranked up.
          */
         VeterancyRankType LastVeterancy;
+
+        /**
+         *  The countdown until the object's Iron Curtain effect fades away.
+         */
+        CDTimerClass<FrameTimerClass> IronCurtainTimer;
 };

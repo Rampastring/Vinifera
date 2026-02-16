@@ -337,4 +337,39 @@ public:
      *  Distance to consider "close enough" for TEVENT_NEAR_WAYPOINT.
      */
     int ComesNearWaypointDistance;
+
+    /**
+     *  List of buildings that enable the AI to use the Iron Curtain.
+     */
+    TypeList<BuildingTypeClass*> IronCurtains;
+
+    /**
+     *  Duration of the Iron Curtain effect in frames.
+     */
+    int IronCurtainDuration;
+    
+    /**
+     *  Recharge time of a house's Iron Curtain in frames.
+     */
+    int IronCurtainRechargeTime;
+
+    /**
+     *  Flash rate of the Iron Curtain pulse effect.
+     */
+    int IronCurtainFlashRate;
+
+    /**
+     *  Intensity multiplier of the Iron Curtain pulse effect.
+     */
+    int IronCurtainFlashIntensityMultiplier;
+
+    /**
+     *  Brightness modifier table for the Iron Curtain pulse effect.
+     */
+    TypeList<int> IronCurtainPulseTable;
+
+    /**
+     *  Does Iron Curtain change the remap color of affected units?
+     */
+    bool IronCurtainChangeRemap;
 };

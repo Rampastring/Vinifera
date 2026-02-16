@@ -136,7 +136,12 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AdvancedAINoTechCenterBeforeFrame(10000),
     IsBeachIsCrush(false),
     IsAIDetectDisguise(true),
-    ComesNearWaypointDistance(CELL_LEPTON_W * 5)
+    ComesNearWaypointDistance(CELL_LEPTON_W * 5),
+    IronCurtainDuration(675),
+    IronCurtainRechargeTime(9900),
+    IronCurtainFlashRate(8),
+    IronCurtainFlashIntensityMultiplier(50),
+    IronCurtainChangeRemap(false)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
 
@@ -160,6 +165,7 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     MaxPips.Add(8);     // PIP_CHARGE
 
     BuildNavalYard = TypeList<BuildingTypeClass*>(0);
+    IronCurtains = TypeList<BuildingTypeClass*>(0);
 
     AIKiteChance = TypeList<int>(DIFF_COUNT);
     AIKiteChance.Add(100);
@@ -175,6 +181,16 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AdvancedAIIonCannonRandomizationFactors.Add(1);
     AdvancedAIIonCannonRandomizationFactors.Add(2);
     AdvancedAIIonCannonRandomizationFactors.Add(3);
+
+    IronCurtainPulseTable = TypeList<int>(8);
+    IronCurtainPulseTable.Add(-16);
+    IronCurtainPulseTable.Add(-15);
+    IronCurtainPulseTable.Add(-14);
+    IronCurtainPulseTable.Add(-13);
+    IronCurtainPulseTable.Add(-12);
+    IronCurtainPulseTable.Add(-13);
+    IronCurtainPulseTable.Add(-14);
+    IronCurtainPulseTable.Add(-15);
 }
 
 
@@ -219,6 +235,7 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
     AIKiteChance.Clear();
     AdvancedAITacticSelectionDelay.Clear();
     AdvancedAIIonCannonRandomizationFactors.Clear();
+    IronCurtainPulseTable.Clear();
 
     HRESULT hr = GlobalExtensionClass::Load(pStm);
     if (FAILED(hr)) {
@@ -229,11 +246,14 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
 
     MaxPips.Load(pStm);
     BuildNavalYard.Load(pStm);
+    IronCurtains.Load(pStm);
     AIKiteChance.Load(pStm);
     AdvancedAITacticSelectionDelay.Load(pStm);
     AdvancedAIIonCannonRandomizationFactors.Load(pStm);
+    IronCurtainPulseTable.Load(pStm);
 
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(BuildNavalYard, "BuildNavalYard");
+    VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(IronCurtains, "IronCurtains");
     
     return hr;
 }
@@ -255,9 +275,11 @@ HRESULT RulesClassExtension::Save(IStream *pStm, BOOL fClearDirty)
 
     MaxPips.Save(pStm);
     BuildNavalYard.Save(pStm);
+    IronCurtains.Save(pStm);
     AIKiteChance.Save(pStm);
     AdvancedAITacticSelectionDelay.Save(pStm);
     AdvancedAIIonCannonRandomizationFactors.Save(pStm);
+    IronCurtainPulseTable.Save(pStm);
 
     return hr;
 }
@@ -311,6 +333,7 @@ void RulesClassExtension::Object_CRC(CRCEngine &crc) const
     crc(IsStrengtheningEnabled);
     crc(BuildNavalYard.Count());
     crc(IsAIDetectDisguise);
+    crc(IronCurtains.Count());
 }
 
 
@@ -773,6 +796,10 @@ bool RulesClassExtension::General(CCINIClass &ini)
     IsBeachIsCrush = ini.Get_Bool(GENERAL, "BeachIsCrush", IsBeachIsCrush);
     ComesNearWaypointDistance = ini.Get_Int(GENERAL, "ComesNearWaypointDistance", ComesNearWaypointDistance);
 
+    IronCurtains = ::TGet_TypeList(ini, GENERAL, "IronCurtains", IronCurtains);
+    IronCurtainDuration = ini.Get_Int(GENERAL, "IronCurtainDuration", IronCurtainDuration);
+    IronCurtainRechargeTime = ini.Get_Int(GENERAL, "IronCurtainRechargeTime", IronCurtainRechargeTime);
+
     return true;
 }
 
@@ -810,6 +837,11 @@ bool RulesClassExtension::AudioVisual(CCINIClass &ini)
     PlaceBeaconSound = ini.Get_VocType(AUDIOVISUAL, "PlaceBeaconSound", PlaceBeaconSound);
     PlaceBeaconVoice = ini.Get_VoxType(AUDIOVISUAL, "PlaceBeaconVoice", PlaceBeaconVoice);
     DetectBeaconVoice = ini.Get_VoxType(AUDIOVISUAL, "DetectBeaconVoice", DetectBeaconVoice);
+
+    IronCurtainFlashRate = ini.Get_Int(AUDIOVISUAL, "IronCurtainFlashRate", IronCurtainFlashRate);
+    IronCurtainFlashIntensityMultiplier = ini.Get_Int(AUDIOVISUAL, "IronCurtainFlashIntensityMultiplier", IronCurtainFlashIntensityMultiplier);
+    IronCurtainPulseTable = ini.Get_Integers(AUDIOVISUAL, "IronCurtainPulseTable", IronCurtainPulseTable);
+    IronCurtainChangeRemap = ini.Get_Bool(AUDIOVISUAL, "IronCurtainChangeRemap", IronCurtainChangeRemap);
 
     return true;
 }

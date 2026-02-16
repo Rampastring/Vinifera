@@ -391,4 +391,9 @@ public:
     TechnoTypeBuildability Buildability;
 
     bool IsDetectDisguise;
+
+    /**
+     *  Specifies whether the AI should use the Iron Curtain to protect this object.
+     */
+    bool IronCurtainPriorityTarget;
 };

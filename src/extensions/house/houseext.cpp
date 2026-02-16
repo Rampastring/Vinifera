@@ -109,7 +109,8 @@ HouseClassExtension::HouseClassExtension(const HouseClass* this_ptr) :
     AdvAILastUndeployableUnitCheckFrame(0),
     AdvAIFunValue(0),
     IsNavalOnly(AdvancedAINavalOnlyState::NOT_CHECKED),
-    LastNavalOnlyCheckFrame(-1)
+    LastNavalOnlyCheckFrame(-1),
+    IronCurtainAvailabilityTimer()
 {
     //if (this_ptr) EXT_DEBUG_TRACE("HouseClassExtension::HouseClassExtension - 0x%08X\n", (uintptr_t)(This()));
 
@@ -2234,4 +2235,29 @@ bool HouseClassExtension::Has_Radar() const
 bool HouseClassExtension::Has_Tech_Center() const
 {
     return Has_One_Of(Rule->BuildTech);
+}
+
+bool HouseClassExtension::Can_Use_Iron_Curtain() const
+{
+    if (!IronCurtainAvailabilityTimer.Expired()) {
+        return false;
+    }
+
+    if (!This()->Is_Powered()) {
+        return false;
+    }
+
+    for (int i = 0; i < RuleExtension->IronCurtains.Count(); i++)
+    {
+        if (This()->ActiveBQuantity.Value(RuleExtension->IronCurtains[i]->HeapID) > 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void HouseClassExtension::Expend_Iron_Curtain()
+{
+    IronCurtainAvailabilityTimer = RuleExtension->IronCurtainRechargeTime;
 }
