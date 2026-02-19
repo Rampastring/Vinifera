@@ -798,7 +798,11 @@ bool RulesClassExtension::General(CCINIClass &ini)
 
     IronCurtains = ::TGet_TypeList(ini, GENERAL, "IronCurtains", IronCurtains);
     IronCurtainDuration = ini.Get_Int(GENERAL, "IronCurtainDuration", IronCurtainDuration);
-    IronCurtainRechargeTime = ini.Get_Int(GENERAL, "IronCurtainRechargeTime", IronCurtainRechargeTime);
+
+    float icrecharge = ini.Get_Float(GENERAL, "IronCurtainRechargeTime");
+    if (icrecharge != 0.0) {
+        IronCurtainRechargeTime = icrecharge * 900.0f;
+    }
 
     return true;
 }
