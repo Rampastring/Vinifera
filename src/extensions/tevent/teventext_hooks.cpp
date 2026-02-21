@@ -35,6 +35,7 @@
 #include "tibsun_defines.h"
 #include "vinifera_defines.h"
 #include "house.h"
+#include "houseext.h"
 #include "object.h"
 #include "fatal.h"
 #include "debughandler.h"
@@ -432,7 +433,7 @@ bool TEventClassExt::_Operator_Parens_Intercept(TEventType event, HouseClass con
     */
     if (Event == TEVENT_PLAYER_ENTERED || Event == TEVENT_CROSS_HORIZONTAL || Event == TEVENT_CROSS_VERTICAL || Event == TEVENT_ENTERS_ZONE) {
         if (event != Event) return false;
-        if (!object || (Data.House != HOUSE_NONE && object->Owner() != House_From_HousesType(Data.House)->HeapID)) return false;
+        if (!object || (Data.House != HOUSE_NONE && object->Owner() != HouseClassExtension::House_From_HousesType(Data.House)->HeapID)) return false;
         is_perm = true;
         return true;
     } else if (Event == TEVENT_NEAR_WAYPOINT) {
@@ -564,7 +565,7 @@ bool TEventClassExt::_Operator_Parens_Intercept(TEventType event, HouseClass con
         }
     }
 
-    house = House_From_HousesType(Data.House);
+    house = HouseClassExtension::House_From_HousesType(Data.House);
     if (house != nullptr) {
         switch (Event) {
         case TEVENT_LOW_POWER:
