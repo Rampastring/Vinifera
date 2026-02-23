@@ -81,8 +81,31 @@ void * __cdecl vinifera_count_allocate(unsigned int count, unsigned int size)
     return block_ptr;
 }
 
+void __cdecl vinifera_free(void* ptr)
+{
+    if (ptr == nullptr) {
+        return;
+    }
+
+    bool freed = HeapFree(GetProcessHeap(), 0, ptr);
+    ASSERT_STACKDUMP_PRINT(freed, "Failed to free memory!\n");
+
+    ++Vinifera_Delete_Count;
+
+    ASSERT(freed);
+}
+
 void * __cdecl vinifera_reallocate(void *ptr, unsigned int size)
 {
+    if (ptr == nullptr) {
+        return vinifera_allocate(size);
+    }
+
+    if (size == 0) {
+        vinifera_free(ptr);
+        return nullptr;
+    }
+
     /**
      *  Round up input size to nearest multiple of 4 for alignment.
      */
@@ -92,16 +115,6 @@ void * __cdecl vinifera_reallocate(void *ptr, unsigned int size)
     ASSERT_STACKDUMP_PRINT(block_ptr != nullptr, "Failed to allocate memory!\n");
 
     return block_ptr;
-}
-
-void __cdecl vinifera_free(void *ptr)
-{
-    bool freed = HeapFree(GetProcessHeap(), HEAP_ZERO_MEMORY, ptr);
-    ASSERT_STACKDUMP_PRINT(freed, "Failed to free memory!\n");
-
-    ++Vinifera_Delete_Count;
-
-    ASSERT(freed);
 }
 
 
