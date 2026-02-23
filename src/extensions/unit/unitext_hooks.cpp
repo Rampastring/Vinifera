@@ -1682,6 +1682,7 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         if (House->Scheme < 0) {
             DEBUG_ERROR("IronCurtainChangeRemap= is set to true, but a color named IronCurtain does not exist!\n");
             WWMessageBox().Process("IronCurtainChangeRemap= is set to true, but a color named IronCurtain does not exist!", 0, TXT_OK);
+            return;
         }
     }
     
@@ -1700,10 +1701,10 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         Draw_Shape(*LogicalSurface, *NormalDrawer, shapefile, shapenum + shapefile->Get_Count() / 2, drawpoint, xcliprect, ShapeFlags_Type(SHAPE_DARKEN | SHAPE_CENTER | SHAPE_WIN_REL | SHAPE_ALPHA | SHAPE_FLAT), NULL, Get_Z_Adjustment() - 2);
 
         Surface* old_surface = LogicalSurface;
-        Matrix3D nmtx;
-        Point2D pt(80, 80);
         LogicalSurface = EightBitSurface;
+        Point2D pt = Point2D(80, 80);
 
+        Matrix3D nmtx;
         Rect srect = LogicalSurface->Get_Rect();
         field_36F = true;
         SomeUnitDrawRect = RECT_NONE;
@@ -1809,7 +1810,7 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
             Draw_Voxel(Class->AuxVoxel2, 0, -1, 0, srect, pt, Get_Isometric_View_Matrix() * nmtx, -1, ShapeFlags_Type(SHAPE_FLAT | SHAPE_ALPHA));
         }
 
-        Unit_Blit_Voxel(*old_surface, xdrawpoint, xcliprect, entry_344(1000));
+        Unit_Blit_Voxel(*old_surface, xdrawpoint, xcliprect, entry_344(brightness));
         LogicalSurface->Fill_Rect(SomeUnitDrawRect, 0);
         LogicalSurface = old_surface;
         field_36F = false;
