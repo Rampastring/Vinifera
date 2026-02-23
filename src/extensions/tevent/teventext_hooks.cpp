@@ -560,6 +560,11 @@ bool TEventClassExt::_Operator_Parens_Intercept(TEventType event, HouseClass con
             if (house->UnitsLost < Data.Value) return false;
             break;
 
+        case EXT_TEVENT_BUILDING_DOES_NOT_EXIST:
+            if (house->ActiveBQuantity.Value(Data.Structure) > 0) return false;
+            is_perm = true;
+            break;
+
         default:
             break;
         }
@@ -759,6 +764,9 @@ void TEventClassExt::_Read_INI()
 int Event_Need_Code(TEventType type)
 {
     switch (type) {
+    case EXT_TEVENT_BUILDING_DOES_NOT_EXIST:
+        return 0;
+
     case TEVENT_LEAVES_MAP:
         return 1;
 
@@ -916,6 +924,7 @@ AttachType _Attaches_To(TEventType event)
     case TEVENT_CREDITS_BELOW:
     case TEVENT_THIEVED:
     case TEVENT_ANY:
+    case EXT_TEVENT_BUILDING_DOES_NOT_EXIST:
         attach |= ATTACH_HOUSE;
         break;
 
