@@ -103,6 +103,7 @@
 //#include "alphashapeext_hooks.h"
 //#include "veinholemonsterext_hooks.h"
 
+#include "astarext_hooks.h"
 #include "aircrafttracker_hooks.h"
 #include "beacon_hooks.h"
 #include "rulesext_hooks.h"
@@ -308,6 +309,7 @@ void Extension_Hooks()
     /**
      *  Miscellaneous hooks
      */
+    AStarClassExtension_Hooks();
     FilePCXExtension_Hooks();
     FetchRes_Hooks();
     XSurfaceExtension_Hooks();
