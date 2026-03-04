@@ -1645,6 +1645,9 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
 
     shapenum = Facing_To_Frame_Number(PrimaryFacing, Class->Facings);
 
+    UnitClassExtension* unitext = Extension::Fetch(this);
+    UnitTypeClassExtension* unittypeext = Extension::Fetch(Class);
+
     if (Locomotion->Is_Moving()) {
         shapenum = Class->StartWalkFrame + shapenum * Class->WalkFrames + TotalFramesWalked % Class->WalkFrames;
     }
@@ -1662,6 +1665,20 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
                 }
                 shapenum = v14 + StartDeathFrame;
             }
+            else if (unittypeext->IdleRate > 0) {
+
+                /**
+                 *  #issue-421
+                 *
+                 *  Implements IdleRate for UnitTypes.
+                 *
+                 *  @author: CCHyper
+                 */
+                shapenum = unittypeext->StartIdleFrame
+                    + (TotalFramesWalked % unittypeext->IdleFrames)
+                    + (unittypeext->IdleFrames * shapenum);
+
+            }
             else if (field_34D) {
                 if (Class->StandingFrames == 0) {
                     shapenum = Class->StartWalkFrame + shapenum * Class->WalkFrames;
@@ -1673,7 +1690,6 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         }
     }
 
-    UnitClassExtension* unitext = Extension::Fetch(this);
     ColorSchemeType oldscheme = House->Scheme;
 
     if (RuleExtension->IronCurtainChangeRemap && unitext->IronCurtainTimer > 0)
@@ -1802,7 +1818,6 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
             frame_number = start_turret_frame + (turret_shape_number % turret_facings);
         }
 
-        Dir32 d = SecondaryFacing.Current().As_Dir32();
         Draw_Object(shapefile, frame_number, pt, srect, DIR_N, 256, 0, ZGRAD_GROUND, false, brightness, NULL, 0, Point2D(0, 0), ShapeFlags_Type(SHAPE_PLAIN | SHAPE_ALPHA | SHAPE_FLAT));
 
         // The the voxel barrel above the turret at other angles
@@ -1840,11 +1855,11 @@ void UnitClassExtension_Hooks()
 
     Patch_Jump(0x006517BE, &_UnitClass_Per_Cell_Process_AutoHarvest_Assign_Harvest_Mission_Patch);
     Patch_Jump(0x0065B547, &_UnitClass_Explode_ShakeScreen_Division_BugFix_Patch);
-    Patch_Jump(0x006530EB, &_UnitClass_Draw_Shape_Primary_Facing_Patch);
-    Patch_Jump(0x006537A8, &_UnitClass_Draw_Shape_Turret_Facing_Patch);
+    // Patch_Jump(0x006530EB, &_UnitClass_Draw_Shape_Primary_Facing_Patch); // Obsoleted by whole function replacement
+    // Patch_Jump(0x006537A8, &_UnitClass_Draw_Shape_Turret_Facing_Patch); // Obsoleted by whole function replacement
     Patch_Jump(0x00653D7F, &_UnitClass_Draw_It_Unloading_Harvester_Patch);
     Patch_Jump(0x00654399, &_UnitClass_Mission_Unload_Transport_Detach_Sound_Patch);
-    Patch_Jump(0x00653114, &_UnitClass_Draw_Shape_IdleRate_Patch);
+    // Patch_Jump(0x00653114, &_UnitClass_Draw_Shape_IdleRate_Patch); // Obsoleted by whole function replacement
     Patch_Jump(0x00656623, &_UnitClass_What_Action_ACTION_HARVEST_Block_On_Bridge_Patch); // IsToHarvest
     Patch_Jump(0x0065665D, &_UnitClass_What_Action_ACTION_HARVEST_Block_On_Bridge_Patch); // IsToVeinHarvest
     Patch_Jump(0x0064F2BE, &_UnitClass_Jellyfish_AI_Armor_Patch);
