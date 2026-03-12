@@ -96,4 +96,9 @@ UnitTypeClassExtension final : public TechnoTypeClassExtension
          *  If set, transforming to another unit will require this unit to have full charge.
          */
         bool IsTransformRequiresFullCharge;
+
+        /**
+         *  If set for a shape-based unit, the unit's turret will recoil when the unit fires.
+         */
+        bool IsTurretRecoil;
 };

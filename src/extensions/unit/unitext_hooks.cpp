@@ -1706,7 +1706,10 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
     **	If there is a turret, then it must be rendered as well. This may include
     **	firing animation if required.
     */
-    if (Class->IsTurretEquipped) {
+
+    // Use original drawing code for units that involve voxel turrets or barrels,
+    // or shape-turreted units that do not have turret recoil
+    if (Class->IsTurretEquipped && (!unittypeext->IsTurretRecoil || (Class->AuxVoxel.VoxelLibrary != nullptr || Class->AuxVoxel.VoxelLibrary != nullptr))) {
 
         Point2D drawpoint = xdrawpoint;
         if (IsOnCarryall) {
@@ -1831,7 +1834,76 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         field_36F = false;
 
     }
+    else if (Class->IsTurretEquipped)
+    {
+        // For SHP turrets with recoil
+
+        // Draw main shape
+        Draw_Object(shapefile, shapenum, xdrawpoint, xcliprect, DIR_N, 256, -1, ZGRAD_GROUND, 0, brightness, NULL, 0, Point2D(0, 0), ShapeFlags_Type(SHAPE_NORMAL));
+
+        UnitTypeClassExtension* unittypeext = Extension::Fetch(Class);
+        int turret_facings = unittypeext->TurretFacings;
+
+        /**
+         *  Fetch the frame index for current turret facing.
+         */
+        int turret_shape_number = Facing_To_Frame_Number(SecondaryFacing, turret_facings);
+        int start_turret_frame = Class->Facings * Class->WalkFrames;
+
+        /**
+         *  #issue-389
+         *
+         *  Allow the starting turret frame index to be defined.
+         *
+         *  @author: CCHyper
+         */
+        int frame_number;
+        if (unittypeext && unittypeext->StartTurretFrame != -1) {
+            frame_number = unittypeext->StartTurretFrame + (turret_shape_number % turret_facings);
+        }
+        else {
+            frame_number = start_turret_frame + (turret_shape_number % turret_facings);
+        }
+
+        // If we are in recoil state, adjust turret position based on turret recoil.
+        FacingType facing8 = Dir_To_8(SecondaryFacing.Current().As_Dir256());
+        Point2D turretpt = xdrawpoint;
+        if (IsInRecoilState)
+        {
+            switch (facing8)
+            {
+            case FACING_N:
+                turretpt += Point2D(-1, 1);
+                break;
+            case FACING_NE:
+                turretpt += Point2D(-1, 0);
+                break;
+            case FACING_E:
+                turretpt += Point2D(-1, -1);
+                break;
+            case FACING_SE:
+                turretpt += Point2D(0, -1);
+                break;
+            case FACING_S:
+                turretpt += Point2D(1, -1);
+                break;
+            case FACING_SW:
+                turretpt += Point2D(1, 0);
+                break;
+            case FACING_W:
+                turretpt += Point2D(1, 1);
+                break;
+            case FACING_NW:
+                turretpt += Point2D(0, 1);
+                break;
+            }
+        }
+
+        // Draw turret
+        Draw_Object(shapefile, frame_number, turretpt, xcliprect, DIR_N, 256, 0, ZGRAD_GROUND, false, brightness, NULL, 0, Point2D(0, 0), ShapeFlags_Type(SHAPE_NORMAL));
+    }
     else {
+        // Non-turreted unit - only draw main shape
         static int _zadj = 0;
         Draw_Object(shapefile, shapenum, xdrawpoint, xcliprect, DIR_N, 256, _zadj, Get_Z_Gradient(), 0, brightness, NULL, 0, Point2D(), SHAPE_NORMAL);
     }
