@@ -38,6 +38,7 @@
 #include "session.h"
 #include "rules.h"
 #include "iomap.h"
+#include "theatertype.h"
 #include "techno.h"
 #include "technotype.h"
 #include "fatal.h"
@@ -266,7 +267,7 @@ void CellClassExt::_Recalc_Passability()
             break;
 
         case RTTI_TERRAIN:
-            if ((Scen->Theater == THEATER_TEMPERATE && static_cast<TerrainClass*>(occupier)->Class->TemperateOccupationBits != 7) || (Scen->Theater == THEATER_SNOW && static_cast<TerrainClass*>(occupier)->Class->SnowOccupationBits != 7)) {
+            if ((!TheaterTypeClass::Is_Arctic(Scen->Theater) && static_cast<TerrainClass*>(occupier)->Class->TemperateOccupationBits != 7) || (TheaterTypeClass::Is_Arctic(Scen->Theater) && static_cast<TerrainClass*>(occupier)->Class->SnowOccupationBits != 7)) {
                 Passability = PASSABLE_PARTIALLY_BLOCKED;
                 return;
             }
