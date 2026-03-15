@@ -42,6 +42,7 @@
 #include "mouse.h"
 #include "session.h"
 #include "tracker.h"
+#include "vinifera_util.h"
 
 #include "fatal.h"
 #include "asserthandler.h"
@@ -90,32 +91,41 @@ void Read_INI(CCINIClass const& ini)
                         }
                     }
 
-                    if (classid != OVERLAY_NONE && (OverlayTypes[classid]->Get_Image_Data() != nullptr || OverlayTypes[classid]->CellAnim)) {
-
-                        /*
-                        **  Don't allow placement of crates in the multiplayer scenarios.
-                        */
-#if false
-                        if (Session.Type == GAME_NORMAL || !OverlayTypes[classid]->IsCrate) {
-#endif
+                    if (classid != OVERLAY_NONE)
+                    {
+                        if (OverlayTypes[classid]->Get_Image_Data() != nullptr || OverlayTypes[classid]->CellAnim)
+                        {
 
                             /*
-                            **  Don't allow placement of overlays on the top or bottom rows of
-                            **  the map.
+                            **  Don't allow placement of crates in the multiplayer scenarios.
                             */
-                            if (Map.In_Radar(cell)) {
-                                unsigned char old_overlay_data = Map[cell].OverlayData;
-                                new OverlayClass(OverlayTypes[classid], cell);
-
-                                if (static_cast<int>(classid) == OVERLAY_BRIDGE1 || static_cast<int>(classid) == OVERLAY_BRIDGE2 ||
-                                    static_cast<int>(classid) == OVERLAY_RAIL_BRIDGE1 || static_cast<int>(classid) == OVERLAY_RAIL_BRIDGE2) {
-                                    Map[cell].OverlayData = old_overlay_data;
-                                }
-                            }
 #if false
-                        }
+                            if (Session.Type == GAME_NORMAL || !OverlayTypes[classid]->IsCrate) 
+                            {
 #endif
-                    }
+
+                                /*
+                                **  Don't allow placement of overlays on the top or bottom rows of
+                                **  the map.
+                                */
+                                if (Map.In_Radar(cell)) {
+                                    unsigned char old_overlay_data = Map[cell].OverlayData;
+                                    new OverlayClass(OverlayTypes[classid], cell);
+
+                                    if (static_cast<int>(classid) == OVERLAY_BRIDGE1 || static_cast<int>(classid) == OVERLAY_BRIDGE2 ||
+                                        static_cast<int>(classid) == OVERLAY_RAIL_BRIDGE1 || static_cast<int>(classid) == OVERLAY_RAIL_BRIDGE2) {
+                                        Map[cell].OverlayData = old_overlay_data;
+                                    }
+                                }
+#if false
+                            }
+#endif
+                        }
+                        else
+                        {
+                            Vinifera_Log_WWMessageBox("Overlay type %s (%d) has no image!", OverlayTypes[classid]->IniName.c_str(), classid);
+                        }
+                    } 
                 }
             }
             temp_surface.Unlock();

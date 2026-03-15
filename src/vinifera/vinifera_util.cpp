@@ -411,6 +411,31 @@ int Vinifera_Do_WWMessageBox(const char *msg, const char *btn1, const char *btn2
 
 
 /**
+ *  Shows a in-game warning message box and logs the message.
+ *
+ *  @author: Rampastring
+ */
+void Vinifera_Log_WWMessageBox(const char* msg, ...)
+{
+    char buffer[510];	    // Working staging buffer.
+    va_list	arg;		    // Argument list var.
+
+    va_start(arg, msg);
+    vsnprintf(buffer, sizeof(buffer), msg, arg);
+    va_end(arg);
+
+    // For the log file, append a line-terminator at the end of the message.
+    char log_buffer[512];
+    int message_length = strlen(buffer);
+    memcpy(log_buffer, buffer, message_length);
+    log_buffer[message_length] = '\n';
+
+    DEBUG_WARNING(log_buffer);
+    WWMessageBox().Process(buffer, 0, "OK");
+}
+
+
+/**
  *  Shows a in-game warning message box only if developer mode is active.
  * 
  *  This has been made its own function because we can not allocate on the stack with
@@ -420,8 +445,8 @@ int Vinifera_Do_WWMessageBox(const char *msg, const char *btn1, const char *btn2
  */
 void Vinifera_DeveloperMode_Warning_WWMessageBox(const char *msg, ...)
 {
-    if (Vinifera_DeveloperMode) {
-
+    if (Vinifera_DeveloperMode)
+    {
         char msg_buff[512];
         std:snprintf(msg_buff, sizeof(msg_buff), "WARNING!\n%s", msg);
         
@@ -435,6 +460,10 @@ void Vinifera_DeveloperMode_Warning_WWMessageBox(const char *msg, ...)
         WWMessageBox().Process(buffer, 0, "OK");
     }
 }
+
+
+
+
 
 
 /**

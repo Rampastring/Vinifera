@@ -2586,10 +2586,8 @@ DECLARE_PATCH(_TechnoClass_Null_House_Warning_Patch)
     
     house = this_ptr->House;
     if (!house) {
-        DEBUG_WARNING("Techno \"%s\" has an invalid house!", this_ptr->Name());
-        Vinifera_DeveloperMode_Warning_WWMessageBox("Techno \"%s\" has an invalid house!", this_ptr->Name());
+        Vinifera_Log_WWMessageBox("Techno \"%s\" has an invalid house!", this_ptr->Name());
         Fatal("Null house pointer in TechnoClass::Owner!\n");
-
     } else {
         id = house->HeapID;
     }
