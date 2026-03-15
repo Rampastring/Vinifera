@@ -1434,7 +1434,12 @@ const char *DumpHeapCRCCommandClass::Get_Description() const
                 class_name *ptr = heap_name[i]; \
                 if (ptr != nullptr) { \
                     ptr->Object_CRC(crc); \
-                    DEBUG_INFO("  %04d\tName: %s\tCRC: 0x%08X\n", i, ptr->Name(), crc.CRC_Value()); \
+                    if (ptr->RTTI == RTTI_INFANTRY || ptr->RTTI == RTTI_UNIT || ptr->RTTI == RTTI_BUILDING || ptr->RTTI == RTTI_AIRCRAFT) { \
+                        TechnoClass* techno = (TechnoClass*)ptr; \
+                        DEBUG_INFO("  %04d\tName: %s\tCRC: 0x%08X\tOwner: %s (%d) (Class: %s)\tCoord: %d,%d,%d\n", i, ptr->Name(), crc.CRC_Value(), techno->House->IniName.c_str(), techno->House->HeapID, techno->House->Class->IniName.c_str(), techno->Position.X, techno->Position.Y, techno->Position.Z); \
+                    } else { \
+                        DEBUG_INFO("  %04d\tName: %s\tCRC: 0x%08X\n", i, ptr->Name(), crc.CRC_Value()); \
+                    } \
                 } else { \
                     DEBUG_INFO("  %04d\tFAILED!\n", i); \
                 } \
