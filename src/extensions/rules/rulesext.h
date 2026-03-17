@@ -372,4 +372,9 @@ public:
      *  Does Iron Curtain change the remap color of affected units?
      */
     bool IronCurtainChangeRemap;
+
+    /**
+     *  Determines how many harvesters the AI builds for each refinery on different difficulty levels.
+     */
+    TypeList<int> AIHarvestersPerRefinery;
 };

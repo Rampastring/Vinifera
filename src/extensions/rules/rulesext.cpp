@@ -191,6 +191,11 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     IronCurtainPulseTable.Add(-13);
     IronCurtainPulseTable.Add(-14);
     IronCurtainPulseTable.Add(-15);
+
+    AIHarvestersPerRefinery = TypeList<int>(3);
+    AIHarvestersPerRefinery.Add(2);
+    AIHarvestersPerRefinery.Add(2);
+    AIHarvestersPerRefinery.Add(1);
 }
 
 
@@ -204,7 +209,10 @@ RulesClassExtension::RulesClassExtension(const NoInitClass &noinit) :
     MaxPips(noinit),
     BuildNavalYard(noinit),
     AIKiteChance(noinit),
-    AdvancedAITacticSelectionDelay(noinit)
+    AdvancedAITacticSelectionDelay(noinit),
+    AdvancedAIIonCannonRandomizationFactors(noinit),
+    IronCurtainPulseTable(noinit),
+    AIHarvestersPerRefinery(noinit)
 {
     //EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension(NoInitClass) - 0x%08X\n", (uintptr_t)(ThisPtr));
 }
@@ -236,6 +244,7 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
     AdvancedAITacticSelectionDelay.Clear();
     AdvancedAIIonCannonRandomizationFactors.Clear();
     IronCurtainPulseTable.Clear();
+    AIHarvestersPerRefinery.Clear();
 
     HRESULT hr = GlobalExtensionClass::Load(pStm);
     if (FAILED(hr)) {
@@ -251,6 +260,7 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
     AdvancedAITacticSelectionDelay.Load(pStm);
     AdvancedAIIonCannonRandomizationFactors.Load(pStm);
     IronCurtainPulseTable.Load(pStm);
+    AIHarvestersPerRefinery.Load(pStm);
 
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(BuildNavalYard, "BuildNavalYard");
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(IronCurtains, "IronCurtains");
@@ -280,6 +290,7 @@ HRESULT RulesClassExtension::Save(IStream *pStm, BOOL fClearDirty)
     AdvancedAITacticSelectionDelay.Save(pStm);
     AdvancedAIIonCannonRandomizationFactors.Save(pStm);
     IronCurtainPulseTable.Save(pStm);
+    AIHarvestersPerRefinery.Save(pStm);
 
     return hr;
 }
@@ -334,6 +345,7 @@ void RulesClassExtension::Object_CRC(CRCEngine &crc) const
     crc(BuildNavalYard.Count());
     crc(IsAIDetectDisguise);
     crc(IronCurtains.Count());
+    crc(AIHarvestersPerRefinery.Count());
 }
 
 
@@ -921,6 +933,7 @@ bool RulesClassExtension::AI(CCINIClass& ini)
 
     BuildNavalYard = ::TGet_TypeList(ini, AI, "BuildNavalYard", BuildNavalYard);
     IsAIDetectDisguise = ini.Get_Bool(AI, "AIDetectDisguise", IsAIDetectDisguise);
+    AIHarvestersPerRefinery = ini.Get_Integers(AI, "HarvestersPerRefinery", AIHarvestersPerRefinery);
 
     return true;
 }

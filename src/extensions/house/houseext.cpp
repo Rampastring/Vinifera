@@ -1149,12 +1149,14 @@ int HouseClassExtension::AI_Unit()
 
     int harv = This()->ActiveUQuantity.Value(This()->Get_First_ActLike(Rule->HarvesterUnit)->HeapID);
     int ref = This()->ActiveBQuantity.Value(This()->Get_First_ActLike(Rule->BuildRefinery)->HeapID);
-    int mult;
-    if (Session.Type == GAME_NORMAL || This()->Difficulty == DIFF_HARD) {
-        mult = 1;
-    } else {
-        mult = 2;
-    }
+    int mult = RuleExtension->AIHarvestersPerRefinery[This()->Difficulty];
+
+    // HarvestersPerRefinery is now unhardcoded.
+    // if (Session.Type == GAME_NORMAL || This()->Difficulty == DIFF_HARD) {
+    //     mult = 1;
+    // } else {
+    //     mult = 2;
+    // }
 
     /*
     **  A computer controlled house will try to build a replacement
