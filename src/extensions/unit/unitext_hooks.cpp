@@ -1839,7 +1839,7 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         // For SHP turrets with recoil
 
         // Draw main shape
-        Draw_Object(shapefile, shapenum, xdrawpoint, xcliprect, DIR_N, 256, -1, ZGRAD_GROUND, 0, brightness, NULL, 0, Point2D(0, 0), ShapeFlags_Type(SHAPE_NORMAL));
+        Draw_Object(shapefile, shapenum, xdrawpoint, xcliprect, DIR_N, 256, 0, ZGRAD_GROUND, 0, brightness, NULL, 0, Point2D(0, 0), ShapeFlags_Type(SHAPE_NORMAL));
 
         UnitTypeClassExtension* unittypeext = Extension::Fetch(Class);
         int turret_facings = unittypeext->TurretFacings;
@@ -1900,12 +1900,12 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         }
 
         // Draw turret
-        Draw_Object(shapefile, frame_number, turretpt, xcliprect, DIR_N, 256, 0, ZGRAD_GROUND, false, brightness, NULL, 0, Point2D(0, 0), ShapeFlags_Type(SHAPE_NORMAL));
+        Draw_Object(shapefile, frame_number, turretpt, xcliprect, DIR_N, 256, -1, ZGRAD_GROUND, false, brightness, NULL, 0, Point2D(0, 0), ShapeFlags_Type(SHAPE_NORMAL));
     }
     else {
         // Non-turreted unit - only draw main shape
         static int _zadj = 0;
-        Draw_Object(shapefile, shapenum, xdrawpoint, xcliprect, DIR_N, 256, _zadj, Get_Z_Gradient(), 0, brightness, NULL, 0, Point2D(), SHAPE_NORMAL);
+        Draw_Object(shapefile, shapenum, xdrawpoint, xcliprect, DIR_N, 256, _zadj, Get_Z_Gradient(), 0, brightness, NULL, 0, Point2D(0, 0), SHAPE_NORMAL);
     }
 
     if (RuleExtension->IronCurtainChangeRemap && unitext->IronCurtainTimer > 0)
