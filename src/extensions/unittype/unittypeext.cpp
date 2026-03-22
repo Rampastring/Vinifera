@@ -50,7 +50,7 @@ UnitTypeClassExtension::UnitTypeClassExtension(const UnitTypeClass *this_ptr) :
     IdleFrames(0),
     TransformsInto(nullptr),
     IsTransformRequiresFullCharge(false),
-    IsTurretRecoil(true)
+    IsTurretRecoil(false)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("UnitTypeClassExtension::UnitTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 
