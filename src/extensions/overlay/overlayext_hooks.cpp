@@ -123,7 +123,10 @@ void Read_INI(CCINIClass const& ini)
                         }
                         else
                         {
-                            Vinifera_Log_WWMessageBox("Overlay type %s (%d) has no image!", OverlayTypes[classid]->IniName.c_str(), classid);
+                            if (!OverlayTypes[classid]->IsVeins) // Veinhole dummies intentionally have no valid image
+                            {
+                                Vinifera_Log_WWMessageBox("Overlay type %s (%d) has no image!", OverlayTypes[classid]->IniName.c_str(), classid);
+                            }
                         }
                     } 
                 }
