@@ -1238,7 +1238,7 @@ int TechnoClassExt::_Anti_Infantry() const
 /**
  *  Wrapper to post-process the result of TechnoClass::What_Action
  *
- *  @author: ZivDero
+ *  @author: ZivDero, Rampastring
  */
 ActionType TechnoClassExt::_What_Action(ObjectClass* object, bool disallow_force)
 {
@@ -1247,7 +1247,10 @@ ActionType TechnoClassExt::_What_Action(ObjectClass* object, bool disallow_force
     if (action == ACTION_ATTACK)
     {
         const bool ctrldown = Keyboard->Down(Options.KeyForceAttack1) || Keyboard->Down(Options.KeyForceAttack2);
-        const FireErrorType error = Can_Fire(object, What_Weapon_Should_I_Use(object));
+
+        // Call the TechnoClass function so our TechnoClassExt override gets executed
+        // Otherwise, moving infantry would not hit our override
+        const FireErrorType error = TechnoClass::Can_Fire(object, What_Weapon_Should_I_Use(object));
 
         if (error == FIRE_ILLEGAL && !ctrldown)
             return ACTION_NONE;
