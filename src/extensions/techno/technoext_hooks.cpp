@@ -3261,6 +3261,29 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
         }
     }
 
+    WeaponSlotType which = _What_Weapon_Should_I_Use(const_cast<TechnoClass*>(object));
+
+    /**
+     *  #issue-444
+     *
+     *  If the weapon fires torpedoes and the target is on land,
+     *  then firing is not allowed.
+     *
+     *  UNLESS we're part of a team. Other team members might still be able to fire at the target,
+     *  and teams prefer to synchronize their target. Cancelling targeting in this case
+     *  could confuse other units of the team.
+     */
+    if (which != WEAPON_SLOT_NONE && (!Is_Foot() || reinterpret_cast<const FootClass*>(this)->Team == nullptr)) {
+        const WeaponTypeClass* weapon = Get_Weapon(which)->Weapon;
+        if (weapon != nullptr) {
+            const auto bullettypeext = Extension::Fetch(weapon->Bullet);
+            if (bullettypeext->IsTorpedo) {
+                if (Map[object->Center_Coord()].Land_Type() != LAND_WATER) {
+                    return false;
+                }
+            }
+        }
+    }
 
     /*
     **	If this target value is better than the previously recorded best
@@ -3308,7 +3331,6 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
     */
     if (object->RTTI != RTTI_BUILDING || RTTI != RTTI_INFANTRY || !reinterpret_cast<const InfantryClass*>(this)->Class->IsBomber)
     {
-        WeaponSlotType which = _What_Weapon_Should_I_Use(const_cast<TechnoClass*>(object));
         if (which != WEAPON_SLOT_NONE) {
             const WeaponTypeClass* weapon = TClass->Fetch_Weapon_Info(which).Weapon;
             if (weapon != nullptr) {
