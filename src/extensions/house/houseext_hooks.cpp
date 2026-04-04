@@ -3801,7 +3801,7 @@ void HouseClass_MPlayer_Defeated_Mark_Player_Win_Or_Loss()
 {
     // The match has ended due to player defeat because there is only one team left.
     // Consider the player as having won if they are not defeated, OR in case of multiplayer,
-    // if they have any allies left alive.
+    // if they have any human allies left alive.
     // This allows the player to be considered a winner if their team wins in a team game,
     // even if the player itself is defeated.
 
@@ -3817,7 +3817,7 @@ void HouseClass_MPlayer_Defeated_Mark_Player_Win_Or_Loss()
             **	Get a pointer to this house
             */
             HouseClass* hptr = Houses[i];
-            if (!hptr || hptr->IsDefeated || hptr->Class->IsMultiplayPassive)
+            if (!hptr || hptr->IsDefeated || !hptr->IsHuman || hptr->Class->IsMultiplayPassive)
                 continue;
 
             if (PlayerPtr->Is_Ally(hptr)) {
