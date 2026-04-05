@@ -1159,52 +1159,6 @@ void AdvAI_Awaken_Sleeping_Harvesters(HouseClass* house)
 
 
 /**
- *  Sells extra construction yards of the specific house until there is one one left.
- *
- *  Author: Rampastring
- */
-void AdvAI_Sell_Extra_ConYards(HouseClass* house)
-{
-    int to_sell_count = house->ConstructionYards.Count() - 1;
-
-    DEBUG_INFO("AdvAI: AI %d has too many Construction Yards. Selling off %d of them. Frame: %d\n", house->Fetch_Heap_ID(), to_sell_count, Frame);
-
-    if (to_sell_count < 1) {
-        return;
-    }
-
-    int sold_count = 0;
-
-    for (int i = house->ConstructionYards.Count() - 1; i > 0; i--) {
-        BuildingClass* building = house->ConstructionYards[i];
-
-        if (!building->IsActive || building->IsInLimbo) {
-            continue;
-        }
-
-        if (building->Mission == MISSION_DECONSTRUCTION || building->MissionQueue == MISSION_DECONSTRUCTION) {
-            sold_count++;
-
-            if (sold_count >= to_sell_count) {
-                break;
-            }
-
-            continue;
-        }
-
-        DEBUG_INFO("AdvAI: Found a Construction Yard to sell.\n");
-
-        building->Sell_Back(1);
-        sold_count++;
-
-        if (sold_count >= to_sell_count) {
-            break;
-        }
-    }
-}
-
-
-/**
  *  Implements DTA's custom AI building selection logic.
  *
  *  Author: Rampastring
@@ -1943,7 +1897,7 @@ void AdvAI_Undeploy_Enforcers(HouseClass* house)
 
     HouseClassExtension* houseext = Extension::Fetch(house);
 
-    if (Frame < houseext->AdvAILastUndeployableUnitCheckFrame + 1500) {
+    if (Frame < houseext->AdvAILastUndeployableUnitCheckFrame + 2250) {
         return;
     }
 
@@ -1968,7 +1922,7 @@ void AdvAI_Undeploy_Enforcers(HouseClass* house)
     }
 
     // Scan for deployable foots that are not recruitable and set them to be recruitable
-    // !! Might not be necessary
+    // !! Not necessary, AdvAI v2 recruitment logic does not currently care about whether the unit is recruitable or not
     // for (int i = 0; i < Foots.Count(); i++)
     // {
     //     FootClass* foot = Foots[i];
@@ -2069,12 +2023,6 @@ void AdvAI_HouseClass_Expert_AI(HouseClass* house)
     AdvAI_Self_Defense_AI(house);
 
     AdvAI_Undeploy_Enforcers(house);
-
-    // If we have more than 1 ConYard without Rules allowing it, sell some of them off
-    // to avoid the "Extreme AI" syndrome.
-    if (house->ConstructionYards.Count() > 1 && !RuleExtension->IsAdvancedAIMultiConYard) {
-        AdvAI_Sell_Extra_ConYards(house);
-    }
 
     // If our current enemy is Neutral, clear our enemy.
     if (house->Enemy != HOUSE_NONE && Houses[house->Enemy]->Class->IsMultiplayPassive) {

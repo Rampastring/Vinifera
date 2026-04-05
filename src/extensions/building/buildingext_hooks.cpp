@@ -977,10 +977,16 @@ void BuildingClassExt::_Factory_AI()
                             }
 
                             // Advanced AI: Don't overspend on aircraft.
-                            if (RuleExtension->AdvancedAIUnitProduction && ttype->RTTI == RTTI_AIRCRAFTTYPE && 
+                            if (ttype->RTTI == RTTI_AIRCRAFTTYPE && RuleExtension->AdvancedAIUnitProduction &&
                                 House->Available_Money() < Rule->AIAlternateProductionCreditCutoff &&
-                                Extension::Fetch(House)->AdvAI_Is_Outnumbered()) {
+                                Extension::Fetch(House)->AdvAI_Is_Outnumbered())
+                            {
                                 House->BuildAircraft = AIRCRAFT_NONE;
+                            }
+                            // Advanced AI: If we are a ConYard, don't build multiples of buildings unless it's allowed by Rules.
+                            else if (ttype->RTTI == RTTI_BUILDINGTYPE && RuleExtension->AdvancedAIBaseBuilding && !RuleExtension->IsAdvancedAIMultiConYard)
+                            {
+                                House->BuildStructure = STRUCT_NONE;
                             }
                         }
                     }
