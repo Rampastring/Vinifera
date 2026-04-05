@@ -365,8 +365,20 @@ int TeamClassExtension::AdvAI_Get_Object_Value_For_Team(TechnoTypeClass* technot
         return -1;
     }
 
-    if (technotype->RTTI == RTTI_INFANTRYTYPE && MaxInfantry > -1 && Infantry_Count() >= MaxInfantry) {
-        return -1;
+    if (technotype->RTTI == RTTI_INFANTRYTYPE) {
+
+        int infcount = Infantry_Count();
+
+        if (MaxInfantry > -1 && infcount >= MaxInfantry)
+        {
+            return -1;
+        }
+
+        if (infcount >= RuleExtension->AdvancedAITeamCheapInfantryMax &&
+            technotype->Cost < RuleExtension->AdvancedAICheapInfantryCostThreshold)
+        {
+            return -1;
+        }
     }
 
     if (IsTransportTeam)
@@ -504,6 +516,16 @@ int TeamClassExtension::AdvAI_Get_Object_Value_For_Team(TechnoTypeClass* technot
             double reduction = count * RuleExtension->AdvancedAISameUnitAntiBias;
             reduction = std::min(0.9, reduction);
             totalvalue = totalvalue * (1.0 - reduction);
+        }
+
+        // Avoid infantry spam
+        auto houseext = Extension::Fetch(This()->House);
+        if (houseext->Has_War_Factory() && InfantryCost > 0)
+        {
+            double ratio = RuleExtension->AdvancedAITeamInfantryCostPunishmentThreshold / (double)InfantryCost;
+
+            if (ratio < 1.0)
+                totalvalue = totalvalue * ratio;
         }
     }
     else if (technotype->RTTI == RTTI_UNITTYPE) {

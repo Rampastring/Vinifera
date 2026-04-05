@@ -135,6 +135,9 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AdvancedAIAircraftReuse(false),
     AdvancedAINoTechCenterBeforeFrame(10000),
     AdvancedAIMaxTeamSize(20),
+    AdvancedAITeamInfantryCostPunishmentThreshold(3000),
+    AdvancedAICheapInfantryCostThreshold(500),
+    AdvancedAITeamCheapInfantryMax(30),
     IsBeachIsCrush(false),
     IsAIDetectDisguise(true),
     ComesNearWaypointDistance(CELL_LEPTON_W * 5),
@@ -931,6 +934,9 @@ bool RulesClassExtension::AI(CCINIClass& ini)
     AdvancedAIAircraftReuse = ini.Get_Bool(AI, "AdvancedAIAircraftReuse", AdvancedAIAircraftReuse);
     AdvancedAINoTechCenterBeforeFrame = ini.Get_Int(AI, "AdvancedAINoTechCenterBeforeFrame", AdvancedAINoTechCenterBeforeFrame);
     AdvancedAIMaxTeamSize = ini.Get_Int(AI, "AdvancedAIMaxTeamSize", AdvancedAIMaxTeamSize);
+    AdvancedAITeamInfantryCostPunishmentThreshold = ini.Get_Int(AI, "AdvancedAITeamInfantryCostPunishmentThreshold", AdvancedAITeamInfantryCostPunishmentThreshold);
+    AdvancedAICheapInfantryCostThreshold = ini.Get_Int(AI, "AdvancedAICheapInfantryCostThreshold", AdvancedAICheapInfantryCostThreshold);
+    AdvancedAITeamCheapInfantryMax = ini.Get_Int(AI, "AdvancedAITeamCheapInfantryMax", AdvancedAITeamCheapInfantryMax);
 
     BuildNavalYard = ::TGet_TypeList(ini, AI, "BuildNavalYard", BuildNavalYard);
     IsAIDetectDisguise = ini.Get_Bool(AI, "AIDetectDisguise", IsAIDetectDisguise);

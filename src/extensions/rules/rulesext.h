@@ -328,6 +328,12 @@ public:
 
     int AdvancedAIMaxTeamSize;
 
+    int AdvancedAITeamInfantryCostPunishmentThreshold;
+
+    int AdvancedAICheapInfantryCostThreshold;
+
+    int AdvancedAITeamCheapInfantryMax;
+
     /**
      *  Is LandType Beach considered as "requires crushing" for passability purposes, as opposed to water?
      */
