@@ -326,6 +326,8 @@ public:
 
     int AdvancedAINoTechCenterBeforeFrame;
 
+    int AdvancedAIMaxTeamSize;
+
     /**
      *  Is LandType Beach considered as "requires crushing" for passability purposes, as opposed to water?
      */
@@ -374,7 +376,7 @@ public:
     bool IronCurtainChangeRemap;
 
     /**
-     *  Determines how many harvesters the AI builds for each refinery on different difficulty levels.
+     *  Determines how many harvesters the non-advanced AI builds for each refinery on different difficulty levels.
      */
     TypeList<int> AIHarvestersPerRefinery;
 };

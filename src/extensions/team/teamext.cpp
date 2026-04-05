@@ -238,6 +238,23 @@ const char* TeamClassExtension::Full_Name() const
     return This()->Class->Full_Name();
 }
 
+/**
+ *  Copies team execution related state from another instance.
+ *  This function does NOT copy state that is only used for producing the team.
+ *
+ *  @author: Rampastring
+ */
+void TeamClassExtension::Copy_Executive_State_From(TeamClassExtension* other)
+{
+    IsAdvAITeam = other->IsAdvAITeam;
+    MinimumReadyFrame = other->MinimumReadyFrame;
+    IsTransportTeam = other->IsTransportTeam;
+    AdvAIGroundTacticType = other->AdvAIGroundTacticType;
+    AdvAITactic = other->AdvAITactic;
+    IsAircraftTeam = other->IsAircraftTeam;
+    ProdFlags = other->ProdFlags;
+}
+
 void TeamClassExtension::AdvAI_Team_Recruit_AI()
 {
     Coord center = This()->Zone != NULL ? This()->Zone->Center_Coord() : COORD_NONE;

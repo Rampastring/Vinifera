@@ -134,6 +134,7 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AdvancedAIAircraftTargeting(false),
     AdvancedAIAircraftReuse(false),
     AdvancedAINoTechCenterBeforeFrame(10000),
+    AdvancedAIMaxTeamSize(20),
     IsBeachIsCrush(false),
     IsAIDetectDisguise(true),
     ComesNearWaypointDistance(CELL_LEPTON_W * 5),
@@ -491,7 +492,6 @@ void RulesClassExtension::Process(CCINIClass &ini)
      * 
      *  #NOTE: These must be performed last!
      */
-    AI(ini);
     General(ini);
     MPlayer(ini);
     AudioVisual(ini);
@@ -930,6 +930,7 @@ bool RulesClassExtension::AI(CCINIClass& ini)
     AdvancedAIAircraftTargeting = ini.Get_Bool(AI, "AdvancedAIAircraftTargeting", AdvancedAIAircraftTargeting);
     AdvancedAIAircraftReuse = ini.Get_Bool(AI, "AdvancedAIAircraftReuse", AdvancedAIAircraftReuse);
     AdvancedAINoTechCenterBeforeFrame = ini.Get_Int(AI, "AdvancedAINoTechCenterBeforeFrame", AdvancedAINoTechCenterBeforeFrame);
+    AdvancedAIMaxTeamSize = ini.Get_Int(AI, "AdvancedAIMaxTeamSize", AdvancedAIMaxTeamSize);
 
     BuildNavalYard = ::TGet_TypeList(ini, AI, "BuildNavalYard", BuildNavalYard);
     IsAIDetectDisguise = ini.Get_Bool(AI, "AIDetectDisguise", IsAIDetectDisguise);

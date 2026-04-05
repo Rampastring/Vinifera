@@ -80,6 +80,7 @@ TeamClassExtension final : public AbstractClassExtension
         virtual const TeamClass *This_Const() const override { return reinterpret_cast<const TeamClass *>(AbstractClassExtension::This_Const()); }
         virtual RTTIType Fetch_RTTI() const override { return RTTI_TEAM; }
 
+        void Copy_Executive_State_From(TeamClassExtension* other);
         void AdvAI_Team_Recruit_AI();
         void AdvAI_Team_Maintenance_AI();
         int AdvAI_Get_Object_Value_For_Team(TechnoTypeClass* technotype, bool debug) const;

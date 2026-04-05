@@ -76,6 +76,7 @@
 #include "asserthandler.h"
 #include "buildingtypeext.h"
 #include "extension_globals.h"
+#include "vinifera_util.h"
 #include "sidebarext.h"
 #include "rules.h"
 #include "session.h"
@@ -1426,12 +1427,74 @@ void AdvAI_Calculate_Enemy_Strength(HouseClass* house)
 }
 
 
+/**
+ *  Commences a single team.
+ *
+ *  Author: Rampastring
+ */
 void AdvAI_Commence_Team(TeamClass* team)
 {
     team->IsFullStrength = true;
     team->IsHasBeen = true;
     team->IsForcedActive = true;
     Extension::Fetch(team)->OriginalTeamMemberCount = team->Total;
+}
+
+
+/**
+ *  Splits a team up if it's too large and eligible for getting split.
+ *  Afterwards, commences all the teams potentially created from the split,
+ *  as well the primary team.
+ *
+ *  Author: Rampastring
+ */
+void AdvAI_Check_Split_And_Commence_Team(TeamClass* team)
+{
+    auto ext = Extension::Fetch(team);
+
+    // Check if this team should be limited by unit count
+    if (!ext->IsAircraftTeam && ext->ProdFlags == PRODFLAG_NONE && !ext->IsTransportTeam)
+    {
+        // Check if the team has too many units in it.
+        // If yes, we need to split it up.
+        if (team->Total > RuleExtension->AdvancedAIMaxTeamSize)
+        {
+            // Calculate number of new teams to create
+            int numteams = team->Total / RuleExtension->AdvancedAIMaxTeamSize;
+            int remainder = team->Total % RuleExtension->AdvancedAIMaxTeamSize;
+            if (remainder == 0)
+                numteams--;
+
+            DEBUG_INFO("AdvAI: House %d: Splitting a team of %d units into %d teams.\n", team->House->HeapID, team->Total, (numteams + 1));
+
+            // Create the new teams
+            for (int i = 0; i < numteams; i++)
+            {
+                TeamClass* other = team->Class->Create_One_Of(team->House);
+
+                auto otherext = Extension::Fetch(other);
+                otherext->Copy_Executive_State_From(ext);
+
+                // Recruit units from the primary team
+                for (int unitindex = 0; unitindex < RuleExtension->AdvancedAIMaxTeamSize; unitindex++)
+                {
+                    if (!other->Add(team->Member)) {
+                        Vinifera_Log_WWMessageBox("AdvAI_Check_Split_And_Commence_Team: Failed to add unit to new team!");
+                    }
+                }
+
+                // Commence the new team
+                AdvAI_Commence_Team(other);
+            }
+        }
+    }
+    else
+    {
+        DEBUG_INFO("AdvAI: House %d: Commencing a single team.\n", team->House->HeapID);
+    }
+
+    // Finally, commence the primary team
+    AdvAI_Commence_Team(team);
 }
 
 /**
@@ -1450,7 +1513,7 @@ void AdvAI_Commence_Current_Tactic(HouseClass* house)
     {
         if (Frame >= houseext->AdvAIGroundTactic.EndFrame()) {
 
-            DEBUG_INFO("AdvAI: House %d: Commencing tactic \"%s\". Frame: %d", house->HeapID, AdvAITacticType_To_Name(houseext->AdvAIGroundTactic.Tactic), Frame);
+            DEBUG_INFO("AdvAI: House %d: Commencing tactic \"%s\". Frame: %d\n", house->HeapID, AdvAITacticType_To_Name(houseext->AdvAIGroundTactic.Tactic), Frame);
 
             // Direct attack tactics might not be executed at the first opportunity.
             if (house->Enemy != HOUSE_NONE &&
@@ -1505,7 +1568,7 @@ void AdvAI_Commence_Current_Tactic(HouseClass* house)
 
                 if (!teamext->IsAircraftTeam) {
                     if (teamext->MinimumReadyFrame <= 0 || Frame >= teamext->MinimumReadyFrame) {
-                        AdvAI_Commence_Team(team);
+                        AdvAI_Check_Split_And_Commence_Team(team);
                     }
                 }
 
@@ -1539,7 +1602,7 @@ void AdvAI_Commence_Current_Tactic(HouseClass* house)
 
             if (teamext->IsAircraftTeam) {
                 if (teamext->MinimumReadyFrame <= 0 || Frame >= teamext->MinimumReadyFrame) {
-                    AdvAI_Commence_Team(team);
+                    AdvAI_Check_Split_And_Commence_Team(team);
                 }
             }
 
@@ -1558,7 +1621,7 @@ void AdvAI_Commence_Current_Tactic(HouseClass* house)
             TeamClassExtension* teamext = Extension::Fetch(team);
 
             if (teamext->MinimumReadyFrame <= 0 || Frame >= teamext->MinimumReadyFrame) {
-                AdvAI_Commence_Team(team);
+                AdvAI_Check_Split_And_Commence_Team(team);
             }
 
             team = houseext->Get_Team_In_Production(id, RTTI_NONE, PRODFLAG_NAVAL);
@@ -1621,7 +1684,7 @@ void AdvAI_Air_Tactic_AI(HouseClass* house)
                 TeamClassExtension* teamext = Extension::Fetch(team);
 
                 if (teamext->IsAircraftTeam) {
-                    AdvAI_Commence_Team(team);
+                    AdvAI_Check_Split_And_Commence_Team(team);
                 }
 
                 team = houseext->Get_Team_In_Production(id, RTTI_AIRCRAFT, PRODFLAG_NONE);
