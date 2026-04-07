@@ -943,7 +943,7 @@ LeaveTransportSound=<none>  ; VocType, the sound effect to play when a passenger
 In `RULES.INI`:
 ```ini
 [SOMETECHNO]  ; TechnoType
-Soylent=0     ; unsigned integer, the refund value for the unit when it is sold at a Service Depot, or a building when sold by the player. 0 uses normal refund amount logic.
+Soylent=-1    ; integer, the refund value for the unit when it is sold at a Service Depot, or a building when sold by the player. -1 uses normal refund amount logic.
 ```
 
 ### New Voice Responses
@@ -998,6 +998,23 @@ ShakeXlo=0    ; unsigned integer, the minimum pixel X value.
 ### WalkRate
 
 - Vinifera allows `WalkRate` to be optionally loaded from `ART.INI` image entries, overriding any value defined in `RULES.INI`.
+
+### Wake Animation Customization
+
+- Vinifera allows customizing the wake (moving on water) animation per-techno.
+
+In `ART.INI`:
+```ini
+[SOMETECHNO]            ; TechnoType
+WakeAnim=               ; AnimType, the wake graphic to show as the object moves across water.
+WakeAnimRate=10         ; integer, the rate at which this object creates the wake animation while moving.
+IdleWakeAnim=           ; AnimType, the wake graphic to show when the object is staying still on water.
+HideWakeWhenCloaked=no  ; boolean, should this unit not spawn wakes when it's cloaked?
+```
+
+```{note}
+Wake customizations currently only take effect on units using `DriveLocomotion`.
+```
 
 ### ImmuneToEMP
 

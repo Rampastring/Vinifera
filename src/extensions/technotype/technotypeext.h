@@ -140,12 +140,12 @@ public:
     /**
      *  The graphic class to switch to when this unit is unloading (e.g., at a refinery).
      */
-    const TechnoTypeClass *UnloadingClass;
+    const UnitTypeClass *UnloadingClass;
 
     /**
      *  The refund value for the unit when it is sold at a Service Depot.
      */
-    unsigned SoylentValue;
+    int SoylentValue;
 
     /**
      *  This is the sound effect to play when a passenger enters this unit.
@@ -384,6 +384,26 @@ public:
      *  Can this object pick up targets within its range automatically (opportunity fire)?
      */
     bool IsOpportunityFire;
+
+    /**
+     *  The wake graphic to show as the object moves across water.
+     */
+    const AnimTypeClass* WakeAnim;
+
+    /**
+     *  The rate at which this object creates the wake animation while moving.
+     */
+    int WakeAnimRate;
+
+    /**
+     *  The wake graphic to show when the object is staying still on water.
+     */
+    const AnimTypeClass* IdleWakeAnim;
+
+    /**
+     *  Should this unit not spawn wakes when it's cloaked? Usually useful for submarines.
+     */
+    bool IsHideWakeWhenCloaked;
 
     /**
      *  Specifies whether this object is available to be built by all players, only AI players, or only human players.

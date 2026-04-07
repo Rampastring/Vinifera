@@ -83,6 +83,14 @@ ScoreEnemyColor=250,28,28    ; color in R,G,B, color of the enemy's score bars.
 
 ## Script Actions
 
+### New Quarry Types
+
+- Script actions accepting a quarry as a parameter now take new quarry values.
+
+| Index | Name | Description |
+|-|-|-|
+|10|Only Harvesters|The team will target only harvesters (not refineries)|
+
 ## Trigger Actions
 
 ### NeedCodes
@@ -128,10 +136,14 @@ NAME = [Action Count], [TActionType], [NeedCode], [PARAM1], [PARAM2], [PARAM3], 
 
 ### New Trigger Actions
 
+```{warning}
+Trigger action 11 `Text Trigger` now takes a string key for the tutorial text entry, not an interer!
+```
+
 |  **ID**  | **Action**               | **NeedCode** | **PARAM1**       | **PARAM2** | **PARAM3** | **PARAM4** | **PARAM5** | **PARAM6** |
 |----------|--------------------------|--------------|------------------|------------|------------|------------|------------|------------|
 | 11       | Text Trigger (Enhanced)     |
-|          | Displays a text message with optional color and duration. Supports templated text substitution: placeholders like `{{g_variableName}}` or `{{l_variableName}}` are replaced with the corresponding global or local variable values. Duration is in real time seconds (0 means like in vanilla). | Other (0) | Text Index (#)     | Color (#) | Duration  | *unused*   | *unused*   | *unused*   |
+|          | Displays a text message with optional color and duration. Supports templated text substitution: placeholders like `{{g_variableName}}` or `{{l_variableName}}` are replaced with the corresponding global or local variable values. Duration is in real time seconds (0 means like in vanilla). | Other (0) | Text ID (string)     | Color (#) | Duration  | *unused*   | *unused*   | *unused*   |
 | 106      | Give Credits             |
 |          | Gives or removes credits from the specified house. A positive amount gives money, a negative amount subtracts it. | Other (0)   | House (#)        | Credits    | *unused*   | *unused*   | *unused*   | *unused*   |
 | 107      | Enable Short Game        |
@@ -190,7 +202,20 @@ NAME = [Action Count], [TActionType], [NeedCode], [PARAM1], [PARAM2], [PARAM3], 
 |          | Displays a line of text on the screen with variable substitution. The text may include placeholders like `{{g_variableName}}` or `{{l_variableName}}`, which are replaced with the corresponding global or local variable values. Color `-1` uses the color of the player's house. | Other (0) | Text Index (#)     | Color (#) | *unused*   | *unused*   | *unused*   | *unused*   |
 | 134      | Disable Templated Text           |
 |          | Removes the currently active templated text from the screen. | Other (0) | *unused*           | *unused*            | *unused*   | *unused*   | *unused*   | *unused*   |
+| 135      | Adjust House Modifier           |
+|          | Adjusts a house modifier by given percentage points. | Other (0) | Modifier (#)           | Amount (%)            | *unused*   | *unused*   | *unused*   | *unused*   |
 
+### [135] Adjust House Modifier — Modifier Types
+
+| Number | Modifier |
+|---|--------|
+| 0 | Firepower |
+| 1 | Armor |
+| 2 | Groundspeed |
+| 3 | Airspeed |
+| 4 | Rate of Fire |
+| 5 | Cost |
+| 6 | Build Time |
 
 ## Trigger Events
 

@@ -27,7 +27,6 @@
  ******************************************************************************/
 #include "vinifera_functions.h"
 #include "vinifera_globals.h"
-#include "vinifera_newdel.h"
 #include "tibsun_globals.h"
 #include "cncnet4.h"
 #include "cncnet4_globals.h"
@@ -64,9 +63,10 @@
 #include "newjumpjetlocomotion.h"
 #include "prerequisitegroup.h"
 #include "setup_hooks.h"
+#include "tibsun_functions.h"
 
 
-static DynamicVectorClass<Wstring> ViniferaSearchPaths;
+static DynamicVectorClass<std::string> ViniferaSearchPaths;
 
 
 /**
@@ -92,9 +92,9 @@ bool Vinifera_Load_INI()
 
     ini.Load(file);
 
-    ini.Get_String("General", "ProjectName", Vinifera_ProjectName, sizeof(Vinifera_ProjectName));
-    ini.Get_String("General", "IconFile", Vinifera_IconName, sizeof(Vinifera_IconName));
-    ini.Get_String("General", "CursorFile", Vinifera_CursorName, sizeof(Vinifera_CursorName));
+    ini.Get_String("General", "ProjectName", "", Vinifera_ProjectName, sizeof(Vinifera_ProjectName));
+    ini.Get_String("General", "IconFile", "", Vinifera_IconName, sizeof(Vinifera_IconName));
+    ini.Get_String("General", "CursorFile", "", Vinifera_CursorName, sizeof(Vinifera_CursorName));
 
 #if defined(TS_CLIENT)
     /**
@@ -106,12 +106,12 @@ bool Vinifera_Load_INI()
     if (ver_file.Is_Available()) {
         INIClass ver_ini;
         ver_ini.Load(ver_file);
-        ver_ini.Get_String("DTA", "Version", Vinifera_ProjectVersion, sizeof(Vinifera_ProjectVersion));
+        ver_ini.Get_String("DTA", "Version", "", Vinifera_ProjectVersion, sizeof(Vinifera_ProjectVersion));
     } else {
-        ini.Get_String("General", "ProjectVersion", Vinifera_ProjectVersion, sizeof(Vinifera_ProjectVersion));
+        ini.Get_String("General", "ProjectVersion", "", Vinifera_ProjectVersion, sizeof(Vinifera_ProjectVersion));
     }
 #else
-    ini.Get_String("General", "ProjectVersion", Vinifera_ProjectVersion, sizeof(Vinifera_ProjectVersion));
+    ini.Get_String("General", "ProjectVersion", Vinifera_ProjectVersion, "", sizeof(Vinifera_ProjectVersion));
 #endif
 
     Vinifera_ProjectName[sizeof(Vinifera_ProjectName)-1] = '\0';
@@ -120,7 +120,7 @@ bool Vinifera_Load_INI()
     Vinifera_CursorName[sizeof(Vinifera_CursorName)-1] = '\0';
 
     char buffer[1024];
-    if (ini.Get_String("General", "SearchPaths", buffer, sizeof(buffer)) > 0) {
+    if (ini.Get_String("General", "SearchPaths", "", buffer, sizeof(buffer)) > 0) {
         char *path = std::strtok(buffer, ",");
         while (path) {
             if (!ViniferaSearchPaths.Is_Present(path)) {
@@ -139,7 +139,7 @@ bool Vinifera_Load_INI()
     Vinifera_NoTacticalVersionString = ini.Get_Bool("General", "NoVersionString", Vinifera_NoTacticalVersionString);
 
     Vinifera_NewSidebar = ini.Get_Bool("Features", "NewSidebar", false);
-    ini.Get_String("General", "SavedGamesDirectory", buffer, std::size(buffer));
+    ini.Get_String("General", "SavedGamesDirectory", "", buffer, std::size(buffer));
     if (std::strlen(buffer) > 0) {
         std::strncpy(Vinifera_SavedGamesDirectory, buffer, std::size(Vinifera_SavedGamesDirectory) - 1);
     }
@@ -261,6 +261,13 @@ bool Vinifera_Parse_Command_Line(int argc, char *argv[])
 {
     if (argc > 1) {
         DEBUG_INFO("Parsing command line arguments...\n");
+    }
+
+    /**
+     *  Let the game parse the arguments first.
+     */
+    if (!Parse_Command_Line(argc, argv)) {
+        return false;
     }
 
     bool menu_skip = false;
@@ -572,7 +579,7 @@ bool Vinifera_Startup()
          */
         for (int i = 0; i < ViniferaSearchPaths.Count(); ++i) {
             if (i != 0) std::strcat(new_path, ";");
-            std::strcat(new_path, ViniferaSearchPaths[i].Peek_Buffer());
+            std::strcat(new_path, ViniferaSearchPaths[i].c_str());
         }
 
         /**
@@ -694,8 +701,6 @@ bool Vinifera_Shutdown()
 
     delete AircraftTracker;
     AircraftTracker = nullptr;
-
-    DEV_DEBUG_INFO("Shutdown - New Count: %d, Delete Count: %d\n", Vinifera_New_Count, Vinifera_Delete_Count);
 
     return true;
 }

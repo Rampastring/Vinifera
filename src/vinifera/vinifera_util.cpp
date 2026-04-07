@@ -69,12 +69,12 @@ const char *Vinifera_Name_String()
         /**
          *  Append the CnCNet version if enabled.
          */
-        char *cncnet_mode = nullptr;
+        char const* cncnet_mode = nullptr;
         if (CnCNet4::IsEnabled) {
             cncnet_mode = " (CnCNet4)";
         }
 
-        char *dev_mode = nullptr;
+        char const* dev_mode = nullptr;
         if (Vinifera_DeveloperMode) {
             dev_mode = " (Dev)";
         }
@@ -174,7 +174,7 @@ const char *Vinifera_Version_String()
         /**
          *  Append the CnCNet version if enabled.
          */
-        char *cncnet_mode = nullptr;
+        char const* cncnet_mode = nullptr;
         if (CnCNet4::IsEnabled) {
             cncnet_mode = " (CnCNet4)";
         }
@@ -473,7 +473,7 @@ void Vinifera_DeveloperMode_Warning_WWMessageBox(const char *msg, ...)
  */
 const char *Vinifera_Get_Window_Title(DWORD dwPid)
 {
-    static char _window_name[512];
+    static char _window_name[512] = {};
 
     if (_window_name[0] != '\0') {
         return _window_name;
@@ -773,25 +773,25 @@ BSurface *Vinifera_Get_Image_Surface(const char *filename)
     BSurface *surface = nullptr;
     CCFileClass file;
 
-    Wstring fname = filename;
-    fname.To_Upper();
+    std::string fname = filename;
+    std::transform(fname.begin(), fname.end(), fname.begin(), ::toupper);
 
-    Wstring png_fname = fname;
+    std::string png_fname = fname;
     png_fname += ".PNG";
 
-    file.Set_Name(png_fname.Peek_Buffer());
+    file.Set_Name(png_fname.c_str());
 
     surface = Read_PNG_File(&file);
     if (surface) {
         return surface;
     }
 
-    surface = Get_BMP_Image_Surface(fname.Peek_Buffer());
+    surface = Get_BMP_Image_Surface(fname.c_str());
     if (surface) {
         return surface;
     }
 
-    surface = Get_PCX_Image_Surface(fname.Peek_Buffer());
+    surface = Get_PCX_Image_Surface(fname.c_str());
     if (surface) {
         return surface;
     }

@@ -199,6 +199,11 @@ public:
     VoxType DetectBeaconVoice;
 
     /**
+     *  Is LandType Beach considered as "requires crushing" for passability purposes, as opposed to water?
+     */
+    bool IsBeachIsCrush;
+
+    /**
      *  Defines for how many frames buildings do not get flames spawned on them on
      *  damage state change after once catching fire.
      */
@@ -333,11 +338,6 @@ public:
     int AdvancedAICheapInfantryCostThreshold;
 
     int AdvancedAITeamCheapInfantryMax;
-
-    /**
-     *  Is LandType Beach considered as "requires crushing" for passability purposes, as opposed to water?
-     */
-    bool IsBeachIsCrush;
 
     bool IsAIDetectDisguise;
 

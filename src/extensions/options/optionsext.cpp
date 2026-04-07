@@ -48,7 +48,12 @@ OptionsClassExtension::OptionsClassExtension(const OptionsClass *this_ptr) :
     FilterBandBoxSelection(true),
     KeyChatToAll1(KN_RETURN),
     KeyChatToAll2(KN_F8),
-    KeyChatToAllies(KN_BACKSPACE)
+    KeyChatToAllies(KN_BACKSPACE),
+    WindowWidth(-1),
+    WindowHeight(-1),
+    ScaleMode(SDL_SCALEMODE_PIXELART),
+    CursorScale(0),
+    IsVSync(false)
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::OptionsClassExtension - 0x%08X\n", (uintptr_t)(This()));
 }
@@ -159,17 +164,9 @@ void OptionsClassExtension::Load_Settings()
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::Load_Settings - 0x%08X\n", (uintptr_t)(This()));
     
-    RawFileClass file("Settings.ini");
-    CCINIClass sun_ini;
-
-    if (file.Is_Available()) {
-
-        sun_ini.Load(file, false);
-
-        SortDefensesAsLast = sun_ini.Get_Bool("Options", "SortDefensesAsLast", SortDefensesAsLast);
-        FilterBandBoxSelection = sun_ini.Get_Bool("Options", "FilterBandBoxSelection", FilterBandBoxSelection);
-        IsClassicMessagePosition = sun_ini.Get_Bool("Options", "ClassicMessageListPosition", IsClassicMessagePosition);
-    }
+    SortDefensesAsLast = ConfigINI.Get_Bool("Options", "SortDefensesAsLast", SortDefensesAsLast);
+    FilterBandBoxSelection = ConfigINI.Get_Bool("Options", "FilterBandBoxSelection", FilterBandBoxSelection);
+    IsClassicMessagePosition = ConfigINI.Get_Bool("Options", "ClassicMessageListPosition", IsClassicMessagePosition);
 
     /**
      *  Read keys from Keyboard.ini.
@@ -207,8 +204,24 @@ void OptionsClassExtension::Load_Settings()
 void OptionsClassExtension::Load_Init_Settings()
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::Load_Settings - 0x%08X\n", (uintptr_t)(This()));
-    
-    RawFileClass file("Settings.ini");
+
+    WindowWidth = ConfigINI.Get_Int("Video", "WindowWidth", WindowWidth);
+    WindowHeight = ConfigINI.Get_Int("Video", "WindowHeight", WindowHeight);
+
+    char buffer[256];
+    if (ConfigINI.Get_String("Video", "ScaleMode", "", buffer, std::size(buffer)) > 0) {
+        if (stricmp(buffer, "Linear") == 0) {
+            ScaleMode = SDL_SCALEMODE_LINEAR;
+        } else if (stricmp(buffer, "Nearest") == 0) {
+            ScaleMode = SDL_SCALEMODE_NEAREST;
+        } else if (stricmp(buffer, "PixelArt") == 0) {
+            ScaleMode = SDL_SCALEMODE_PIXELART;
+        }
+    }
+
+    CursorScale = ConfigINI.Get_Int("Video", "CursorScale", CursorScale);
+    WindowedMode = ConfigINI.Get_Bool("Video", "Windowed", WindowedMode);
+    IsVSync = ConfigINI.Get_Bool("Video", "VSync", IsVSync);
 }
 
 

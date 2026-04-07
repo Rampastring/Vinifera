@@ -203,13 +203,14 @@ void ScenarioClassExtension::Init_Clear()
          *  Clear the any previously loaded tutorial messages in preperation for
          *  reloading the TUTORIAL.INI as they might contain scenario overrides.
          */
-        TutorialText.Clear();
+        Vinifera_TutorialText.clear();
 
         /**
          *  Reload the main tutorial message data.
          */
         CCINIClass ini;
-        ini.Load(CCFileClass("TUTORIAL.INI"), false);
+        CCFileClass tutorial_file("TUTORIAL.INI");
+        ini.Load(tutorial_file, false);
         Read_Tutorial_INI(ini);
     }
 
@@ -242,8 +243,8 @@ bool ScenarioClassExtension::Read_INI(CCINIClass &ini)
     static const char * const BASIC = "Basic";
 
     IsIceDestruction = ini.Get_Bool(BASIC, "IceDestructionEnabled", IsIceDestruction);
-    ScorePlayerColor = ini.Get_RGB(BASIC, "ScorePlayerColor", ScorePlayerColor);
-    ScoreEnemyColor = ini.Get_RGB(BASIC, "ScoreEnemyColor", ScoreEnemyColor);
+    ScorePlayerColor = ini.Get_RGBColor(BASIC, "ScorePlayerColor", ScorePlayerColor);
+    ScoreEnemyColor = ini.Get_RGBColor(BASIC, "ScoreEnemyColor", ScoreEnemyColor);
     ini.Get_String(BASIC, "UIColorName", UIColorOverrideName, std::size(UIColorOverrideName));
     if (UIColorOverrideName[0] != '\0')
         CachedUIColorSchemeIndex = Fetch_Scheme_Index_By_Name(UIColorOverrideName);
@@ -253,7 +254,7 @@ bool ScenarioClassExtension::Read_INI(CCINIClass &ini)
      * 
      *  Fetch additional tutorial message data (if present) from the scenario.
      */
-    Read_Tutorial_INI(ini, true);
+    Read_Tutorial_INI(ini);
 
     BeaconManager.Load_Art();
 
@@ -266,20 +267,16 @@ bool ScenarioClassExtension::Read_INI(CCINIClass &ini)
  *
  *  @author: CCHyper
  */
-bool ScenarioClassExtension::Read_Tutorial_INI(CCINIClass &ini, bool log)
+bool ScenarioClassExtension::Read_Tutorial_INI(CCINIClass const& ini)
 {
+    char buffer[512];
     static char const * const TUTORIAL = "Tutorial";
 
     /**
      *  Fetch the additional tutorial message data (if present).
      */
     if (ini.Is_Present(TUTORIAL)) {
-
-        char buf[300];
-
         int counter = ini.Entry_Count(TUTORIAL);
-
-        if (counter > 0 && log) DEBUG_INFO("Tutorial section found and has %d entries.\n", counter);
 
         for (int index = 0; index < counter; ++index) {
             const char *entry = ini.Get_Entry(TUTORIAL, index);
@@ -287,36 +284,10 @@ bool ScenarioClassExtension::Read_Tutorial_INI(CCINIClass &ini, bool log)
             /**
              *  Get a tutorial message entry.
              */
-            if (ini.Get_String(TUTORIAL, entry, buf, sizeof(buf))) {
-
-                /**
-                 *  Convert the entry name (which in this context is an index) to an "id" value.
-                 */
-                int id = std::strtol(entry, nullptr, 10);
-                const char *string = strdup(buf);
-
-                /**
-                 *  Check to see if this id already exists before adding it, otherwise
-                 *  the replacement message will not get used.
-                 */
-                if (TutorialText.Is_Present(id)) {
-                    TutorialText.Remove_Index(id);
-                    if (log) DEV_DEBUG_INFO("  Removed ID '%d' from TutorialText index.\n", id);
-#ifndef NDEBUG
-                    if (log) { DEV_DEBUG_INFO("  %d = \"%s\".\n", id, TutorialText[id]); }
-#endif
-                }
-
-                if (log) DEV_DEBUG_INFO("  Adding ID '%d' from TutorialText index.\n", id);
-#ifndef NDEBUG
-                if (log) DEV_DEBUG_INFO("  %d = \"%s\".\n", id, string);
-#endif
-
-                TutorialText.Add_Index(id, string);
+            if (ini.Get_String(TUTORIAL, entry, "", buffer, sizeof(buffer))) {
+                Vinifera_TutorialText[entry] = buffer;
             }
-
         }
-
     }
 
     return true;
@@ -602,7 +573,7 @@ int ScenarioClassExtension::Set_Global_To(int global, int value)
         int previous = GlobalFlags[global].Value;
         if (previous != value) {
             GlobalFlags[global].Value = value;
-            Scen->IsGlobalChanged = true;
+            This()->IsGlobalChanged = true;
 
             /*
             **  Special case to scan through all triggers and if any are found that depend on this
@@ -614,7 +585,9 @@ int ScenarioClassExtension::Set_Global_To(int global, int value)
             /*
             **  Clear the templated text cache as it may contain this variable.
             */
-            TacticalMapExtension->Clear_Templated_Text_Cache();
+            if (TacticalMapExtension) {
+                TacticalMapExtension->Clear_Templated_Text_Cache();
+            }
         }
         return previous;
     }
@@ -734,12 +707,12 @@ bool ScenarioClassExtension::Read_Global_INI(INIClass& ini)
  */
 int ScenarioClassExtension::Set_Local_To(int local, int value)
 {
-    if (static_cast<size_t>(local) < std::size(Scen->LocalFlags)) {
+    if (static_cast<size_t>(local) < std::size(LocalFlags)) {
 
         int previous = LocalFlags[local].Value;
         if (previous != value) {
             LocalFlags[local].Value = value;
-            Scen->IsGlobalChanged = true;
+            This()->IsGlobalChanged = true;
 
             /*
             **  Special case to scan through all triggers and if any are found that depend on this
@@ -751,7 +724,9 @@ int ScenarioClassExtension::Set_Local_To(int local, int value)
             /*
             **  Clear the templated text cache as it may contain this variable.
             */
-            TacticalMapExtension->Clear_Templated_Text_Cache();
+            if (TacticalMapExtension) {
+                TacticalMapExtension->Clear_Templated_Text_Cache();
+            }
         }
         return previous;
     }
@@ -781,7 +756,7 @@ int ScenarioClassExtension::Set_Local_To(char const* name, int value)
  */
 bool ScenarioClassExtension::Get_Local_Value(int local, int& value)
 {
-    if (local >= 0 && local < std::size(Scen->LocalFlags)) {
+    if (local >= 0 && local < std::size(LocalFlags)) {
         value = LocalFlags[local].Value;
         return true;
     }
@@ -811,7 +786,7 @@ bool ScenarioClassExtension::Get_Local_Value(char const* name, int& value)
  */
 int ScenarioClassExtension::Find_Local_Variable_Index(char const* name)
 {
-    for (int i = 0; i < std::size(Scen->LocalFlags); i++) {
+    for (int i = 0; i < std::size(LocalFlags); i++) {
         if (!strcmp(name, LocalFlags[i].VariableName)) {
             return i;
         }
@@ -829,11 +804,11 @@ bool ScenarioClassExtension::Read_Local_INI(INIClass& ini)
 {
     char buffer[128];
 
-    for (int i = 0; i < std::size(Scen->LocalFlags); i++) {
+    for (int i = 0; i < std::size(LocalFlags); i++) {
         LocalFlags[i].VariableName[0] = 0;
     }
 
-    int count = std::min(ini.Entry_Count("VariableNames"), static_cast<int>(std::size(Scen->LocalFlags)));
+    int count = std::min(ini.Entry_Count("VariableNames"), static_cast<int>(std::size(LocalFlags)));
 
     for (int i = 0; i < count; i++) {
         const char* entry = ini.Get_Entry("VariableNames", i);
@@ -1832,7 +1807,7 @@ void ScenarioClassExtension::Create_Units(bool official)
          *  Assign the center of this house to the waypoint location.
          */
         hptr->Center = centroid.As_Coord();
-        Extension::Fetch(hptr)->Set_Spawn_Point(hptr->Center.As_Cell());
+        Extension::Fetch(hptr)->Set_Spawn_Point(centroid);
         DEBUG_INFO("  Setting house center to %d,%d\n", centroid.X, centroid.Y);
 
         /**
@@ -2159,5 +2134,5 @@ void ScenarioClassExtension::Create_Units(bool official)
         }
     }
 
-    DEBUG_INFO("Finished unit generation. Random number is %d\n", Scen->RandomNumber);
+    DEBUG_INFO("Finished unit generation. Random number is %d\n", Scen->RandomNumber());
 }

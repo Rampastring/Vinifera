@@ -142,6 +142,8 @@ This page lists all the individual contributions to the project by their author.
   - Implement MeteorShowerCommandClass and MeteorImpactCommandClass.
   - Add the "Underground" layer to the tactical display Next and Prev search.
   - Fix a bug where the game could freeze in the score screen in `Clip_Line` when running on Windows 11 24H2.
+  - Add customizable wake animations.
+  - Replace DirectDraw with SDL.
 - **hacklex**:
   - Add Veterancy and Health Filter hotkeys.
 - **Kerbiter (Metadorius)**:
@@ -193,6 +195,14 @@ This page lists all the individual contributions to the project by their author.
   - Original implementations of actions in ts-patches.
   - Fix a bug where the game could freeze in the score screen in `Clip_Line` when running on Windows 11 24H2.
   - Fix an edge case crash when AI raises money.
+  - Make it possible to prevent buildings from repeatedly catching fire when rapidly switching between damage stages.
+  - Improve alternative factory selection when the primary factory is blocked.
+  - Add "Adjust House Modifier" trigger action.
+  - Teams attacking a BwP now take zones into account.
+  - Add "Only Harvesters" quarry.
+  - Fix a bug where placed buildings were not revealed to allies, only the player who placed down the building.
+  - Fix a bug where spawned aircraft would reveal terrain when they fired.
+  - Port a ts-patches fix for a bug where the player's army wouldn't fire at armed civilians.
 - **secsome**:
   - Add support for up to 32767 waypoints to be used in scenarios.
 - **Starkku**:
@@ -301,3 +311,8 @@ This page lists all the individual contributions to the project by their author.
   - Fix a bug where under some circumstances Tiberium would halt spreading and/or growing temporarily.
   - Fix a bug where Tiberium spawned by animations wouldn't grow or spread.
   - Fix a bug where carryalls assign their ROT to the unit they're carrying.
+  - Port to Syringe.
+  - Add customizable wake animations.
+  - Replace DirectDraw with SDL.
+  - Fix a bug where you could tote a `Totable=no` unit by force-moving onto it.
+  - Tutorial text INI keys are now interpreted as strings, not integers.

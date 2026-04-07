@@ -1041,4 +1041,3 @@ void SidebarClassExtension::Check_Hover(GadgetClass* gadget, int mousex, int mou
         }
     }
 }
-

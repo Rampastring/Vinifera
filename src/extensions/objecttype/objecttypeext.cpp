@@ -53,7 +53,13 @@ ObjectTypeClassExtension::ObjectTypeClassExtension(const ObjectTypeClass *this_p
     AbstractTypeClassExtension(this_ptr),
     GraphicName(),
     AlphaGraphicName(),
-    NoSpawnAlt(false)
+    NoSpawnAlt(false),
+    NoSpawnVoxel(),
+    NoSpawnVoxelIndex(),
+    WaterAlt(false),
+    WaterVoxel(),
+    WaterVoxelIndex()
+
 {
     //if (this_ptr) EXT_DEBUG_TRACE("ObjectTypeClassExtension::ObjectTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
@@ -67,7 +73,9 @@ ObjectTypeClassExtension::ObjectTypeClassExtension(const ObjectTypeClass *this_p
 ObjectTypeClassExtension::ObjectTypeClassExtension(const NoInitClass &noinit) :
     AbstractTypeClassExtension(noinit),
     GraphicName(noinit),
-    AlphaGraphicName(noinit)
+    AlphaGraphicName(noinit),
+    NoSpawnVoxel(noinit),
+    WaterVoxel(noinit)
 {
     //EXT_DEBUG_TRACE("ObjectTypeClassExtension::ObjectTypeClassExtension(NoInitClass) - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
@@ -298,4 +306,3 @@ BuildingClass* ObjectTypeClassExtension::Who_Can_Build_Me(bool intheory, bool ne
 
     return anybuilding;
 }
-

@@ -37,7 +37,7 @@
 #include "cell.h"
 
 #include "hooker.h"
-#include "hooker_macros.h"
+#include "syringe.h"
 #include "techno.h"
 #include "tibsun_functions.h"
 #include "weapontypeext.h"
@@ -208,7 +208,6 @@ Point2D MouseClassExt::_Get_Mouse_Hotspot(MouseType mouse) const
                 break;
             case MOUSE_HOTSPOT_MIN:
             default:
-                hotspot.X = std::clamp(hotspot_x, -MouseShapes->Get_Width(), MouseShapes->Get_Width());
                 break;
         };
 
@@ -221,7 +220,6 @@ Point2D MouseClassExt::_Get_Mouse_Hotspot(MouseType mouse) const
                 break;
             case MOUSE_HOTSPOT_MIN:
             default:
-                hotspot.Y = std::clamp(hotspot_y, -MouseShapes->Get_Height(), MouseShapes->Get_Height());
                 break;
         };
 
@@ -304,18 +302,17 @@ static ActionType Get_Action(ObjectClass* obj, Cell& cellnum, bool check_fog)
  *
  *  @author: ZivDero
  */
-DECLARE_PATCH(_ScrollClass_What_Action_Attack_Cursor_Patch)
+DEFINE_HOOK(0x005E8920, _ScrollClass_What_Action_Attack_Cursor_Patch, 0)
 {
-    GET_STACK_STATIC(Cell*, cellnum, esp, 0x18);
-    GET_STACK_STATIC(ObjectClass*, obj, esp, 0x1C);
-    GET_STACK_STATIC8(bool, check_fog, esp, 0x20);
+    GET_STACK(Cell*, cellnum, 0x18);
+    GET_STACK(ObjectClass*, obj, 0x1C);
+    GET_STACK(bool, check_fog, 0x20);
 
-    static ActionType action;
-    action = Get_Action(obj, *cellnum, check_fog);
+    ActionType action = Get_Action(obj, *cellnum, check_fog);
 
     // return action;
-    _asm mov eax, action
-    JMP_REG(esi, 0x005E8936);
+    R->EAX(action);
+    return 0x005E8936;
 }
 
 
@@ -331,6 +328,4 @@ void MouseClassExtension_Hooks()
     Patch_Jump(0x005624D0, &MouseClassExt::_AI);
     Patch_Jump(0x00563220, &MouseClassExt::_Get_Mouse_Start_Frame);
     Patch_Jump(0x00563240, &MouseClassExt::_Get_Mouse_Frame_Count);
-
-    Patch_Jump(0x005E8920, &_ScrollClass_What_Action_Attack_Cursor_Patch);
 }

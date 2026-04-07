@@ -31,7 +31,7 @@
 #include "vector.h"
 #include "ccfile.h"
 #include "extension_globals.h"
-#include "scenarioext.h"
+#include <unordered_map>
 
 
 class PrerequisiteGroupClass;
@@ -46,6 +46,9 @@ class MouseTypeClass;
 class ActionTypeClass;
 class PrerequisiteGroupClass;
 class AdvancedAITacticTypeClass;
+struct SDL_Window;
+struct SDL_Renderer;
+struct SDL_Texture;
 
 
 extern bool Vinifera_DeveloperMode;
@@ -90,6 +93,16 @@ extern bool Vinifera_Developer_IsToReloadRules;
 
 
 /**
+ *  SDL globals.
+ */
+extern SDL_Window* SDLWindow;
+extern SDL_Renderer* SDLWindowRenderer;
+extern SDL_Texture* SDLWindowTexture;
+extern int SDLWindowWidth;
+extern int SDLWindowHeight;
+
+
+/**
  *  Various globals.
  */
 extern bool Vinifera_SkipLogoMovies;
@@ -112,6 +125,8 @@ extern KamikazeTrackerClass *KamikazeTracker;
 extern AircraftTrackerClass *AircraftTracker;
 
 extern int EnvironmentGlobals[/*std::size(ScenExtension->GlobalFlags)*/500];
+
+extern std::unordered_map<std::string, std::string> Vinifera_TutorialText;
 
 
 /**

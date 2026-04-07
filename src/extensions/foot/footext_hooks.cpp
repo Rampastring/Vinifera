@@ -66,10 +66,10 @@
 #include "msgbox.h"
 
 #include "hooker.h"
-#include "hooker_macros.h"
 #include "ionstorm.h"
 #include "levitatelocomotion.h"
 #include "radarevent.h"
+#include "syringe.h"
 #include "uicontrol.h"
 #include "vinifera_globals.h"
 #include "vox.h"
@@ -538,13 +538,11 @@ Cell FootClassExt::_Search_For_Tiberium(int rad, bool a2)
  * 
  *  @author: CCHyper
  */
-static bool Foot_Target_Something_Nearby_Coord(FootClass *this_ptr, ThreatType threat) { return this_ptr->Target_Something_Nearby(this_ptr->PositionCoord, threat); }
-DECLARE_PATCH(_FootClass_Mission_Move_Can_Passive_Acquire_Patch)
+DEFINE_HOOK(0x004A102F, _FootClass_Mission_Move_Can_Passive_Acquire_Patch, 0)
 {
-    GET_REGISTER_STATIC(FootClass *, this_ptr, esi);
-    static TechnoClassExtension *technoclassext;
+    GET(FootClass *, this_ptr, ESI);
 
-    technoclassext = Extension::Fetch(this_ptr);
+    auto technoclassext = Extension::Fetch(this_ptr);
 
     /**
      *  Can this unit passively acquire new targets?
@@ -556,10 +554,10 @@ DECLARE_PATCH(_FootClass_Mission_Move_Can_Passive_Acquire_Patch)
     /**
      *  Find a fresh target within my range.
      */
-    Foot_Target_Something_Nearby_Coord(this_ptr, THREAT_RANGE);
+    this_ptr->Target_Something_Nearby(this_ptr->PositionCoord, THREAT_RANGE);
 
 finish_mission_process:
-    JMP(0x004A104B);
+    return 0x004A104B;
 }
 
 
@@ -570,12 +568,11 @@ finish_mission_process:
  * 
  *  @author: CCHyper
  */
-DECLARE_PATCH(_FootClass_Mission_Guard_Can_Passive_Acquire_Patch)
+DEFINE_HOOK(0x004A1AAE, _FootClass_Mission_Guard_Can_Passive_Acquire_Patch, 0)
 {
-    GET_REGISTER_STATIC(FootClass *, this_ptr, esi);
-    static TechnoClassExtension *technoclassext;
+    GET(FootClass *, this_ptr, ESI);
 
-    technoclassext = Extension::Fetch(this_ptr);
+    auto technoclassext = Extension::Fetch(this_ptr);
 
     /**
      *  Can this unit passively acquire new targets?
@@ -587,15 +584,15 @@ DECLARE_PATCH(_FootClass_Mission_Guard_Can_Passive_Acquire_Patch)
     /**
      *  Find a fresh target within my range.
      */
-    if (!Foot_Target_Something_Nearby_Coord(this_ptr, THREAT_RANGE)) {
+    if (!this_ptr->Target_Something_Nearby(this_ptr->PositionCoord, THREAT_RANGE)) {
         goto random_animate;
     }
 
 continue_check:
-    JMP(0x004A1AD6);
+    return 0x004A1AD6;
 
 random_animate:
-    JMP(0x004A1ACC);
+    return 0x004A1ACC;
 }
 
 
@@ -606,13 +603,11 @@ random_animate:
  * 
  *  @author: CCHyper
  */
-static bool Foot_Target_Something_Nearby_Archive(FootClass *this_ptr, ThreatType threat) { return this_ptr->Target_Something_Nearby(this_ptr->ArchiveTarget->Center_Coord(), threat); }
-DECLARE_PATCH(_FootClass_Mission_Guard_Area_Can_Passive_Acquire_Patch)
+DEFINE_HOOK(0x004A2BE7, _FootClass_Mission_Guard_Area_Can_Passive_Acquire_Patch, 0)
 {
-    GET_REGISTER_STATIC(FootClass *, this_ptr, esi);
-    static TechnoClassExtension *technoclassext;
+    GET(FootClass *, this_ptr, ESI);
 
-    technoclassext = Extension::Fetch(this_ptr);
+    auto technoclassext = Extension::Fetch(this_ptr);
 
     /**
      *  Can this unit passively acquire new targets?
@@ -624,10 +619,10 @@ DECLARE_PATCH(_FootClass_Mission_Guard_Area_Can_Passive_Acquire_Patch)
     /**
      *  Find a fresh target in my area using the backup target.
      */
-    Foot_Target_Something_Nearby_Archive(this_ptr, THREAT_AREA);
+    this_ptr->Target_Something_Nearby(this_ptr->ArchiveTarget->Center_Coord(), THREAT_AREA);
 
 tarcom_check:
-    JMP(0x004A2C04);
+    return 0x004A2C04;
 }
 
 
@@ -638,35 +633,31 @@ tarcom_check:
  * 
  *  @author: CCHyper
  */
-static bool Locomotion_Is_Moving_Now(FootClass *this_ptr) { return this_ptr->Locomotion->Is_Moving_Now(); }
-DECLARE_PATCH(_FootClass_AI_IdleRate_Patch)
+DEFINE_HOOK(0x004A59E1, _FootClass_AI_IdleRate_Patch, 0)
 {
-    GET_REGISTER_STATIC(FootClass *, this_ptr, esi);
-    GET_REGISTER_STATIC(ILocomotion *, loco, edi);
-    static TechnoTypeClassExtension *technotypeext;
+    GET(FootClass *, this_ptr, ESI);
+    GET(ILocomotion *, loco, EDI);
 
-    technotypeext = Extension::Fetch(this_ptr->TClass);
+    auto technotypeext = Extension::Fetch(this_ptr->TClass);
 
     /**
      *  Stolen bytes/code.
      * 
      *  If the object is currently moving, check to see if its time to update its walk frame.
      */
-    if (Locomotion_Is_Moving_Now(this_ptr) && !(Frame % this_ptr->TClass->WalkRate)) {
+    if (this_ptr->Locomotion->Is_Moving_Now() && !(Frame % this_ptr->TClass->WalkRate)) {
         ++this_ptr->TotalFramesWalked;
 
     /**
      *  Otherwise, if the object is not currently moving, check to see if its time to update its idle frame.
      */
     } else if (technotypeext->IdleRate > 0) {
-        if (!Locomotion_Is_Moving_Now(this_ptr) && !(Frame % technotypeext->IdleRate)) {
+        if (!this_ptr->Locomotion->Is_Moving_Now() && !(Frame % technotypeext->IdleRate)) {
             ++this_ptr->TotalFramesWalked;
         }
     }
 
-    _asm { mov edi, loco }      // Restore EDI register.
-
-    JMP_REG(edx, 0x004A5A12);
+    return 0x004A5A12;
 }
 
 
@@ -677,18 +668,15 @@ DECLARE_PATCH(_FootClass_AI_IdleRate_Patch)
  * 
  *  @author: CCHyper
  */
-DECLARE_PATCH(_FootClass_Is_Allowed_To_Recloak_Cloak_Stop_BugFix_Patch)
+DEFINE_HOOK(0x004A6866, _FootClass_Is_Allowed_To_Recloak_Cloak_Stop_BugFix_Patch, 0)
 {
-    GET_REGISTER_STATIC(FootClass *, this_ptr, esi);
-    GET_REGISTER_STATIC(TechnoTypeClass *, technotype, eax);
-    static ILocomotion *loco;
+    GET(FootClass *, this_ptr, ESI);
+    GET(TechnoTypeClass *, technotype, EAX);
 
     /**
      *  Is this unit flagged to only re-cloak when not moving?
      */
     if (technotype->CloakStop) {
-
-        loco = this_ptr->Locomotor_Ptr();
 
         /**
          *  If the object is currently moving, then return false.
@@ -697,7 +685,7 @@ DECLARE_PATCH(_FootClass_Is_Allowed_To_Recloak_Cloak_Stop_BugFix_Patch)
          *  false when the locomotor was on a slope or rotating, which
          *  breaks the CloakStop mechanic.
          */
-        if (loco->Is_Moving()) {
+        if (this_ptr->Locomotion->Is_Moving()) {
             goto return_false;
         }
     }
@@ -706,13 +694,13 @@ DECLARE_PATCH(_FootClass_Is_Allowed_To_Recloak_Cloak_Stop_BugFix_Patch)
      *  The unit can re-cloak.
      */
 return_true:
-    JMP_REG(ecx, 0x004A6897);
+    return 0x004A6897;
 
     /**
      *  The unit is not allowed to re-cloak.
      */
 return_false:
-    JMP_REG(ecx, 0x004A689B);
+    return 0x004A689B;
 }
 
 
@@ -759,8 +747,7 @@ bool FootClassExt::_Unlimbo(const Coord& coord, Dir256 dir)
 
         if (off) {
             Locomotion->Power_Off();
-        }
-        else {
+        } else {
             Locomotion->Power_On();
         }
 
@@ -1349,11 +1336,6 @@ commence_mission:
  */
 void FootClassExtension_Hooks()
 {
-    Patch_Jump(0x004A6866, &_FootClass_Is_Allowed_To_Recloak_Cloak_Stop_BugFix_Patch);
-    Patch_Jump(0x004A59E1, &_FootClass_AI_IdleRate_Patch);
-    Patch_Jump(0x004A2BE7, &_FootClass_Mission_Guard_Area_Can_Passive_Acquire_Patch);
-    Patch_Jump(0x004A1AAE, &_FootClass_Mission_Guard_Can_Passive_Acquire_Patch);
-    Patch_Jump(0x004A102F, &_FootClass_Mission_Move_Can_Passive_Acquire_Patch);
     Patch_Jump(0x004A58A8, &_FootClass_AI_Hook_Patch);
     Patch_Jump(0x004A6A40, &FootClassExt::_Draw_Action_Line);
     Patch_Jump(0x004A4D60, &FootClassExt::_Death_Announcement);

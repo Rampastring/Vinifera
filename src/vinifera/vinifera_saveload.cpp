@@ -31,7 +31,6 @@
 #include "tibsun_util.h"
 #include "vinifera_util.h"
 #include "vinifera_gitinfo.h"
-#include "wstring.h"
 #include "saveload.h"
 #include "extension.h"
 #include "debughandler.h"
@@ -197,7 +196,7 @@ static HRESULT Vinifera_Save_Vector(LPSTREAM &pStm, DynamicVectorClass<T> &list,
         hr = OleSaveToStream(lpPS, pStm);
         if (FAILED(hr)) {
             DEBUG_ERROR("  OleSaveToStream failed!\n");
-            return false;
+            return hr;
         }
 
         /**
@@ -206,7 +205,7 @@ static HRESULT Vinifera_Save_Vector(LPSTREAM &pStm, DynamicVectorClass<T> &list,
         hr = lpPS->Release();
         if (FAILED(hr)) {
             DEBUG_ERROR("  Release failed!\n");
-            return false;
+            return hr;
         }
 
     }
@@ -221,7 +220,7 @@ static HRESULT Vinifera_Save_Vector(LPSTREAM &pStm, DynamicVectorClass<T> &list,
  *  @author: CCHyper
  */
 template<class T>
-static bool Vinifera_Load_Vector(IStream *pStm, DynamicVectorClass<T> &list, const char *heap_name)
+static HRESULT Vinifera_Load_Vector(IStream *pStm, DynamicVectorClass<T> &list, const char *heap_name)
 {
     DEBUG_INFO("Loading %s...\n", heap_name);
 
@@ -457,7 +456,7 @@ bool Vinifera_Get_All(IStream *pStm, bool load_net)
 
         scen_ini.Load(scen_file, false);
 
-        if (!ScenExtension->Read_Tutorial_INI(scen_ini, true)) {
+        if (!ScenExtension->Read_Tutorial_INI(scen_ini)) {
             DEBUG_ERROR("Failed to read tutorial strings from scenario file!\n");
             return false;
         }
@@ -1009,6 +1008,8 @@ bool LoadOptionsClassExt::_Load_File(const char* filename)
     if (handle) {
         WinDialogClass::End_Dialog(handle);
     }
+
+    // TODO should exit game on failure in TS Client builds
 
     return result;
 }

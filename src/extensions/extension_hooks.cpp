@@ -106,6 +106,7 @@
 #include "astarext_hooks.h"
 #include "aircrafttracker_hooks.h"
 #include "beacon_hooks.h"
+#include "drivelocomotionext_hooks.h"
 #include "rulesext_hooks.h"
 #include "scenarioext_hooks.h"
 #include "sessionext_hooks.h"
@@ -160,9 +161,11 @@
 #include "swizzle.h"
 
 #include "hooker.h"
-#include "hooker_macros.h"
 #include "objectext_hooks.h"
 #include "prerequisitegroup_hooks.h"
+#include "sdl_hooks.h"
+#include "sdlmouse_hooks.h"
+#include "sdlsurface_hooks.h"
 #include "spawnmanager_hooks.h"
 #include "teventext_hooks.h"
 #include "voxelanimext_hooks.h"
@@ -259,6 +262,11 @@ void Extension_Hooks()
     StorageClassExtension_Hooks();
 
     /**
+     *  Locomotors.
+     */
+    DriveLocomotionClassExtension_Hooks();
+
+    /**
      *  All global class extensions here.
      */
     RulesClassExtension_Hooks();
@@ -300,6 +308,10 @@ void Extension_Hooks()
     ScoreClassExtension_Hooks();
     MultiMissionExtension_Hooks();
     ConquerExtension_Hooks();
+
+    SDLSurface_Hooks();
+    SDLMouse_Hooks();
+    SDL_Hooks();
 
     /**
      *  Dialogs and associated code.

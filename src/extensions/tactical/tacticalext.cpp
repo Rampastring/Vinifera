@@ -59,6 +59,7 @@
 #include "beacon.h"
 #include "debughandler.h"
 #include "mouse.h"
+#include "scenarioext.h"
 #include "tibsun_functions.h"
 #include "uicontrol.h"
 #include "wwmouse.h"
@@ -849,7 +850,7 @@ void TacticalExtension::Draw_Super_Timers()
 #ifdef RELEASE
     int row_index = 0;
 #else
-    int row_index = 3;
+    int row_index = Vinifera_NoTacticalVersionString ? 0 : 3;
 #endif
 
     /**

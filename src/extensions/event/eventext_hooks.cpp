@@ -39,9 +39,9 @@
 #include "debughandler.h"
 #include "asserthandler.h"
 #include "hooker.h"
-#include "hooker_macros.h"
 #include "house.h"
 #include "session.h"
+#include "syringe.h"
 #include "version.h"
 
 
@@ -50,29 +50,16 @@
  *
  *  @author: ZivDero
  */
-DECLARE_PATCH(_EventClass_Execute_New_Events)
+DEFINE_HOOK(0x00494294, _EventClass_Execute_New_Events, 5)
 {
-    GET_REGISTER_STATIC(EventClassExt*, event, esi);
-
-    _asm pushad
+    GET(EventClassExt*, event, ESI);
 
     if (event->Is_Vinifera_Event()) {
         event->Execute();
-        _asm popad
-        JMP(0x00495110); // return
+        return 0x00495110; // return
     }
 
-    static EventType etype;
-    static int eID;
-
-    etype = event->Type;
-    eID = event->ID;
-
-    // continue execution
-    _asm popad
-    _asm mov al, etype
-    _asm mov edi, eID
-    JMP_REG(ebx, 0x00494299);
+    return 0;
 }
 
 
@@ -637,7 +624,6 @@ DECLARE_PATCH(_EventClass_Executre_PRIMARY_Prevent_Setting_For_Enemy_Patch)
  */
 void EventClassExtension_Hooks()
 {
-    Patch_Jump(0x00494294, &_EventClass_Execute_New_Events);
     //Patch_Jump(0x005B4530, &_Add_Compressed_Events);
     //Patch_Jump(0x005B4A40, &_Extract_Compressed_Events);
 

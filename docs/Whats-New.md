@@ -72,6 +72,14 @@ New:
 - Add Water movement zone override (by ZivDero)
 - Implement multiplayer beacons (by ZivDero)
 - Chat improvements (by ZivDero)
+- Port to Syringe (by ZivDero)
+- Add customizable wake animations (by CCHyper, ZivDero)
+- Replace DirectDraw with SDL (by ZivDero, tomsons26, CCHyper)
+- Make it possible to prevent buildings from repeatedly catching fire when rapidly switching between damage stages (by Rampastring)
+- Improve alternative factory selection when the primary factory is blocked (by Rampstring)
+- Add "Adjust House Modifier" trigger action (by Rampstring)
+- Add "Only Harvesters" quarry (by Rampastring)
+- Tutorial text INI keys are now interpreted as strings, not integers (by ZivDero)
 
 
 Vinifera fixes:
@@ -86,6 +94,12 @@ Vinifera fixes:
 - Fix a crash that could happen if you lost a factory while producing something (by ZivDero)
 - Fix problems with new IsometricTileType flags during save/load (by ZivDero)
 - Fix a bug where when undeploying a building, the resulting unit would face the wrong way (by ZivDero)
+- Fix a bug where only local variables up to 50 would be used (by ZivDero)
+- Fix a bug where you'd hear "Construction complete" after placing a building, instead of when it's ready (by ZivDero)
+- Fix a bug where AI vehicles got stuck on War Factory if attacked while exiting (by Rampastring, ZivDero)
+- Fix a bug where you could tote a `Totable=no` unit by force-moving onto it (by ZivDero)
+- Fix a bug where spawned aircraft would reveal terrain when they fired (by Rampastring)
+- Fix a bug where new local/global variable trigger events wouldn't reset their timers correctly (by ZivDero)
 
 
 Vanilla fixes:
@@ -111,6 +125,9 @@ Vanilla fixes:
 - Fix a bug where under some circumstances Tiberium would halt spreading and/or growing temporarily (by ZivDero)
 - Fix a bug where Tiberium spawned by animations wouldn't grow or spread (by ZivDero)
 - Fix a bug where carryalls assign their ROT to the unit they're carrying (by ZivDero)
+- Teams attacking a BwP now take zones into account (by Rampastring) 
+- Fix a bug where placed buildings were not revealed to allies, only the player who placed down the building (by Rampastring)
+- Fix a bug where the player's army wouldn't fire at armed civilians (by Rampastring)
 
 :::
 

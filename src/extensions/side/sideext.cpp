@@ -196,7 +196,7 @@ void SideClassExtension::Object_CRC(CRCEngine &crc) const
  */
 bool SideClassExtension::Read_INI(CCINIClass &ini)
 {
-    DEV_DEBUG_WARNING("SideClassExtension::Read_INI - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
+    //DEV_DEBUG_WARNING("SideClassExtension::Read_INI - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 
     const char* ini_name = Name();
 
@@ -234,8 +234,8 @@ bool SideClassExtension::Read_INI(CCINIClass &ini)
         return false;
     }
 
-    UIColor = ini.Get_ColorSchemeType(ini_name, "UIColor", UIColor);
-    ToolTipColor = ini.Get_ColorSchemeType(ini_name, "ToolTipColor", ToolTipColor);
+    UIColor = ini.Get_Scheme_Index(ini_name, "UIColor", UIColor);
+    ToolTipColor = ini.Get_Scheme_Index(ini_name, "ToolTipColor", ToolTipColor);
 
     Crew = TGet_Class(ini, ini_name, "Crew", Crew);
     Engineer = TGet_Class(ini, ini_name, "Engineer", Engineer);

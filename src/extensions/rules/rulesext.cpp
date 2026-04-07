@@ -36,7 +36,6 @@
 #include "side.h"
 #include "armortype.h"
 #include "rockettype.h"
-#include "wstring.h"
 #include "wwcrc.h"
 #include "noinit.h"
 #include "swizzle.h"
@@ -106,6 +105,7 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     PlaceBeaconSound(VOC_NONE),
     PlaceBeaconVoice(VOX_NONE),
     DetectBeaconVoice(VOX_NONE),
+    IsBeachIsCrush(false),
     BuildingFlameSpawnBlockFrames(0),
     StrengthenDestroyedValueThreshold(0),
     StrengthenBuildingValueMultiplier(3),
@@ -138,7 +138,6 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AdvancedAITeamInfantryCostPunishmentThreshold(3000),
     AdvancedAICheapInfantryCostThreshold(500),
     AdvancedAITeamCheapInfantryMax(30),
-    IsBeachIsCrush(false),
     IsAIDetectDisguise(true),
     ComesNearWaypointDistance(CELL_LEPTON_W * 5),
     IronCurtainDuration(675),
@@ -162,11 +161,11 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     This()->EngineerCaptureLevel = This()->ConditionRed;  // Building damage level before engineer can capture.
 
     MaxPips = TypeList<int>(5);
-    MaxPips.Add(5);     // PIP_AMMO
-    MaxPips.Add(5);     // PIP_TIBERIUM
-    MaxPips.Add(5);     // PIP_PASSENGERS
-    MaxPips.Add(10);    // PIP_POWER
-    MaxPips.Add(8);     // PIP_CHARGE
+    MaxPips.Add(5);     // PIPSCALE_AMMO
+    MaxPips.Add(5);     // PIPSCALE_TIBERIUM
+    MaxPips.Add(5);     // PIPSCALE_PASSENGERS
+    MaxPips.Add(10);    // PIPSCALE_POWER
+    MaxPips.Add(8);     // PIPSCALE_CHARGE
 
     BuildNavalYard = TypeList<BuildingTypeClass*>(0);
     IronCurtains = TypeList<BuildingTypeClass*>(0);
@@ -439,8 +438,6 @@ void RulesClassExtension::Process(CCINIClass &ini)
     for (int index = 0; index < BuildingTypes.Count(); ++index) {
 
         BuildingTypeClass *btype = BuildingTypes[index];
-        Wstring name = btype->Name();
-        Wstring graphic_name = btype->Graphic_Name();
 
         /**
          *  This is a edge case issue we exposed in the original RULES.INI where the
@@ -450,7 +447,7 @@ void RulesClassExtension::Process(CCINIClass &ini)
          *  BuildingTypes (see RulesClass::Objects()), we make sure NARADR has the
          *  default value of "IsNewTheater" set to true.
          */
-        if (name == "NARADR" && btype->IsNewTheater == false) {
+        if (btype->IniName == "NARADR" && btype->IsNewTheater == false) {
             DEBUG_WARNING("Rules: Changing the default value of IsNewTheater for NARADR to 'true'!\n");
             DEBUG_WARNING("Rules: Please consider changing NewTheater on NARADR to 'yes'!\n");
             btype->IsNewTheater = true;
@@ -807,8 +804,8 @@ bool RulesClassExtension::General(CCINIClass &ini)
         std::copy(std::begin(water), std::end(water), MovementZonePassability[mzone_water]);
     }
 
-    AIKiteChance = ini.Get_Integers(GENERAL, "AIKiteChance", AIKiteChance);
     IsBeachIsCrush = ini.Get_Bool(GENERAL, "BeachIsCrush", IsBeachIsCrush);
+    AIKiteChance = ini.Get_Integers(GENERAL, "AIKiteChance", AIKiteChance);
     ComesNearWaypointDistance = ini.Get_Int(GENERAL, "ComesNearWaypointDistance", ComesNearWaypointDistance);
 
     IronCurtains = ::TGet_TypeList(ini, GENERAL, "IronCurtains", IronCurtains);
@@ -840,7 +837,7 @@ bool RulesClassExtension::AudioVisual(CCINIClass &ini)
 
     IsShowSuperWeaponTimers = ini.Get_Bool(AUDIOVISUAL, "ShowSuperWeaponTimers", IsShowSuperWeaponTimers);
     WeedPipIndex = ini.Get_Int(AUDIOVISUAL, "WeedPipIndex", WeedPipIndex);
-    MaxPips = ini.Get_Integers(AUDIOVISUAL, "MaxPips", MaxPips);
+    MaxPips = ini.Get_IntList(AUDIOVISUAL, "MaxPips", MaxPips);
 
     VoxelLightAzimuth = DEG_TO_RADF(ini.Get_Float(AUDIOVISUAL, "VoxelLightAzimuth", RAD_TO_DEGF(VoxelLightAzimuth)));
     VoxelLightElevation = DEG_TO_RADF(ini.Get_Float(AUDIOVISUAL, "VoxelLightElevation", RAD_TO_DEGF(VoxelLightElevation)));
@@ -990,7 +987,7 @@ bool RulesClassExtension::Weapons(CCINIClass &ini)
         /**
          *  Get a weapon entry.
          */
-        if (ini.Get_String(WEAPONS, entry, buf, sizeof(buf))) {
+        if (ini.Get_String(WEAPONS, entry, "", buf, sizeof(buf))) {
 
             /**
              *  Find or create a weapon of the name specified.
@@ -1031,7 +1028,7 @@ bool RulesClassExtension::Armors(CCINIClass &ini)
         /**
          *  Get a weapon entry.
          */
-        if (ini.Get_String(ARMORTYPES, entry, buf, sizeof(buf))) {
+        if (ini.Get_String(ARMORTYPES, entry, "", buf, sizeof(buf))) {
 
             /**
              *  Find or create a weapon of the name specified.
@@ -1070,7 +1067,7 @@ bool RulesClassExtension::Rockets(CCINIClass &ini)
         /**
          *  Get a rocket entry.
          */
-        if (ini.Get_String(ROCKETTYPES, entry, buf, sizeof(buf))) {
+        if (ini.Get_String(ROCKETTYPES, entry, "", buf, sizeof(buf))) {
 
             /**
              *  Find or create a rocket of the name specified.
@@ -1230,7 +1227,7 @@ bool RulesClassExtension::Tiberiums(CCINIClass &ini)
         /**
          *  Get a Tiberium entry.
          */
-        if (ini.Get_String(TIBERIUMS, entry, buf, sizeof(buf))) {
+        if (ini.Get_String(TIBERIUMS, entry, "", buf, sizeof(buf))) {
 
             /**
              *  Find or create a weapon of the name specified.
@@ -1271,7 +1268,7 @@ bool RulesClassExtension::PrerequisiteGroups(CCINIClass& ini)
         /**
          *  Get a group entry.
          */
-        if (ini.Get_String(PREREQUISITE_GROUPS, entry, buf, sizeof(buf)) > 0) {
+        if (ini.Get_String(PREREQUISITE_GROUPS, entry, "", buf, sizeof(buf)) > 0) {
 
             /**
              *  Find or create a group of the name specified.
@@ -1437,11 +1434,11 @@ void RulesClassExtension::Fixups(CCINIClass &ini)
              *   - The HouseType's Side name is "GDI"
              *   - Side 1 name is "Nod"
              */
-            if (Wstring(housetype->Name()) == Wstring("Nod")
+            if (housetype->IniName == "Nod"
                 && housetype->Fetch_Heap_ID() == HOUSE_NOD
                 && housetype->Side == SIDE_GDI
-                && Wstring(Sides[housetype->Side]->Name()) == Wstring("GDI")
-                && Wstring(Sides[SIDE_NOD]->Name()) == Wstring("Nod")) {
+                && Sides[housetype->Side]->IniName == "GDI"
+                && Sides[SIDE_NOD]->IniName == "Nod") {
 
                 DEBUG_WARNING("Rules: House \"%s\" (%d) has \"Side=GDI\", changing Side to \"Nod\"!\n",
                     housetype->Name(), housetype->Fetch_Heap_ID());
@@ -1465,7 +1462,7 @@ void RulesClassExtension::Fixups(CCINIClass &ini)
              *   - HouseType "Nod" is index 1
              *   - HouseType "Nod" has Prefix=B
              */
-            if (Wstring(housetype->Name()) == Wstring("Nod")
+            if (housetype->IniName == "Nod"
                 && housetype->Fetch_Heap_ID() == HOUSE_NOD
                 && housetype->Prefix == 'B') {
 

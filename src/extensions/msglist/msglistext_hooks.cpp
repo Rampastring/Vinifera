@@ -42,7 +42,6 @@
 #include "asserthandler.h"
 
 #include "hooker.h"
-#include "hooker_macros.h"
 
 class MessageListClassExt final : public MessageListClass
 {

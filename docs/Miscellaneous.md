@@ -13,6 +13,7 @@ This page describes every change in Vinifera that wasn't categorized into a prop
 - `FreeUnit` or `PadAircraft` would in some cases affect the cost of a building. This functionality has been removed.
 - Pre-placed units can now have missions in multiplayer.
 - Parachute animations with `AltPalette=yes` now remap to the parachuted unit owner's color.
+- Improve alternative factory selection when the primary factory is blocked.
 
 ## Quality of Life
 
@@ -21,6 +22,33 @@ This page describes every change in Vinifera that wasn't categorized into a prop
 - Vinifera changes the default value of `IsScoreShuffle` to true.
 - Vinifera changes the default value of `AllowHiResModes` to true.
 - Factories now hold their object if there is no war factory available for the unit to exit from instead of refuding construction.
+
+### DirectDraw replacement
+
+- Vinifera replaced the old DirectDraw (`ddraw.dll`) API with SDL. As a result, DirectDraw wrappers are no longer necessary for the game to run properly, and may even be harmful.
+- Accordingly, some new video settings are available in `SUN.INI`.
+
+In `SUN.INI`:
+```ini
+[Video]
+Windowed=no         ; boolean, should the game start in a window
+WindowWidth=-1      ; integer, if positive and Windowed=true, sets the window width override
+WindowHeight=-1     ; integer, if positive and Windowed=true, sets the window height override
+ScaleMode=PixelArt  ; scale mode, valid options are "Linear", "Nearest" and "PixelArt"
+CursorScale=0       ; integer, cursor scale factor override
+VSync=no            ; boolean, is vertical synchronization on?
+```
+
+```{note}
+`CursorScale` options:
+- `<0` - disable scaling
+- `0` - scale automatically
+- `>0` - explicit scale value
+```
+
+```{warning}
+Fullscreen mode uses a borderless window; exclusive fullscreen is not supported. To disable the windowed mode entirely, set `Windowed` to `false`.
+```
 
 ### Starting Unit Placement
 
@@ -184,6 +212,15 @@ Once a movement zone is replaced with water, it cannot be reverted.
 ```ini
 [General]
 BeachIsCrush=  ; boolean, are beaches considered as requiring crushing for pathfinding purposes?
+```
+
+## Building Catching on Fire Timeout
+
+- When a building enters a damaged state, it spawns flame animations that may deal damage. If the building rapidly switches between damage states, it may end up spawning many instance of flame animations, taking large amount of damage. You can now specify a timeout during which buildings do not get flames spawned on them on damage state change after once catching fire.
+
+```ini
+[CombatDamage]
+BuildingFlameSpawnBlockFrames=  ; integer, for how many frames buildings do not get flames spawned on them on damage state change after once catching fire.
 ```
 
 ## File System
