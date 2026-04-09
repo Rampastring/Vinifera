@@ -42,6 +42,7 @@
 
 #include "hooker.h"
 #include "hooker_macros.h"
+#include "syringe.h"
 
 
 /**
@@ -101,17 +102,17 @@ int TechnoTypeClassExt::_Max_Pips() const
  *
  *  Author: Rampastring
  */
-DECLARE_PATCH(_TechnoTypeClass_In_Range_Disable_Arcing_Bonus_Range_Patch)
+DEFINE_HOOK(0x0063D5A7, _TechnoTypeClass_In_Range_Disable_Arcing_Bonus_Range, 0)
 {
-    GET_REGISTER_STATIC(int, range, edi);
-    GET_STACK_STATIC(TechnoTypeClass*, this_ptr, esp, 0x14);
+    GET(int, range, EDI);
+    GET_STACK(TechnoTypeClass*, this_ptr, 0x14);
     if (this_ptr->RTTI == RTTI_AIRCRAFTTYPE)
     {
         range += CELL_LEPTON * 2;
-        _asm { mov  edi, dword ptr ds : range }
+        R->EDI(range);
     }
 
-    JMP(0x0063D6AA);
+    return 0x0063D6AA;
 }
 
 
@@ -121,5 +122,4 @@ DECLARE_PATCH(_TechnoTypeClass_In_Range_Disable_Arcing_Bonus_Range_Patch)
 void TechnoTypeClassExtension_Hooks()
 {
     Patch_Jump(0x0063D460, &TechnoTypeClassExt::_Max_Pips);
-    Patch_Jump(0x0063D5A7, &_TechnoTypeClass_In_Range_Disable_Arcing_Bonus_Range_Patch);
 }

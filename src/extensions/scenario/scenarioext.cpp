@@ -193,9 +193,6 @@ void ScenarioClassExtension::Init_Clear()
     ScorePlayerColor = RGBStruct{ 253, 181, 28 }; // Default to TS GDI score color
     ScoreEnemyColor = RGBStruct{ 250, 28, 28 };   // Default to TS Nod score color
 
-    UIColorOverrideName[0] = '\0';
-    CachedUIColorSchemeIndex = -1;
-
     //EXT_DEBUG_TRACE("ScenarioClassExtension::Init_Clear - 0x%08X\n", (uintptr_t)(This()));
 
     {
@@ -245,9 +242,6 @@ bool ScenarioClassExtension::Read_INI(CCINIClass &ini)
     IsIceDestruction = ini.Get_Bool(BASIC, "IceDestructionEnabled", IsIceDestruction);
     ScorePlayerColor = ini.Get_RGBColor(BASIC, "ScorePlayerColor", ScorePlayerColor);
     ScoreEnemyColor = ini.Get_RGBColor(BASIC, "ScoreEnemyColor", ScoreEnemyColor);
-    ini.Get_String(BASIC, "UIColorName", UIColorOverrideName, std::size(UIColorOverrideName));
-    if (UIColorOverrideName[0] != '\0')
-        CachedUIColorSchemeIndex = Fetch_Scheme_Index_By_Name(UIColorOverrideName);
 
     /**
      *  #issue-123

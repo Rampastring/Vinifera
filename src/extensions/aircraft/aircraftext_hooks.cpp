@@ -271,7 +271,7 @@ ActionType AircraftClassExt::_What_Action(ObjectClass const* target, bool disall
                 action = ACTION_NO_DEPLOY;
             }
         }
-
+        
     }
 
     /**
@@ -727,8 +727,6 @@ DEFINE_HOOK(0x00408BF3, _AircraftClass_Draw_It_Carry_All_Patch, 0)
     GET_STACK(Rect*, cliprect, 0xD0);
     LEA_STACK(Point2D*, drawpoint, 0x10);
 
-    MAKE_STACK_FRAME(0x20)
-
     if (this_ptr->Cargo.Is_Something_Attached(RTTI_UNIT) && this_ptr->Class->IsCarryall) {
         this_ptr->Cargo.Attached_Object(RTTI_UNIT)->Draw_It(*drawpoint, *cliprect);
     }
@@ -801,8 +799,6 @@ LONG AircraftClassExt::_Landing_Altitude_Thunk()
 DEFINE_HOOK(0x00409366, _AircraftClass_AI_Carryall_Facing_Patch, 0)
 {
     GET(AircraftClass*, this_ptr, EBP);
-
-    MAKE_STACK_FRAME(0x30);
 
     if (this_ptr->Cargo.Is_Something_Attached(RTTI_UNIT) && this_ptr->Class->IsCarryall) {
         this_ptr->Cargo.Attached_Object()->PrimaryFacing.Set(this_ptr->SecondaryFacing.Current());
@@ -996,12 +992,11 @@ void AdvAI_Aircraft_Maintenance(AircraftClass* aircraft)
 }
 
 
-DECLARE_PATCH(_AircraftClass_AI_Hook_Patch)
+DEFINE_HOOK(0x0040917A, _AircraftClass_AI_Hook, 0)
 {
-    GET_REGISTER_STATIC(AircraftClass*, this_ptr, ebp);
-    static AircraftClassExtension *aircraftext;
+    GET(AircraftClass*, this_ptr, EBP);
 
-    aircraftext = Extension::Fetch(this_ptr);
+    AircraftClassExtension* aircraftext = Extension::Fetch(this_ptr);
     Check_For_Paradrop_Aircraft(this_ptr, aircraftext);
     AdvAI_Aircraft_Maintenance(this_ptr);
 
@@ -1012,13 +1007,13 @@ DECLARE_PATCH(_AircraftClass_AI_Hook_Patch)
      */
     this_ptr->FootClass::AI();
     if (!this_ptr->IsActive) {
-        JMP_REG(ebx, 0x004093DE);
+        return 0x004093DE;
     }
 
     /**
      *  Continue function execution.
      */
-    JMP(0x0040918A);
+    return 0x0040918A;
 }
 
 
@@ -1363,11 +1358,7 @@ void AircraftClassExtension_Hooks()
     Patch_Jump(0x0040EDD0, &AircraftClassExt::_Landing_Altitude_Thunk);
     Patch_Jump(0x0040C8A0, &AircraftClassExt::_Receive_Message);
 
-    Patch_Jump(0x00409366, &_AircraftClass_AI_Carryall_Facing_Patch);
-
     Patch_Jump(0x00409910, &AircraftClassExt::_Mission_Retreat);
-    Patch_Jump(0x0040917A, &_AircraftClass_AI_Hook_Patch);
     Patch_Jump(0x0040B310, &AircraftClassExt::_Enter_Idle_Mode);
     Patch_Jump(0x0040DD10, &AircraftClassExt::_Do_MISSION_GUARD);
-    Patch_Jump(0x0040A195, &_AircraftClass_Fire_At_No_Reveal_On_Fire_For_Spawned_Aircraft_Patch);
 }

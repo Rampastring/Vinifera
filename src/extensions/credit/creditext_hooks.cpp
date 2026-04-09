@@ -85,17 +85,8 @@ void Draw_Tooltip_Rectangle(Surface* surface, Rect& drawrect)
 {
     surface->Fill_Rect(drawrect, 0);
 
-    ColorScheme* colorscheme;
-
-    if (ScenExtension->CachedUIColorSchemeIndex > -1)
-    {
-        colorscheme = ColorSchemes[ScenExtension->CachedUIColorSchemeIndex];
-    }
-    else
-    {
-        ColorSchemeType colorschemetype = Extension::Fetch(Sides[PlayerPtr->Class->Side])->ToolTipColor;
-        colorscheme = ColorSchemes[colorschemetype];
-    }
+    const ColorSchemeType colorschemetype = Extension::Fetch(Sides[PlayerPtr->Class->Side])->ToolTipColor;
+    const ColorScheme* colorscheme = ColorSchemes[colorschemetype];
 
     RGBClass rgb = colorscheme->HSV.operator RGBClass();
     surface->Draw_Rect(drawrect, DSurface::Build_Hicolor_Pixel(rgb));

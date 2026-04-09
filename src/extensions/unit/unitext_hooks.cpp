@@ -1318,26 +1318,26 @@ bool UnitClassExt::_Limbo(void)
  *
  *  Author: Rampastring
  */
-DECLARE_PATCH(_UnitClass_What_Action_ACTION_SELF_Prevent_Deploying_Hijacked_Build_Limited_Vehicles_Patch)
+DEFINE_HOOK(0x0065601D, _UnitClass_What_Action_ACTION_SELF_Prevent_Deploying_Hijacked_Build_Limited_Vehicles, 0)
 {
-    GET_REGISTER_STATIC(UnitClass*, this_ptr, esi);
-    GET_REGISTER_STATIC(UnitTypeClass*, unittype, eax);
+    GET(UnitClass*, this_ptr, ESI);
+    GET(UnitTypeClass*, unittype, EAX);
 
     // Stolen bytes / code.
     if (unittype->DeploysInto == nullptr)
     {
-        JMP_REG(ecx, 0x00656344);
+        return 0x00656344;
     }
 
     // Do not allow deploying if this unit has been hijacked and it would deploy into a build-limited unit.
     if (unittype->BuildLimit < INT_MAX && this_ptr->EnteredByInfType != INFANTRY_NONE)
     {
-        _asm { mov  [esp+28h], ACTION_NO_DEPLOY }
-        JMP_REG(ecx, 0x0065618E);
+        R->Stack(0x28, ACTION_NO_DEPLOY);
+        return 0x0065618E;
     }
 
     // Continue deployability checks.
-    JMP(0x0065602B);
+    return 0x0065602B;
 }
 
 inline WeaponInfoStruct const& Get_Class_Weapon_Data(TechnoClass* techno, WeaponSlotType which = WEAPON_SLOT_PRIMARY)
@@ -1519,8 +1519,8 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
             int key = -1;
             Matrix3D mtx = Locomotion->Draw_Matrix(&key);
             mtx.Translate_X(Class->TurretOffset / 8);
-            double sec = SecondaryFacing.Current().As_Radian32();
-            double pri = PrimaryFacing.Current().As_Radian32();
+            double sec = SecondaryFacing.Current().Get_Radian<32>();
+            double pri = PrimaryFacing.Current().Get_Radian<32>();
             mtx.Rotate_Z(sec - pri);
 
             /*
@@ -1540,7 +1540,7 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
 
             FacingClass face = BarrelFacing;
             if (PrimaryWeapon->Bullet->IsInvisible) {
-                Dir256 dir256 = face.Current().As_Dir256();
+                Dir256 dir256 = static_cast<Dir256>(face.Current().Get_Facing<256>());
                 if (dir256 > 64 && dir256 <= 128) {
                     dir256 = (Dir256)((dir256 - 64) / 3 + 64);
                 }
@@ -1550,12 +1550,12 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
                 face.Set(DirType(dir256));
             }
 
-            nmtx.Rotate_Y(-face.Current().As_Radian32());
+            nmtx.Rotate_Y(-face.Current().Get_Radian<32>());
             nmtx.Translate(flh);
             nmtx.Translate(trans);
-            if (SecondaryFacing.Current().As_Weirderer() > 0) {
+            if (SecondaryFacing.Current().Get_Facing<4>() > 0) {
                 barrel_above_turret = true;
-                if (SecondaryFacing.Current().As_Weirderer() >= 3) {
+                if (SecondaryFacing.Current().Get_Facing<4>() >= 3) {
                     barrel_above_turret = true;
                 }
                 else {
@@ -1653,7 +1653,7 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         }
 
         // If we are in recoil state, adjust turret position based on turret recoil.
-        FacingType facing8 = Dir_To_8(SecondaryFacing.Current().As_Dir256());
+        FacingType facing8 = Dir_To_8(static_cast<Dir256>(SecondaryFacing.Current().Get_Facing<256>()));
         Point2D turretpt = xdrawpoint;
         if (IsInRecoilState)
         {
@@ -1715,7 +1715,6 @@ void UnitClassExtension_Hooks()
     Patch_Jump(0x0064E560, &UnitClassExt::_Rotation_AI);
     Patch_Jump(0x006571E0, &UnitClassExt::_Approach_Target);
     Patch_Jump(0x00659270, &UnitClassExt::_Limbo);
-    Patch_Jump(0x0065601D, &_UnitClass_What_Action_ACTION_SELF_Prevent_Deploying_Hijacked_Build_Limited_Vehicles_Patch);
     Patch_Jump(0x00653090, &UnitClassExt::_Draw_Shape);
 
     Patch_Byte(0x00658961, 0xEB); // Allow pre-placed units to have missions in multiplayer, change JZ to JMP

@@ -805,7 +805,7 @@ bool RulesClassExtension::General(CCINIClass &ini)
     }
 
     IsBeachIsCrush = ini.Get_Bool(GENERAL, "BeachIsCrush", IsBeachIsCrush);
-    AIKiteChance = ini.Get_Integers(GENERAL, "AIKiteChance", AIKiteChance);
+    AIKiteChance = ini.Get_IntList(GENERAL, "AIKiteChance", AIKiteChance);
     ComesNearWaypointDistance = ini.Get_Int(GENERAL, "ComesNearWaypointDistance", ComesNearWaypointDistance);
 
     IronCurtains = ::TGet_TypeList(ini, GENERAL, "IronCurtains", IronCurtains);
@@ -856,7 +856,7 @@ bool RulesClassExtension::AudioVisual(CCINIClass &ini)
 
     IronCurtainFlashRate = ini.Get_Int(AUDIOVISUAL, "IronCurtainFlashRate", IronCurtainFlashRate);
     IronCurtainFlashIntensityMultiplier = ini.Get_Int(AUDIOVISUAL, "IronCurtainFlashIntensityMultiplier", IronCurtainFlashIntensityMultiplier);
-    IronCurtainPulseTable = ini.Get_Integers(AUDIOVISUAL, "IronCurtainPulseTable", IronCurtainPulseTable);
+    IronCurtainPulseTable = ini.Get_IntList(AUDIOVISUAL, "IronCurtainPulseTable", IronCurtainPulseTable);
     IronCurtainChangeRemap = ini.Get_Bool(AUDIOVISUAL, "IronCurtainChangeRemap", IronCurtainChangeRemap);
 
     return true;
@@ -910,13 +910,13 @@ bool RulesClassExtension::AI(CCINIClass& ini)
     AdvancedAIMinimumRefineryCount = ini.Get_Int(AI, "AdvancedAIMinimumRefineryCount", AdvancedAIMinimumRefineryCount);
     AdvancedAIExpansionCloseEnough = ini.Get_Int(AI, "AdvancedAIExpansionCloseEnough", AdvancedAIExpansionCloseEnough);
     AdvancedAIFieldOccupyMaximumDistance = ini.Get_Int(AI, "AdvancedAIFieldOccupyMaximumDistance", AdvancedAIFieldOccupyMaximumDistance);
-    AdvancedAITacticSelectionDelay = ini.Get_Integers(AI, "AdvancedAITacticSelectionDelay", AdvancedAITacticSelectionDelay);
-    AdvancedAIIonCannonRandomizationFactors = ini.Get_Integers(AI, "AdvancedAIIonCannonRandomizationFactors", AdvancedAIIonCannonRandomizationFactors);
+    AdvancedAITacticSelectionDelay = ini.Get_IntList(AI, "AdvancedAITacticSelectionDelay", AdvancedAITacticSelectionDelay);
+    AdvancedAIIonCannonRandomizationFactors = ini.Get_IntList(AI, "AdvancedAIIonCannonRandomizationFactors", AdvancedAIIonCannonRandomizationFactors);
     AdvancedAIExpansionDistanceComparisonRandomness = ini.Get_Int(AI, "AdvancedAIExpansionDistanceComparisonRandomness", AdvancedAIExpansionDistanceComparisonRandomness);
     AdvancedAIVulnerableBuildingMaxThreat = ini.Get_Int(AI, "AdvancedAIVulnerableBuildingMaxThreat", AdvancedAIVulnerableBuildingMaxThreat);
     AdvancedAILightlyDefendedBuildingMaxThreat = ini.Get_Int(AI, "AdvancedAILightlyDefendedBuildingMaxThreat", AdvancedAILightlyDefendedBuildingMaxThreat);
-    AdvancedAISameUnitAntiBias = ini.Get_Double(AI, "AdvancedAISameUnitAntiBias", AdvancedAISameUnitAntiBias);
-    AdvancedAIOverweightedArmorTypeAntiBias = ini.Get_Double(AI, "AdvancedAIOverweightedArmorTypeAntiBias", AdvancedAIOverweightedArmorTypeAntiBias);
+    AdvancedAISameUnitAntiBias = ini.Get_Float(AI, "AdvancedAISameUnitAntiBias", AdvancedAISameUnitAntiBias);
+    AdvancedAIOverweightedArmorTypeAntiBias = ini.Get_Float(AI, "AdvancedAIOverweightedArmorTypeAntiBias", AdvancedAIOverweightedArmorTypeAntiBias);
     AdvancedAIOffensiveWeaponValueMultiplier = ini.Get_Int(AI, "AdvancedAIOffensiveWeaponValueMultiplier", AdvancedAIOffensiveWeaponValueMultiplier);
     AdvancedAISkipInfantryProductionValueThreshold = ini.Get_Int(AI, "AdvancedAISkipInfantryProductionValueThreshold", AdvancedAISkipInfantryProductionValueThreshold);
     AdvancedAIConditionalSkipInfantryProductionValueThreshold = ini.Get_Int(AI, "AdvancedAIConditionalSkipInfantryProductionValueThreshold", AdvancedAIConditionalSkipInfantryProductionValueThreshold);
@@ -937,7 +937,7 @@ bool RulesClassExtension::AI(CCINIClass& ini)
 
     BuildNavalYard = ::TGet_TypeList(ini, AI, "BuildNavalYard", BuildNavalYard);
     IsAIDetectDisguise = ini.Get_Bool(AI, "AIDetectDisguise", IsAIDetectDisguise);
-    AIHarvestersPerRefinery = ini.Get_Integers(AI, "HarvestersPerRefinery", AIHarvestersPerRefinery);
+    AIHarvestersPerRefinery = ini.Get_IntList(AI, "HarvestersPerRefinery", AIHarvestersPerRefinery);
 
     return true;
 }
@@ -1106,7 +1106,7 @@ bool RulesClassExtension::AdvancedAIGroundTactics(CCINIClass& ini)
         /**
          *  Get a tactic entry.
          */
-        if (ini.Get_String(ADVAITACTICTYPES, entry, buf, sizeof(buf))) {
+        if (ini.Get_String(ADVAITACTICTYPES, entry, "", buf, sizeof(buf))) {
 
             /**
              *  Find or create a rocket of the name specified.
@@ -1145,7 +1145,7 @@ bool RulesClassExtension::AdvancedAIAirTactics(CCINIClass& ini)
         /**
          *  Get a tactic entry.
          */
-        if (ini.Get_String(ADVAITACTICTYPES, entry, buf, sizeof(buf))) {
+        if (ini.Get_String(ADVAITACTICTYPES, entry, "", buf, sizeof(buf))) {
 
             /**
              *  Find or create a rocket of the name specified.
@@ -1185,7 +1185,7 @@ bool RulesClassExtension::AdvancedAINavalTactics(CCINIClass& ini)
         /**
          *  Get a tactic entry.
          */
-        if (ini.Get_String(ADVAITACTICTYPES, entry, buf, sizeof(buf))) {
+        if (ini.Get_String(ADVAITACTICTYPES, entry, "", buf, sizeof(buf))) {
 
             /**
              *  Find or create a rocket of the name specified.

@@ -1627,7 +1627,7 @@ bool AdvancedAITacticTypeClass::Read_INI(CCINIClass& ini)
     {
         sprintf(keybuffer, "Conditions.%d", i);
 
-        if (ini.Get_String(IniName, keybuffer, outputbuffer, sizeof(outputbuffer)) > 0)
+        if (ini.Get_String(IniName, keybuffer, "", outputbuffer, sizeof(outputbuffer)) > 0)
         {
             char* token = strtok(outputbuffer, delimiter);
 
@@ -1665,7 +1665,7 @@ bool AdvancedAITacticTypeClass::Read_INI(CCINIClass& ini)
     {
         sprintf(keybuffer, "AdvAITeamTypes.%d", i);
 
-        if (ini.Get_String(IniName, keybuffer, outputbuffer, sizeof(outputbuffer)) > 0)
+        if (ini.Get_String(IniName, keybuffer, "", outputbuffer, sizeof(outputbuffer)) > 0)
         {
             char* token = strtok(outputbuffer, delimiter);
 
@@ -1704,7 +1704,7 @@ bool AdvancedAITacticTypeClass::Read_INI(CCINIClass& ini)
     }
 
     // Only suicide and max cost are relevant for aircraft team types
-    if (IsAir && ini.Get_String(IniName, "AdvAIAircraftTeamType", outputbuffer, sizeof(outputbuffer)) > 0)
+    if (IsAir && ini.Get_String(IniName, "AdvAIAircraftTeamType", "", outputbuffer, sizeof(outputbuffer)) > 0)
     {
         char* token = strtok(outputbuffer, delimiter);
         bool suicide = atoi(token) > 0;
@@ -1723,7 +1723,7 @@ bool AdvancedAITacticTypeClass::Read_INI(CCINIClass& ini)
         AdvAITeamTypes.Add(advaiteamtype);
     }
     
-    if (ini.Get_String(IniName, "PrimaryTacticType", outputbuffer, sizeof(outputbuffer)) > 0) 
+    if (ini.Get_String(IniName, "PrimaryTacticType", "", outputbuffer, sizeof(outputbuffer)) > 0) 
     {
         if (IsAir)
         {

@@ -93,6 +93,7 @@ public:
     bool _Limbo();
     int  _Do_MISSION_HUNT();
     int  _Do_MISSION_GUARD_AREA();
+
 private:
     void _Draw_Line(Coord& start_coord, Coord& end_coord, bool is_dashed, bool is_thick, bool is_dropshadow, unsigned line_color, unsigned drop_color, int rate) const;
 };
@@ -1146,9 +1147,9 @@ void FootClass_AI_Abandon_Invalid_Targets(FootClass* this_ptr)
  *
  *  Author: Rampastring
  */
-DECLARE_PATCH(_FootClass_AI_Hook_Patch)
+DEFINE_HOOK(0x004A58A8, _FootClass_AI_Hook, 0)
 {
-    GET_REGISTER_STATIC(FootClass*, this_ptr, esi);
+    GET(FootClass*, this_ptr, ESI);
 
     FootClass_AI_Abandon_Invalid_Targets(this_ptr);
 
@@ -1158,10 +1159,10 @@ DECLARE_PATCH(_FootClass_AI_Hook_Patch)
     this_ptr->field_34A = false;
 
     if (this_ptr->Techno_Type_Class()->IsTiberiumHeal) {
-        JMP(0x004A58D4);
+        return 0x004A58D4;
     }
 
-    JMP(0x004A58C3);
+    return 0x004A58C3;
 }
 
 
@@ -1284,50 +1285,36 @@ int FootClassExt::_Do_MISSION_GUARD_AREA()
  *
  *  @author: Rampastring
  */
-DECLARE_PATCH(_FootClass_Mission_Enter_Seek_New_Refinery_After_Dropped)
+DEFINE_HOOK(0x004A49A3, _FootClass_Mission_Enter_Seek_New_Refinery_After_Dropped, 0)
 {
-    GET_REGISTER_STATIC(FootClass*, this_ptr, esi);
-    static UnitTypeClass* unittype;
+    GET(FootClass*, this_ptr, ESI);
 
     /**
      *  Check if we're a harvester.
      */
+    if (this_ptr->What_Am_I() == RTTI_UNIT) {
 
-    if (this_ptr->What_Am_I() != RTTI_UNIT) {
+        UnitTypeClass* unittype = reinterpret_cast<UnitClass*>(this_ptr)->Class;
 
-        /**
-         *  We're not a unit and so we can't be a harvester, don't change original behaviour.
-         */
-        goto original_code;
+        if (!this_ptr->House->Is_Human_Player() && (unittype->IsToHarvest || unittype->IsToVeinHarvest)) {
+
+            /**
+             *  We're a harvester, try to find a new refinery instead of going idle.
+             */
+            this_ptr->Assign_Mission(MISSION_HARVEST);
+            return 0x004A49B1;
+        }
     }
-
-    unittype = reinterpret_cast<UnitClass*>(this_ptr)->Class;
-
-    if (this_ptr->House->Is_Human_Player() || (!unittype->IsToHarvest && !unittype->IsToVeinHarvest)) {
-
-        /**
-         *  We're not a harvester, don't change original behaviour.
-         */
-        goto original_code;
-    }
-
-    /**
-     *  We're a harvester, try to find a new refinery instead of going idle.
-     */
-    this_ptr->Assign_Mission(MISSION_HARVEST);
-    goto commence_mission;
 
     /**
      *  Put the object into idle mode and continue on to commencing the mission.
      */
-original_code:
     this_ptr->Enter_Idle_Mode(false, true);
 
     /**
      *  Commences the given mission and exits the function afterwards.
      */
-commence_mission:
-    JMP(0x004A49B1);
+    return 0x004A49B1;
 }
 
 
@@ -1336,7 +1323,6 @@ commence_mission:
  */
 void FootClassExtension_Hooks()
 {
-    Patch_Jump(0x004A58A8, &_FootClass_AI_Hook_Patch);
     Patch_Jump(0x004A6A40, &FootClassExt::_Draw_Action_Line);
     Patch_Jump(0x004A4D60, &FootClassExt::_Death_Announcement);
     Patch_Jump(0x004A76F0, &FootClassExt::_Search_For_Tiberium);
@@ -1344,5 +1330,4 @@ void FootClassExtension_Hooks()
     Patch_Jump(0x004A5E80, &FootClassExt::_Limbo);
     Patch_Jump(0x004A1BE0, &FootClassExt::_Do_MISSION_HUNT);
     Patch_Jump(0x004A2830, &FootClassExt::_Do_MISSION_GUARD_AREA);
-    Patch_Jump(0x004A49A3, &_FootClass_Mission_Enter_Seek_New_Refinery_After_Dropped);
 }

@@ -445,8 +445,7 @@ void Vinifera_Log_WWMessageBox(const char* msg, ...)
  */
 void Vinifera_DeveloperMode_Warning_WWMessageBox(const char *msg, ...)
 {
-    if (Vinifera_DeveloperMode)
-    {
+    if (Vinifera_DeveloperMode) {
         char msg_buff[512];
         std:snprintf(msg_buff, sizeof(msg_buff), "WARNING!\n%s", msg);
         
@@ -460,10 +459,6 @@ void Vinifera_DeveloperMode_Warning_WWMessageBox(const char *msg, ...)
         WWMessageBox().Process(buffer, 0, "OK");
     }
 }
-
-
-
-
 
 
 /**

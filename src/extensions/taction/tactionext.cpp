@@ -710,16 +710,16 @@ bool TActionClassExtension::Do_DISABLE_SHORT_GAME(HouseClass* house, ObjectClass
  *
  *  @author: Rampastring
  */
-bool TActionClassExtension::Do_CREATE_BUILDING_AT(TActionClass& taction, HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
+bool TActionClassExtension::Do_CREATE_BUILDING_AT(HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
-    Cell wpcell = ScenExtension->Waypoint_Cell(taction.EffectLocation);
+    Cell wpcell = ScenExtension->Waypoint_Cell(This()->EffectLocation);
 
     if (wpcell != CELL_NONE)
     {
-        HouseClass* hptr = HouseClassExtension::House_From_HousesType(taction.Data.House);
+        HouseClass* hptr = HouseClassExtension::House_From_HousesType(This()->Data.House);
 
-        int buildingtypeid = taction.TriggerRect.X;
-        bool forced = taction.TriggerRect.Y > 0;
+        int buildingtypeid = This()->TriggerRect.X;
+        bool forced = This()->TriggerRect.Y > 0;
         BuildingTypeClass* btc = BuildingTypes[buildingtypeid];
 
         bool success = false;

@@ -640,19 +640,19 @@ DEFINE_HOOK(0x004D8BE4, _InfantryClass_Doing_AI_Fix_Invalid_Facing_Set, 0)
  *
  *  Author: Rampastring
  */
-DECLARE_PATCH(_InfantryClass_What_Action_Prevent_Hijacking_Allied_Vehicles_Patch)
+DEFINE_HOOK(0x004D7267, _InfantryClass_What_Action_Prevent_Hijacking_Allied_Vehicles, 0)
 {
-    GET_REGISTER_STATIC(TechnoClass*, target, esi);
-    GET_REGISTER_STATIC(InfantryClass*, this_ptr, edi);
+    GET(TechnoClass*, target, ESI);
+    GET(InfantryClass*, this_ptr, EDI);
 
     if (this_ptr->House->Is_Ally(target))
     {
         // The target is allied to the hijacker. Move on.
-        JMP(0x004D72B7);
+        return 0x004D72B7;
     }
 
     // Move to harvester truce check.
-    JMP(0x004D7277);
+    return 0x004D7277;
 }
 
 

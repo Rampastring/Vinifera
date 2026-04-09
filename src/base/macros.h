@@ -72,7 +72,7 @@
 /**
  *  Defines operator overloads to enable bit operations on enum values, useful for
  *  using an enum to define flags for a bitfield.
- *
+ *  
  *  Example usage:
  *   enum MyEnum {
  *       ENUM_A = 0,

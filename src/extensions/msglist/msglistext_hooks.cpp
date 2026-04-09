@@ -42,6 +42,7 @@
 #include "asserthandler.h"
 
 #include "hooker.h"
+#include "syringe.h"
 
 class MessageListClassExt final : public MessageListClass
 {
@@ -55,13 +56,12 @@ public:
  *
  *  Author: Rampastring
  */
-DECLARE_PATCH(_MessageListClass_Init_Modify_Width_Patch)
+DEFINE_HOOK(0x00572EAC, _MessageListClass_Init_Modify_Width, 0)
 {
-    GET_REGISTER_STATIC(MessageListClass *, this_ptr, esi);
-    GET_REGISTER_STATIC(int, width, eax);
-    static int posx;
+    GET(MessageListClass*, this_ptr, ESI);
+    GET(int, width, EAX);
 
-    posx = 0;
+    int posx = 0;
     if (UIControls != nullptr) {
         posx = UIControls->MessageListPositionX;
     }
@@ -69,11 +69,13 @@ DECLARE_PATCH(_MessageListClass_Init_Modify_Width_Patch)
     width -= posx;
     width -= 5;
 
+    this_ptr->Width = width;
+
     DEBUG_INFO("MessageListClass::Init(Width: %d)\n", width);
 
-    _asm { xor ebx, ebx }
-    _asm { mov edi, [esi] }
-    JMP(0x00572EC4);
+    R->EBX(0);
+    R->EDI(*reinterpret_cast<DWORD*>(this_ptr));
+    return 0x00572EC4;
 }
 
 
@@ -120,6 +122,5 @@ void MessageListClassExtension_Hooks()
 {
     // Replace the message format to add a space after the semicolon after the message author's name.
     Patch_Dword(0x00573161 + 1, reinterpret_cast<uintptr_t>(&"%s: %s"));
-    Patch_Jump(0x00572EAC, &_MessageListClass_Init_Modify_Width_Patch);
     Patch_Jump(0x00573EF0, &MessageListClassExt::Set_Width);
 }

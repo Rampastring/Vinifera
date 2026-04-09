@@ -55,15 +55,6 @@
 #include "vinifera_defines.h"
 
 
-static DECLARE_EXTENDING_CLASS_AND_PAIR(TeamClass)
-{
-public:
-    bool _Add(FootClass * obj);
-    bool _Remove(FootClass * obj, int typeindex);
-	bool _Recalc_Strength();
-	void _TMission_ATTACK(ScriptMissionClass * mission, bool a1);
-};
-
 /**
  *  A fake class for implementing new member functions which allow
  *  access to the "this" pointer of the intended class.
@@ -74,6 +65,9 @@ public:
 DECLARE_EXTENDING_CLASS_AND_PAIR(TeamClass)
 {
 public:
+    bool _Add(FootClass * obj);
+    bool _Remove(FootClass * obj, int typeindex);
+    bool _Recalc_Strength();
     void _TMission_ATTACK(ScriptMissionClass * mission, bool a1);
 };
 

@@ -472,25 +472,23 @@ static int _Extract_Compressed_Events(void* buf, int bufsize)
  *
  *  Author: Rampastring
  */
-DECLARE_PATCH(_EventClass_Execute_MEGAMISSION_Prevent_Controlling_Enemy_Units_Patch)
+DEFINE_HOOK(0x004946FF, _EventClass_Execute_MEGAMISSION_Prevent_Controlling_Enemy_Units, 0)
 {
-    enum JumpAddresses {
+    enum {
         Continue = 0x0049470A,
         Bail = 0x00495110
     };
 
-    GET_REGISTER_STATIC(EventClass*, this_ptr, esi);
-    GET_REGISTER_STATIC(TechnoClass*, techno, edi);
-    static FootClass* cargoobject;
-    static bool hasowncargo;
+    GET(EventClass*, this_ptr, ESI);
+    GET(TechnoClass*, techno, EDI);
 
     // Stolen bytes / code.
     // Jump out if the techno is not active.
     if (!techno->IsActive) {
-        JMP(Bail);
+        return Bail;
     }
 
-    hasowncargo = false;
+    bool hasowncargo = false;
 
     if (Session.Type != GAME_NORMAL) {
         // In multiplayer, each human player can only control one house.
@@ -500,7 +498,7 @@ DECLARE_PATCH(_EventClass_Execute_MEGAMISSION_Prevent_Controlling_Enemy_Units_Pa
             // This might be a crafted event.
             // But before assuming so, check for the object having the event sender's units as cargo.
             // This is necessary so that a player is able to unload units placed inside another house's transport.
-            cargoobject = techno->Cargo.Attached_Object();
+            FootClass* cargoobject = techno->Cargo.Attached_Object();
             while (cargoobject != nullptr) {
                 if (cargoobject->House->HeapID == this_ptr->ID) {
                     hasowncargo = true;
@@ -510,7 +508,7 @@ DECLARE_PATCH(_EventClass_Execute_MEGAMISSION_Prevent_Controlling_Enemy_Units_Pa
             }
 
             if (!hasowncargo) {
-                JMP(Bail);
+                return Bail;
             }
         }
     }
@@ -521,7 +519,7 @@ DECLARE_PATCH(_EventClass_Execute_MEGAMISSION_Prevent_Controlling_Enemy_Units_Pa
 
             // Also check for cargo in singleplayer. But use IsPlayerControl instead of direct ID comparison
             // due to the human player being able to control multiple houses.
-            cargoobject = techno->Cargo.Attached_Object();
+            FootClass* cargoobject = techno->Cargo.Attached_Object();
             while (cargoobject != nullptr) {
                 if (cargoobject->House->IsPlayerControl) {
                     hasowncargo = true;
@@ -531,13 +529,13 @@ DECLARE_PATCH(_EventClass_Execute_MEGAMISSION_Prevent_Controlling_Enemy_Units_Pa
             }
 
             if (!hasowncargo) {
-                JMP(Bail);
+                return Bail;
             }
         }
     }
 
     // Continue event execution.
-    JMP(Continue);
+    return Continue;
 }
 
 
@@ -547,20 +545,20 @@ DECLARE_PATCH(_EventClass_Execute_MEGAMISSION_Prevent_Controlling_Enemy_Units_Pa
  *
  *  Author: Rampastring
  */
-DECLARE_PATCH(_EventClass_Execute_IDLE_Prevent_Controlling_Enemy_Units_Patch)
+DEFINE_HOOK(0x004949AF, _EventClass_Execute_IDLE_Prevent_Controlling_Enemy_Units, 0)
 {
-    enum JumpAddresses {
+    enum {
         Continue = 0x004949BB,
         Bail = 0x00495110
     };
 
-    GET_REGISTER_STATIC(EventClass*, this_ptr, esi);
-    GET_REGISTER_STATIC(TechnoClass*, techno, eax);
+    GET(EventClass*, this_ptr, ESI);
+    GET(TechnoClass*, techno, EAX);
 
     // Stolen bytes / code.
     // Jump out if the techno is null.
     if (techno == nullptr) {
-        JMP(Bail);
+        return Bail;
     }
 
     if (Session.Type != GAME_NORMAL) {
@@ -568,23 +566,23 @@ DECLARE_PATCH(_EventClass_Execute_IDLE_Prevent_Controlling_Enemy_Units_Patch)
         if (this_ptr->ID != techno->House->HeapID) {
             // ID of owner of techno does not match the ID of whoever generated the event.
             // Exit the function.
-            JMP(Bail);
+            return Bail;
         }
     }
     else {
         // In campaign, the player can control multiple houses.
         // We might as well also fix this exploit for campaign by checking for player control here.
         if (!techno->House->IsPlayerControl) {
-            JMP(Bail);
+            return Bail;
         }
     }
 
     // Continue event execution.
-    // Set esi to point to the techno and edi to zero, the original 
+    // Set esi to point to the techno and edi to zero, the original
     // game code expects these values.
-    _asm { mov  esi, dword ptr ds:techno }
-    _asm { xor  edi, edi }
-    JMP(Continue);
+    R->ESI(techno);
+    R->EDI(0);
+    return Continue;
 }
 
 
@@ -594,28 +592,28 @@ DECLARE_PATCH(_EventClass_Execute_IDLE_Prevent_Controlling_Enemy_Units_Patch)
  *
  *  Author: Rampastring
  */
-DECLARE_PATCH(_EventClass_Executre_PRIMARY_Prevent_Setting_For_Enemy_Patch)
+DEFINE_HOOK(0x004946CD, _EventClass_Execute_PRIMARY_Prevent_Setting_For_Enemy, 0)
 {
-    enum JumpAddresses {
+    enum {
         Continue = 0x004946D8,
         Bail = 0x00495110
     };
 
-    GET_REGISTER_STATIC(EventClass*, this_ptr, esi);
-    GET_REGISTER_STATIC(TechnoClass*, techno, eax);
+    GET(EventClass*, this_ptr, ESI);
+    GET(TechnoClass*, techno, EAX);
 
     // Stolen bytes / code.
     if (!techno->IsActive) {
-        JMP(Bail);
+        return Bail;
     }
 
     // Make sure that the owner of the building is the same player who sent the PRIMARY event.
     if (this_ptr->ID != techno->House->HeapID) {
-        JMP(Bail);
+        return Bail;
     }
 
-    _asm { mov  eax, dword ptr ds:techno }
-    JMP_REG(edx, Continue);
+    R->EAX(techno);
+    return Continue;
 }
 
 
@@ -632,7 +630,4 @@ void EventClassExtension_Hooks()
     Patch_Dword(0x005B4CF8 + 2, reinterpret_cast<uint32_t>(&EventClassExt::EventLength));
 
     Patch_Jump(0x00494B9A, 0x00494BAA); // Jump over code that prevents deploying with aircraft
-    Patch_Jump(0x004946FF, &_EventClass_Execute_MEGAMISSION_Prevent_Controlling_Enemy_Units_Patch);
-    Patch_Jump(0x004949AF, &_EventClass_Execute_IDLE_Prevent_Controlling_Enemy_Units_Patch);
-    Patch_Jump(0x004946CD, &_EventClass_Executre_PRIMARY_Prevent_Setting_For_Enemy_Patch);
 }

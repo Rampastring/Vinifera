@@ -121,14 +121,6 @@ class ScenarioClassExtension final : public GlobalExtensionClass<ScenarioClass>
         };
         ScenarioFlagExtType GlobalFlags[500];
         ScenarioFlagExtType LocalFlags[500];
-
-        /**
-         *  Name of a color that is used for the user interface in this scenario.
-         *  If empty, then the default color for the player faction is used.
-         */
-        char UIColorOverrideName[24];
-
-        int CachedUIColorSchemeIndex;
 };
 
 int Vinifera_Scan_Place_Object(ObjectClass* obj, Cell cell, int min_dist, int max_dist, bool no_scatter);

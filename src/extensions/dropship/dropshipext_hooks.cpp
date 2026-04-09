@@ -105,7 +105,6 @@ DEFINE_HOOK(0x005DB3BB, _Start_Scenario_Dropship_Loadout_Show_Mouse_Patch, 0)
     if (Theme.Still_Playing()) {
         Theme.Stop(true); // Smoothly fade out the track.
     }
-}
 
     return 0x005DB3C0;
 }

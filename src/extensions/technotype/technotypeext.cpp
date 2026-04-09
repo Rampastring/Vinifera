@@ -462,7 +462,7 @@ bool TechnoTypeClassExtension::Read_INI(CCINIClass &ini)
     IsHideWakeWhenCloaked = ArtINI.Get_Bool(graphic_name, "HideWakeWhenCloaked", IsHideWakeWhenCloaked);
 
     char buffer[32];
-    if (ini.Get_String(ini_name, "Buildability", buffer, std::size(buffer)) > 0)
+    if (ini.Get_String(ini_name, "Buildability", "", buffer, std::size(buffer)) > 0)
     {
         if (!strcasecmp("Normal", buffer)) {
             Buildability = TechnoTypeBuildability::BUILDABILITY_NORMAL;

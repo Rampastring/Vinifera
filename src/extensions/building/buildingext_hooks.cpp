@@ -1053,18 +1053,8 @@ DEFINE_HOOK(0x00428AA4, _BuildingClass_Draw_Overlays_Fetch_Factory_Patch, 0)
     FactoryClass* factory = Extension::Fetch(this_ptr->House)->Fetch_Factory(
         this_ptr->Class->ToBuild, type_ext->IsNaval ? PRODFLAG_NAVAL : PRODFLAG_NONE);
     R->EAX(factory);
-    MAKE_STACK_FRAME(0x20)
-
-    static FactoryClass* factory;
-    static BuildingTypeClassExtension const* type_ext;
-    type_ext = Extension::Fetch(this_ptr->Class);
-    factory = Extension::Fetch(this_ptr->House)->Fetch_Factory(this_ptr->Class->ToBuild, type_ext->IsNaval ? PRODFLAG_NAVAL : PRODFLAG_NONE);
 
     return 0x00428AC4;
-    END_STACK_FRAME();
-
-    _asm mov eax, factory
-    JMP_REG(ecx, 0x00428AC4);
 }
 
 
@@ -1569,7 +1559,6 @@ DEFINE_HOOK(0x00428AD3, _BuildingClass_Draw_Spied_Cameo_Palette_Patch, 0)
     GET(Rect *, window_rect, EBP);
 
     const TechnoTypeClass* technotype = factory_obj->TClass;
-    MAKE_STACK_FRAME(0x30)
 
     technotype = factory_obj->TClass;
 
@@ -1608,9 +1597,6 @@ DEFINE_HOOK(0x00428AD3, _BuildingClass_Draw_Spied_Cameo_Palette_Patch, 0)
     }
 
     return 0x00428B13;
-    END_STACK_FRAME()
-
-    JMP(0x00428B13);
 }
 
 
@@ -1701,20 +1687,6 @@ DEFINE_HOOK(0x00430CC2, _BuildingClass_Mission_Deconstruction_ConYard_Survivors_
  *  @author: ZivDero
  */
 static bool Unlimbo_Helper(UnitClass* unit, Coord const& coord, Dir256 dir)
-static bool Unlimbo_Helper(UnitClass* unit, Coord const& coord, Dir256 dir)
-{
-    ScenarioInit++;
-    bool result = unit->Unlimbo(coord, dir);
-    ScenarioInit--;
-
-    if (!result) {
-        delete unit;
-    }
-
-    return result;
-}
-
-DECLARE_PATCH(_BuildingClass_Mission_Deconstruction_ConYard_Unlimbo_Patch)
 {
     ScenarioInit++;
     bool result = unit->Unlimbo(coord, dir);
@@ -1737,14 +1709,6 @@ DEFINE_HOOK(0x00430A01, _BuildingClass_Mission_Deconstruction_ConYard_Unlimbo_Pa
         return 0x00430A1A;
     } else {
         return 0x00430B37;
-    GET_REGISTER_STATIC(UnitClass*, mcv, ebp);
-    GET_REGISTER_STATIC(Dir256, dir, eax);
-    LEA_STACK_STATIC(Coord const*, coord, esp, 0x40);
-
-    if (Unlimbo_Helper(mcv, *coord, dir)) {
-        JMP(0x00430A1A);
-    } else {
-        JMP(0x00430B37);
     }
 }
 
@@ -2591,11 +2555,10 @@ DEFINE_HOOK(0x0042CAB9, _BuildingClass_Exit_Object_Factory_Busy_Customized_Alter
  *
  *  @author: Rampastring
  */
-DECLARE_PATCH(_BuildingClass_Take_Damage_Prevent_Cumulative_Flame_Spawn_Patch)
+DEFINE_HOOK(0x0042B6CC, _BuildingClass_Take_Damage_Prevent_Cumulative_Flame_Spawn, 0)
 {
-    GET_REGISTER_STATIC(Coord *, coord, eax);
-    GET_REGISTER_STATIC(BuildingClass *, this_ptr, esi);
-    static BuildingClassExtension *buildingext;
+    GET(Coord *, coord, EAX);
+    GET(BuildingClass *, this_ptr, ESI);
 
     /**
      *  Stolen bytes / code.
@@ -2607,9 +2570,12 @@ DECLARE_PATCH(_BuildingClass_Take_Damage_Prevent_Cumulative_Flame_Spawn_Patch)
      *  Do not spawn flames on the building if flames were spawned
      *  on it too recently.
      */
-    buildingext = Extension::Fetch(this_ptr);
+    BuildingClassExtension* buildingext = Extension::Fetch(this_ptr);
     if (Frame < buildingext->LastFlameSpawnFrame + RuleExtension->BuildingFlameSpawnBlockFrames) {
-        goto past_flame_spawn;
+        /**
+         *  Skip the game's code block for spawning flames on buildings.
+         */
+        return 0x0042B684;
     }
 
     buildingext->LastFlameSpawnFrame = Frame;
@@ -2617,15 +2583,8 @@ DECLARE_PATCH(_BuildingClass_Take_Damage_Prevent_Cumulative_Flame_Spawn_Patch)
     /**
      *  Continue into applying building flames.
      */
-original_code:
-    _asm { mov  ebx, 7FFFh }
-    JMP(0x0042B6E4);
-
-    /**
-     *  Skip the game's code block for spawning flames on buildings.
-     */
-past_flame_spawn:
-    JMP(0x0042B684);
+    R->EBX(0x7FFF);
+    return 0x0042B6E4;
 }
 
 
@@ -3636,70 +3595,21 @@ int BuildingClass_Exit_Object_Custom_Position(BuildingClass* building)
     return returnvalue;
 }
 
-DECLARE_PATCH(_BuildingClass_Exit_Object_Seek_Building_Position)
+DEFINE_HOOK(0x0042D3B8, _BuildingClass_Exit_Object_Seek_Building_Position, 6)
 {
-    GET_REGISTER_STATIC(BuildingClass*, base, edi);
-    static int retvalue;
-    retvalue = 0;
+    GET(BuildingClass*, base, EDI);
 
     if (!RuleExtension->AdvancedAIBaseBuilding || base->Class->PowersUpBuilding[0] != '\0') {
-
-        // Stolen bytes / code
-        _asm { mov eax, [esi+0ECh]}
-        JMP_REG(ecx, 0x0042D3BE);
+        // Continue with the original behavior; let Syringe restore the stolen
+        // `mov eax, [esi+0ECh]` and continue at 0x0042D3BE.
+        return 0;
     }
 
-    retvalue = BuildingClass_Exit_Object_Custom_Position(base);
+    int retvalue = BuildingClass_Exit_Object_Custom_Position(base);
 
-    // Reconstruct function epilogue
-    _asm { pop edi }
-    _asm { pop esi }
-    _asm { pop ebp }
-    _asm { mov eax, dword ptr ds:retvalue }
-    _asm { pop ebx }
-    _asm { add esp, 0F8h }
-    _asm { retn 4 }
-}
-
-
-
-/**
- *  Replaces the loop starting from 0x0042CAB9 to improve the alternative
- *  war factory selection logic when a war factory is busy in 3 ways:
- * 
- *  1) The object can now exit from factory buildings of a different type
- *     than what the object was originally produced from.
- *  
- *  2) The above takes speed type into account when finding building to exit from,
- *     preventing ships from exiting from land-based factories and vice-versa.
- * 
- *  3) The logic prefers finding the closest rather than the "first" alternative
- *  factory building.
- * 
- *  @author: Rampastring
- */
-DECLARE_PATCH(_BuildingClass_Exit_Object_Factory_Busy_Customized_Alternate_Factory_Seeking_Logic)
-{
-    GET_REGISTER_STATIC(BuildingClass*, this_ptr, esi);
-    GET_REGISTER_STATIC(FootClass*, exiting_object, edi);
-    static BuildingClass* best_alternative_building;
-
-    best_alternative_building = Find_Best_Alternative_Factory(this_ptr, exiting_object);
-
-    if (best_alternative_building != nullptr) {
-
-        /**
-         *  Exit from the factory we found.
-         */
-        _asm { mov ebp, dword ptr best_alternative_building }
-        JMP_REG(ebx, 0x0042CB28);
-    }
-
-    /**
-     *  We could not find an alternative factory to exit from,
-     *  exit the function and return 1.
-     */
-    JMP(0x0042CB16);
+    // Return through the function's natural epilogue (pop edi/esi/ebp/ebx, add esp, retn 4).
+    R->EAX(retvalue);
+    return 0x0042CB5A;
 }
 
 
@@ -3735,38 +3645,27 @@ AbstractClass* BuildingClassExt::_Greatest_Threat(ThreatType threat, Coord & coo
  *
  *  @author: Rampastring
  */
-DECLARE_PATCH(_BuildingClass_Receive_Message_Harvester_Queue_Jump_No_Ignoring_If_In_Contact_Patch)
+DEFINE_HOOK(0x0042694A, _BuildingClass_Receive_Message_Harvester_Queue_Jump_No_Ignoring_If_In_Contact, 0)
 {
-    GET_REGISTER_STATIC(BuildingClass*, building, esi);
+    GET(BuildingClass*, building, ESI);
 
     if (building->Class->IsRefinery && RuleExtension->IsUseAdvancedAI && !building->House->Is_Human_Player()) {
-        goto skip_returning_negative;
+        /**
+         *  Skip the (!ScenarioInit && In_Radio_Contact()) and following (Contact_With_Whom() != from)
+         *  condition and related code for the refinery and continue function
+         *  execution from beyond that point.
+         */
+        return 0x0042697B;
     }
-
-    /**
-     *  We're not a refinery, don't skip the check.
-     */
-    goto original_behaviour;
-
-
-    /**
-     *  Skip the (!ScenarioInit && In_Radio_Contact()) and following (Contact_With_Whom() != from)
-     *  condition and related code for the refinery and continue function
-     *  execution from beyond that point.
-     */
-skip_returning_negative:
-    JMP(0x0042697B);
-
 
     /**
      *  Stolen bytes / code, perform the check.
      */
-original_behaviour:
     if (ScenarioInit) {
-        JMP(0x00426962);
+        return 0x00426962;
     }
 
-    JMP(0x00426953);
+    return 0x00426953;
 }
 
 
@@ -3783,21 +3682,16 @@ original_behaviour:
  *
  *  @author: Rampastring
  */
-DECLARE_PATCH(_BuildingClass_Receive_Message_Harvester_Queue_Jump_Allow_Replacing_Old_Harv_If_Closer_Patch)
+DEFINE_HOOK(0x00426A71, _BuildingClass_Receive_Message_Harvester_Queue_Jump_Allow_Replacing_Old_Harv_If_Closer, 0)
 {
-    GET_REGISTER_STATIC(BuildingClass*, building, esi);
-    GET_REGISTER_STATIC(TechnoClass*, message_sender, edi);
-    static int queue_jump_distance;
-    static int old_harvester_distance;
-    static int new_harvester_distance;
-    static TechnoClass* old_harvester;
+    GET(BuildingClass*, building, ESI);
+    GET(TechnoClass*, message_sender, EDI);
 
     if (ScenarioInit) {
         /**
          *  Stolen bytes / code, return RADIO_ROGER if ScenarioInit is set.
          */
-    return_roger_scenarioinit:
-        JMP(0x0042707B);
+        return 0x0042707B;
     }
 
 
@@ -3806,9 +3700,8 @@ DECLARE_PATCH(_BuildingClass_Receive_Message_Harvester_Queue_Jump_Allow_Replacin
         /**
          *  We're not free (perhaps a harvester is unloading), return RADIO_STATIC.
          */
-    return_static:
-        _asm { mov  eax, [RADIO_STATIC] }
-        JMP_REG(ecx, 0x004271CA);
+        R->EAX(RADIO_STATIC);
+        return 0x004271CA;
     }
 
     /**
@@ -3816,7 +3709,7 @@ DECLARE_PATCH(_BuildingClass_Receive_Message_Harvester_Queue_Jump_Allow_Replacin
      *  than the one that sent us the message.
      *  If not, we can simply accept the new harvester.
      */
-    old_harvester = building->Contact_With_Whom();
+    TechnoClass* old_harvester = building->Contact_With_Whom();
 
     if (old_harvester != nullptr && old_harvester != message_sender) {
 
@@ -3824,10 +3717,10 @@ DECLARE_PATCH(_BuildingClass_Receive_Message_Harvester_Queue_Jump_Allow_Replacin
          *  Get distance to the old harvester and distance
          *  to the new harvester and compare the distances.
          */
-        old_harvester_distance = building->Distance(old_harvester);
-        new_harvester_distance = building->Distance(message_sender);
+        int old_harvester_distance = building->Distance(old_harvester);
+        int new_harvester_distance = building->Distance(message_sender);
 
-        queue_jump_distance = 7;
+        const int queue_jump_distance = 7;
 
         if (!RuleExtension->IsUseAdvancedAI || message_sender->House->Is_Human_Player() || new_harvester_distance + Cell_To_Lepton(queue_jump_distance) > old_harvester_distance) {
 
@@ -3835,8 +3728,7 @@ DECLARE_PATCH(_BuildingClass_Receive_Message_Harvester_Queue_Jump_Allow_Replacin
              *  The new harvester is not significantly closer to us than the old one,
              *  exit the function and return RADIO_NEGATIVE.
              */
-        return_negative:
-            JMP(0x0042696C);
+            return 0x0042696C;
         }
 
         /**
@@ -3850,8 +3742,7 @@ DECLARE_PATCH(_BuildingClass_Receive_Message_Harvester_Queue_Jump_Allow_Replacin
     /**
      *  Exits the function and returns RADIO_ROGER.
      */
-return_roger:
-    JMP(0x004269BD);
+    return 0x004269BD;
 }
 
 /**
@@ -3883,11 +3774,6 @@ void BuildingClassExtension_Hooks()
     Patch_Jump(0x0043AF60, &BuildingClassExt::_Fetch_Super_Weapon);
     Patch_Jump(0x0043AFC0, &BuildingClassExt::_Fetch_Super_Weapon2);
     Patch_Jump(0x004268C0, &BuildingClassExt::_Receive_Message);
-    Patch_Jump(0x0042B6CC, &_BuildingClass_Take_Damage_Prevent_Cumulative_Flame_Spawn_Patch);
-    Patch_Jump(0x0042D3B8, &_BuildingClass_Exit_Object_Seek_Building_Position);
-    Patch_Jump(0x0042CAB9, &_BuildingClass_Exit_Object_Factory_Busy_Customized_Alternate_Factory_Seeking_Logic);
     Patch_Byte(0x00432786 + 1, 0x00); // Change "true" to "false" in Create_Bullet call in Mission_Missile to disable combat light from nukes
     Patch_Jump(0x0042E0E0, &BuildingClassExt::_Greatest_Threat);
-    Patch_Jump(0x0042694A, &_BuildingClass_Receive_Message_Harvester_Queue_Jump_No_Ignoring_If_In_Contact_Patch);
-    Patch_Jump(0x00426A71, &_BuildingClass_Receive_Message_Harvester_Queue_Jump_Allow_Replacing_Old_Harv_If_Closer_Patch);
 }

@@ -131,7 +131,6 @@ public:
     bool _Can_Deploy_Now() const;
     int _Refund_Amount() const;
     bool _Evaluate_Object(ThreatType method, int mask, int range, TechnoClass const* object, int& value, int zone, Coord const& coord) const;
-    bool _Evaluate_Object(ThreatType method, int mask, int range, TechnoClass const* object, int& value, int zone, Coord & coord) const;
     int _Anti_Air() const;
     int _Apparent_Brightness(int brightness) const;
     void _Flashing_AI();
@@ -2774,12 +2773,12 @@ void Reveal_Techno_On_Fire(TechnoClass* techno, ObjectClass* target)
  *
  *  @author: Rampastring
  */
-DECLARE_PATCH(_TechnoClass_Fire_At_No_Reveal_When_Firing_At_Spawned_Unit_Patch)
+DEFINE_HOOK(0x00631365, _TechnoClass_Fire_At_No_Reveal_When_Firing_At_Spawned_Unit, 0)
 {
-    GET_REGISTER_STATIC(ObjectClass*, target, eax);
-    GET_REGISTER_STATIC(TechnoClass*, this_ptr, esi);
+    GET(ObjectClass*, target, EAX);
+    GET(TechnoClass*, this_ptr, ESI);
     Reveal_Techno_On_Fire(this_ptr, target);
-    JMP(0x0063139F);
+    return 0x0063139F;
 }
 
 
@@ -3224,6 +3223,47 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
 }
 
 
+/// <summary>
+/// Custom TechnoClass::Anti_Air implementation.
+/// Fixes a bug where a unit believes it is not AA-capable when its primary weapon has no AA capability,
+/// even when its secondary weapon is AA-capable.
+/// </summary>
+int TechnoClassExt::_Anti_Air(void) const
+{
+    assert(IsActive);
+
+    if (Is_Weapon_Equipped()) {
+
+        WeaponTypeClass const* weapon = PrimaryWeapon;
+        BulletTypeClass const* bullet = weapon->Bullet;
+        WarheadTypeClass const* warhead = weapon->WarheadPtr;
+
+        if (bullet->IsAntiAircraft) {
+            int value = ((weapon->Attack * warhead->Modifier[ARMOR_ALUMINUM]) * weapon->Range) / weapon->ROF;
+
+            if (TClass->Is_Two_Shooter()) {
+                value *= 2;
+            }
+            return value / 50;
+        }
+
+        // If the primary weapon is not AA-capable, check if we have a secondary weapon that is AA-capable.
+        weapon = SecondaryWeapon;
+        if (weapon) {
+            bullet = weapon->Bullet;
+            warhead = weapon->WarheadPtr;
+
+            if (bullet->IsAntiAircraft) {
+                int value = ((weapon->Attack * warhead->Modifier[ARMOR_ALUMINUM]) * weapon->Range) / weapon->ROF;
+
+                return value / 50;
+            }
+        }
+    }
+    return (0);
+}
+
+
 /**
  *  Fixes a bug where placed buildings are not revealed for allies.
  *
@@ -3242,6 +3282,69 @@ DEFINE_HOOK(0x0062AB5E, _TechnoClass_Revealed_Look_For_Allies_Patch, 0)
     return 0x0062AB68;
 }
 
+
+/**
+ *  Implements flashing for the Iron Curtain.
+ *
+ *  Author: tomsons26/ZivDero for original function code, Rampastring for Iron Curtain effect.
+ */
+int TechnoClassExt::_Apparent_Brightness(int brightness) const
+{
+    TechnoClassExtension* technoext = Extension::Fetch(this);
+    
+    if (technoext->IronCurtainTimer > 0)
+    {
+        int index = (technoext->IronCurtainTimer.Value() / RuleExtension->IronCurtainFlashRate) % RuleExtension->IronCurtainPulseTable.Count();
+        int extra = RuleExtension->IronCurtainPulseTable[index] * RuleExtension->IronCurtainFlashIntensityMultiplier;
+        int total = brightness + extra;
+        if (total < 0)
+            total = 0;
+    
+        return total;
+    }
+
+    if (((FlashCount / 2) % 2) == 1) {
+        return(brightness > 1500 ? 500 : 2000);
+    }
+    else {
+        return(brightness);
+    }
+}
+
+
+void TechnoClassExt::_Flashing_AI()
+{
+    int flash = FlashCount;
+    unsigned b = ((FlashCount / 2) % 2) == 1;
+    TechnoClassExtension* technoext = Extension::Fetch(this);
+
+    if (FlasherClass::Process() || technoext->IronCurtainTimer > 0) {
+        Mark(MARK_CHANGE);
+    }
+
+    if (RTTI == RTTI_BUILDING && (technoext->IronCurtainTimer > 0 || (flash && flash != FlashCount)))
+    {
+        unsigned b2 = ((FlashCount / 2) % 2) == 1;
+        if (b != (unsigned char)b2) {
+            TacticalMap->Register_Dirty_Area(entry_118(), false);
+            ((BuildingClass*)this)->Update_Anim_Appearance();
+        }
+    }
+}
+
+/**
+ *  Makes the game redraw an object while it is flashing with the Iron Curtain effect.
+ *
+ *  Author: Rampastring
+ */
+DEFINE_HOOK(0x0062ECE3, _TechnoClass_AI_Iron_Curtain_Flash_Redraw_Patch, 0)
+{
+    GET(TechnoClassExt*, this_ptr, ESI);
+
+    this_ptr->_Flashing_AI();
+
+    return 0x0062ED7A;
+}
 
 
 /**
@@ -3274,8 +3377,5 @@ void TechnoClassExtension_Hooks()
     Patch_Jump(0x0062FD70, &TechnoClassExt::_Assign_Target);
     Patch_Jump(0x0062D0F0, &TechnoClassExt::_Evaluate_Object);
     Patch_Jump(0x006380F0, &TechnoClassExt::_Anti_Air);
-    Patch_Jump(0x00631365, _TechnoClass_Fire_At_No_Reveal_When_Firing_At_Spawned_Unit_Patch);
-    Patch_Jump(0x0062AB5E, _TechnoClass_Revealed_Look_For_Allies_Patch);
     Patch_Jump(0x00639C70, &TechnoClassExt::_Apparent_Brightness);
-    Patch_Jump(0x0062ECE3, &_TechnoClass_AI_Iron_Curtain_Flash_Redraw_Patch);
 }

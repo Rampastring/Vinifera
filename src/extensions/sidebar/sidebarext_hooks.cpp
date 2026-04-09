@@ -2005,20 +2005,8 @@ void StripClassExt::_Draw_It(bool complete)
                 if (overbutton && !Scen->InputLock && !darken)
                 {
                     Rect cameo_hover_rect(x, SidebarRect.Y + y, OBJECT_WIDTH, OBJECT_HEIGHT - 3);
-
-                    ColorScheme* colorscheme = nullptr;
-
-                    if (ScenExtension->CachedUIColorSchemeIndex > -1)
-                    {
-                        colorscheme = ColorSchemes[ScenExtension->CachedUIColorSchemeIndex];
-                    }
-                    else
-                    {
-                        const ColorSchemeType colorschemetype = Extension::Fetch(Sides[PlayerPtr->Class->Side])->UIColor;
-                        colorscheme = ColorSchemes[colorschemetype];
-                    }
-
-                    SidebarSurface->Draw_Rect(cameo_hover_rect, DSurface::Build_Hicolor_Pixel(colorscheme->HSV.operator RGBClass()));
+                    const ColorSchemeType colorschemetype = Extension::Fetch(Sides[PlayerPtr->Class->Side])->UIColor;
+                    SidebarSurface->Draw_Rect(cameo_hover_rect, DSurface::Build_Hicolor_Pixel(ColorSchemes[colorschemetype]->HSV.operator RGBClass()));
                 }
 
                 /**

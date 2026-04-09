@@ -545,18 +545,15 @@ void Draw_Tib(CellClass* cellptr, TiberiumClass* tib, Point2D point, Rect* windo
 }
 
 
-DECLARE_PATCH(_CellClass_Draw_Overlay_Tiberium_Patch)
+DEFINE_HOOK(0x00455973, _CellClass_Draw_Overlay_Tiberium, 0)
 {
-    GET_REGISTER_STATIC(CellClass*, this_ptr, esi);
-    GET_REGISTER_STATIC(TiberiumClass*, tib, ebp);
-    static int pointptr;
-    _asm { lea  eax, [esp + 0x18] }
-    _asm { mov pointptr, eax }
-    //GET_STACK_STATIC(void*, pointptr, esp, 0x18);
-    GET_REGISTER_STATIC(Rect*, rect, ebx);
-    GET_REGISTER_STATIC(int, height, edi);
-    Draw_Tib(this_ptr, tib, *(Point2D*)pointptr, rect, height);
-    JMP_REG(ecx, 0x00455B26);
+    GET(CellClass*, this_ptr, ESI);
+    GET(TiberiumClass*, tib, EBP);
+    GET(Rect*, rect, EBX);
+    GET(int, height, EDI);
+    LEA_STACK(Point2D*, point, 0x18);
+    Draw_Tib(this_ptr, tib, *point, rect, height);
+    return 0x00455B26;
 }
 
 
@@ -571,6 +568,4 @@ void CellClassExtension_Hooks()
     Patch_Jump(0x004594D0, &CellClassExt::_Spread_Tiberium);
     Patch_Jump(0x00459A00, &CellClassExt::_Recalc_Passability);
     Patch_Jump(0x00456BF0, &CellClassExt::_Reduce_Tiberium);
-    Patch_Jump(0x004531E4, &_CellClass_Update_Wall_Owner_Skip_Buildings_That_Cannot_Own_Walls_Patch);
-    Patch_Jump(0x00455973, &_CellClass_Draw_Overlay_Tiberium_Patch);
 }

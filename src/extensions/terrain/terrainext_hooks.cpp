@@ -248,24 +248,20 @@ CellClass* Get_Terrain_Cell(TerrainClass* terrain) { return &Map[terrain->Positi
  *
  *  @author: Rampastring
  */
-DECLARE_PATCH(_TerrainClass_Unlimbo_No_Overlay_Erase_Patch)
+DEFINE_HOOK(0x00640991, _TerrainClass_Unlimbo_No_Overlay_Erase, 0)
 {
-    GET_REGISTER_STATIC(TerrainClass *, this_ptr, edi);
-    GET_REGISTER_STATIC(TerrainTypeClass *, terraintype, eax);
-    // didn't work for some reason, maybe I don't know enough about C++ syntax
-    // GET_STACK_STATIC(Coord*, coord, esp, 0x1C);
-    static CellClass* cellptr;
-    static OverlayTypeClass* overlaytype;
+    GET(TerrainClass *, this_ptr, EDI);
+    GET(TerrainTypeClass *, terraintype, EAX);
 
     /**
      *  Stolen bytes/code.
      *  Skip erasing overlay if the terrain type does not spawn Tiberium.
      */
     if (!terraintype->IsTiberiumSpawn) {
-        goto continue_function;
+        return 0x006409C3;
     }
 
-    cellptr = Get_Terrain_Cell(this_ptr);
+    CellClass* cellptr = Get_Terrain_Cell(this_ptr);
 
     /**
      *  Fetch the overlay type.
@@ -273,7 +269,7 @@ DECLARE_PATCH(_TerrainClass_Unlimbo_No_Overlay_Erase_Patch)
      */
     if (cellptr->Overlay != OVERLAY_NONE)
     {
-        overlaytype = OverlayTypes[cellptr->Overlay];
+        OverlayTypeClass* overlaytype = OverlayTypes[cellptr->Overlay];
         if (overlaytype->IsTiberium)
         {
             cellptr->Overlay = OVERLAY_NONE;
@@ -284,8 +280,7 @@ DECLARE_PATCH(_TerrainClass_Unlimbo_No_Overlay_Erase_Patch)
     /**
      *  Return "true" from function.
      */
-continue_function:
-    JMP(0x006409C3);
+    return 0x006409C3;
 }
 
 
@@ -300,5 +295,4 @@ void TerrainClassExtension_Hooks()
     TerrainClassExtension_Init();
 
     Patch_Jump(0x0063FFB0, &TerrainClassExt::_AI);
-    Patch_Jump(0x00640991, &_TerrainClass_Unlimbo_No_Overlay_Erase_Patch);
 }

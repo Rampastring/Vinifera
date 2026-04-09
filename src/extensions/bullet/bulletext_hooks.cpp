@@ -629,26 +629,16 @@ void BulletClass_AI_Homing_Reimplementation(BulletClass* this_ptr)
 }
 
 
-DECLARE_PATCH(_BulletClass_AI_Jump_To_Custom_Function_If_ROT_Over_Zero)
+DEFINE_HOOK(0x00444A3E, _BulletClass_AI_Jump_To_Custom_Function_If_ROT_Over_Zero, 6)
 {
-    GET_REGISTER_STATIC(BulletClass*, this_ptr, ebp);
+    GET(BulletClass*, this_ptr, EBP);
+
     if (!this_ptr->Class->IsVeryHigh && !this_ptr->Class->IsSplits && this_ptr->Class->ROT < 100 && this_ptr->Class->Arming != 1000) {
         BulletClass_AI_Homing_Reimplementation(this_ptr);
-    }
-    else {
-        // original code
-        _asm { mov ecx, [ebp + 0xA8] }
-        JMP(0x00444A44);
+        return 0x00445B5A;
     }
 
-    // Return from function
-    _asm { pop edi }
-    _asm { pop esi }
-    _asm { pop ebp }
-    _asm { pop ebx }
-    _asm { mov esp, ebp }
-    _asm { pop ebp }
-    _asm { retn }
+    return 0;
 }
 
 
@@ -797,6 +787,7 @@ int BulletClassExt::_Shape_Number()
 }
 
 
+#if false
 static void _BulletClass_AI_Custom_Implementation(BulletClass* this_ptr)
 {
     BulletClassExt* converted = reinterpret_cast<BulletClassExt*>(this_ptr);
@@ -804,25 +795,24 @@ static void _BulletClass_AI_Custom_Implementation(BulletClass* this_ptr)
 }
 
 
-DECLARE_PATCH(_BulletClass_AI_Intercept)
+DECLARE_PATCH(0x00444702, _BulletClass_AI_Intercept, 0)
 {
-    GET_REGISTER_STATIC(BulletClass*, this_ptr, ebp);
-    static BulletTypeClassExtension* bullettypeext;
+    GET(BulletClass*, this_ptr, ebp);
 
-    bullettypeext = Extension::Fetch(this_ptr->Class);
+    BulletTypeClassExtension* bullettypeext = Extension::Fetch(this_ptr->Class);
 
     if (false /*bullettypeext->UseCustomProjectileLogic*/) {
 
         _BulletClass_AI_Custom_Implementation(this_ptr);
         // Jump to end of function
-        JMP_REG(ecx, 0x00445B5A); 
+        return 0x00445B5A; 
     }
 
     // Stolen bytes / code
-    _asm { mov  ecx, ebp }
-    CALL(0x00584C10); // ObjectClass::AI
-    JMP_REG(ecx, 0x00444707); // Jump to IsActive check
+    this_ptr->ObjectClass::AI();
+    return 0x00444707; // Jump to IsActive check
 }
+#endif
 
 /**
  *  Main function for patching the hooks.
@@ -830,9 +820,5 @@ DECLARE_PATCH(_BulletClass_AI_Intercept)
 void BulletClassExtension_Hooks()
 {
     Patch_Jump(0x004462C0, &BulletClassExt::_Is_Forced_To_Explode);
-    // Patch_Jump(0x00444702, &_BulletClass_AI_Intercept);
-    Patch_Jump(0x00446652, &_BulletClass_Logic_ShakeScreen_Patch);
-    Patch_Jump(0x004447BF, &_BulletClass_AI_SpawnDelay_Patch);
-    Patch_Jump(0x00444A3E, &_BulletClass_AI_Jump_To_Custom_Function_If_ROT_Over_Zero);
     Patch_Jump(0x00445B70, &BulletClassExt::_Shape_Number);
 }

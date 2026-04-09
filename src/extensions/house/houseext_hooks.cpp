@@ -3793,7 +3793,7 @@ void HouseClass_MPlayer_Defeated_Mark_Player_Win_Or_Loss()
  *
  *  Author: Rampastring
  */
-DEFINE_HOOK(0x004BC855, _HouseClass_MPlayer_Defeated_Flag_Win_Or_Lose, 0)
+DEFINE_HOOK(0x004BF8BD, _HouseClass_MPlayer_Defeated_Flag_Win_Or_Lose, 0)
 {
     HouseClass_MPlayer_Defeated_Mark_Player_Win_Or_Loss();
 
@@ -3958,43 +3958,42 @@ bool Passes_Additional_Validity_Checks(TechnoTypeClass* technotype, HouseClass* 
  *
  *  Author: Rampastring
  */
-DECLARE_PATCH(_HouseClass_Begin_Production_Check_For_Unallowed_Buildables)
+DEFINE_HOOK(0x004BE218, _HouseClass_Begin_Production_Check_For_Unallowed_Buildables, 0)
 {
-    GET_REGISTER_STATIC(TechnoTypeClass*, technotype, eax);
-    GET_REGISTER_STATIC(HouseClass*, this_ptr, ebp);
-    static BuildingClass* factorybuilding;
+    GET(TechnoTypeClass*, technotype, EAX);
+    GET(HouseClass*, this_ptr, EBP);
 
     // Restore stolen code / bytes.
-    _asm { mov  edi, eax }
+    R->EDI(technotype);
 
     if (!Passes_Additional_Validity_Checks(technotype, this_ptr)) {
         // Additional production validity check failed, exit from function.
-        JMP(0x004BE28D);
+        return 0x004BE28D;
     }
 
-    factorybuilding = technotype->Who_Can_Build_Me(false, true, true, this_ptr);
+    BuildingClass* factorybuilding = technotype->Who_Can_Build_Me(false, true, true, this_ptr);
 
     // Continue original game code.
-    _asm { mov  eax, dword ptr ds:factorybuilding }
-    JMP_REG(edx, 0x004BE22B);
+    R->EAX(factorybuilding);
+    return 0x004BE22B;
 }
 
 
-DECLARE_PATCH(_HouseClass_AI_AdvAI_Team_Production_Patch)
+DEFINE_HOOK(0x004BC9D4, _HouseClass_AI_AdvAI_Team_Production, 0)
 {
-    GET_REGISTER_STATIC(HouseClass*, this_ptr, esi);
+    GET(HouseClass*, this_ptr, ESI);
 
     if (RuleExtension->AdvancedAIUnitProduction) {
         // Skip TeamDelay processing for Advanced AI.
-        JMP(0x004BCAA0);
+        return 0x004BCAA0;
     }
 
     // Stolen bytes / code.
     if (this_ptr->TeamTime.Expired()) {
-        JMP(0x004BC9FD);
+        return 0x004BC9FD;
     }
 
-    JMP(0x004BCAA0);
+    return 0x004BCAA0;
 }
 
 /**
@@ -4278,13 +4277,7 @@ void HouseClassExtension_Hooks()
     Patch_Jump(0x004BF180, &HouseClassExt::_Suggest_New_Object);
     Patch_Jump(0x004BD590, &HouseClassExt::_Harvested);
 
-    Patch_Jump(0x004C0F87, &_HouseClass_AI_Raise_Money_Fix_Memory_Corruption);
-
-    Patch_Jump(0x004BF8BD, &_HouseClass_MPlayer_Defeated_Flag_Win_Or_Lose);
     Patch_Jump(0x004CA4A0, &HouseClassExt::_AI_Target_MultiMissile);
-    Patch_Jump(0x004C0F87, &_HouseClass_AI_Raise_Money_Fix_Memory_Corruption);
-    Patch_Jump(0x004BE218, &_HouseClass_Begin_Production_Check_For_Unallowed_Buildables);
 
-    Patch_Jump(0x004BC9D4, &_HouseClass_AI_AdvAI_Team_Production_Patch);
     Patch_Jump(0x004C9EA0, &HouseClassExt::_AI_Super_Weapons);
 }
