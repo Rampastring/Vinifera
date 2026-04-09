@@ -3747,7 +3747,13 @@ bool HouseClassExt::_AI_Has_Prerequisites(const TechnoTypeClass* type, DynamicVe
 }
 
 
-void HouseClass_MPlayer_Defeated_Mark_Player_Win_Or_Loss()
+/**
+ *  Fixes a bug where the local player could be considered "lost" (Do_Lose was called)
+ *  when a multiplayer match ended with the last enemy getting defeated.
+ *
+ *  Author: Rampastring
+ */
+DEFINE_HOOK(0x004BF8BD, _HouseClass_MPlayer_Defeated_Flag_Win_Or_Lose, 0)
 {
     // The match has ended due to player defeat because there is only one team left.
     // Consider the player as having won if they are not defeated, OR in case of multiplayer,
@@ -3767,8 +3773,7 @@ void HouseClass_MPlayer_Defeated_Mark_Player_Win_Or_Loss()
             **	Get a pointer to this house
             */
             HouseClass* hptr = Houses[i];
-            if (!hptr || hptr->IsDefeated || !hptr->IsHuman || hptr->Class->IsMultiplayPassive)
-                continue;
+            if (!hptr || hptr->IsDefeated || !hptr->IsHuman || hptr->Class->IsMultiplayPassive) continue;
 
             if (PlayerPtr->Is_Ally(hptr)) {
                 localplayerwon = true;
@@ -3784,18 +3789,6 @@ void HouseClass_MPlayer_Defeated_Mark_Player_Win_Or_Loss()
         DEBUG_INFO("MPlayer_Defeated: Flagging local player as lost.\n");
         PlayerPtr->Flag_To_Lose(false);
     }
-}
-
-
-/**
- *  Fixes a bug where the local player could be considered "lost" (Do_Lose was called)
- *  when a multiplayer match ended with the last enemy getting defeated.
- *
- *  Author: Rampastring
- */
-DEFINE_HOOK(0x004BF8BD, _HouseClass_MPlayer_Defeated_Flag_Win_Or_Lose, 0)
-{
-    HouseClass_MPlayer_Defeated_Mark_Player_Win_Or_Loss();
 
     return 0x004BF8E3;
 }

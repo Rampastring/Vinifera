@@ -862,8 +862,7 @@ FireErrorType TechnoClassExt::_Can_Fire(AbstractClass * target, WeaponSlotType w
     /**
      *  If the object has an armor type that this unit's warhead is forbidden to fire at, bail.
      */
-    if (techno && !Verses::Get_ForceFire(techno->TClass->Armor, weapon->WarheadPtr))
-        return FIRE_ILLEGAL;
+    if (techno && !Verses::Get_ForceFire(techno->TClass->Armor, weapon->WarheadPtr)) return FIRE_ILLEGAL;
 
     /**
      *  The target must be within range in order to allow firing.
