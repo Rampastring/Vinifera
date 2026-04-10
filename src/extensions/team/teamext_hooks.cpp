@@ -25,34 +25,32 @@
  *                 If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
+
+#include "always.h"
+
 #include "teamext_hooks.h"
-#include "teamext_init.h"
-#include "teamext.h"
-#include "team.h"
-#include "teamtype.h"
-#include "technoext.h"
-#include "building.h"
-#include "cell.h"
-#include "foot.h"
-#include "footext.h"
-#include "house.h"
-#include "rulesext.h"
-#include "tag.h"
-#include "taskforce.h"
-#include "technotypeext.h"
-#include "weapontype.h"
-#include "extension.h"
-#include "iomap.h"
-#include "fatal.h"
-#include "debughandler.h"
+
 #include "asserthandler.h"
 #include "building.h"
-
+#include "cell.h"
+#include "extension.h"
+#include "foot.h"
+#include "footext.h"
 #include "hooker.h"
+#include "house.h"
+#include "iomap.h"
+#include "rulesext.h"
 #include "scripttype.h"
 #include "syringe.h"
+#include "tag.h"
+#include "taskforce.h"
+#include "team.h"
+#include "teamext.h"
+#include "teamext_init.h"
 #include "teamtype.h"
+#include "technotypeext.h"
 #include "vinifera_defines.h"
+#include "weapontype.h"
 
 
 /**

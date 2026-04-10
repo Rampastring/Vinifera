@@ -25,32 +25,29 @@
  *                 If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
+
+#include "always.h"
+
 #include "superext_hooks.h"
-#include "superext_init.h"
-#include "superext.h"
+
 #include "aircraft.h"
 #include "aircraftext.h"
-#include "aircrafttype.h"
+#include "building.h"
+#include "extension.h"
+#include "hooker.h"
 #include "house.h"
-#include "infantrytype.h"
+#include "housetype.h"
 #include "mouse.h"
 #include "reinf.h"
 #include "scenarioext.h"
 #include "scripttype.h"
+#include "sideext.h"
+#include "superext.h"
+#include "superext_init.h"
+#include "syringe.h"
 #include "taskforce.h"
 #include "teamtype.h"
-#include "fatal.h"
-#include "asserthandler.h"
-#include "debughandler.h"
-#include "extension.h"
 #include "unit.h"
-#include "house.h"
-#include "housetype.h"
-#include "sideext.h"
-#include "building.h"
-
-#include "hooker.h"
-#include "syringe.h"
 
 
 /**

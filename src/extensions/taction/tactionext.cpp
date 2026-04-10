@@ -25,33 +25,34 @@
  *                 If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
+
+#include "always.h"
+
 #include "tactionext.h"
-#include "taction.h"
+
 #include "building.h"
-#include "house.h"
-#include "object.h"
-#include "vinifera_defines.h"
-#include "wwcrc.h"
-#include "asserthandler.h"
 #include "debughandler.h"
+#include "house.h"
 #include "houseext.h"
 #include "housetype.h"
+#include "msgbox.h"
+#include "object.h"
 #include "rules.h"
 #include "scenario.h"
 #include "scenarioext.h"
 #include "session.h"
 #include "tacticalext.h"
+#include "taction.h"
 #include "tag.h"
 #include "tagtype.h"
-#include "teamtype.h"
 #include "techno.h"
 #include "technoext.h"
 #include "tibsun_inline.h"
 #include "trigger.h"
 #include "triggertype.h"
+#include "vinifera_defines.h"
 #include "vinifera_globals.h"
 #include "voc.h"
-#include "msgbox.h"
 
 
 TActionClass::ActionDescriptionStruct TActionClassExtension::ExtActionDescriptions[EXT_TACTION_COUNT - EXT_TACTION_FIRST] = {

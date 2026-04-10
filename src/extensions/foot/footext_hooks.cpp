@@ -25,60 +25,55 @@
  *                 If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
+
+#include "always.h"
+
 #include "footext_hooks.h"
 
 #include "aircrafttracker.h"
-#include "foot.h"
-#include "technoext.h"
-#include "technotype.h"
-#include "technotypeext.h"
-#include "tibsun_defines.h"
-#include "tibsun_inline.h"
-#include "tibsun_functions.h"
-#include "tibsun_globals.h"
-#include "tactical.h"
-#include "textprint.h"
+#include "asserthandler.h"
 #include "clipline.h"
-#include "convert.h"
 #include "coord.h"
+#include "debughandler.h"
+#include "extension.h"
+#include "foot.h"
+#include "hooker.h"
 #include "house.h"
 #include "infantry.h"
 #include "iomap.h"
-#include "rules.h"
-#include "rulesext.h"
-#include "session.h"
-#include "script.h"
-#include "scripttype.h"
-#include "team.h"
-#include "teamext.h"
-#include "teamtypeext.h"
-#include "terrain.h"
-#include "terraintype.h"
-#include "unit.h"
-#include "unitext.h"
-#include "unittype.h"
-#include "warheadtype.h"
-#include "weapontype.h"
-#include "extension.h"
-#include "fatal.h"
-#include "asserthandler.h"
-#include "debughandler.h"
-#include "msgbox.h"
-
-#include "hooker.h"
 #include "ionstorm.h"
 #include "levitatelocomotion.h"
 #include "radarevent.h"
+#include "rulesext.h"
+#include "script.h"
+#include "scripttype.h"
+#include "session.h"
 #include "syringe.h"
+#include "tactical.h"
+#include "team.h"
+#include "teamext.h"
+#include "teamtypeext.h"
+#include "technoext.h"
+#include "technotype.h"
+#include "technotypeext.h"
+#include "terrain.h"
+#include "terraintype.h"
+#include "tibsun_globals.h"
+#include "tibsun_inline.h"
 #include "uicontrol.h"
+#include "unit.h"
+#include "unitext.h"
+#include "unittype.h"
 #include "vinifera_globals.h"
 #include "vox.h"
+#include "warheadtype.h"
+#include "weapontype.h"
 
 
 /**
  *  A fake class for implementing new member functions which allow
  *  access to the "this" pointer of the intended class.
- * 
+ *
  *  @note: This must not contain a constructor or destructor!
  *  @note: All functions must be prefixed with "_" to prevent accidental virtualization.
  */

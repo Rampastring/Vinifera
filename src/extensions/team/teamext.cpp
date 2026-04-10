@@ -25,22 +25,19 @@
  *                 If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
+
+#include "always.h"
+
 #include "teamext.h"
+
+#include "ccini.h"
+#include "extension.h"
+#include "rulesext.h"
 #include "team.h"
 #include "teamtype.h"
-#include "foot.h"
-#include "houseext.h"
-#include "rulesext.h"
-#include "technotypeext.h"
-#include "unit.h"
-#include "ccini.h"
 #include "tibsun_inline.h"
-#include "vinifera_globals.h"
 #include "vinifera_saveload.h"
 #include "wwcrc.h"
-#include "extension.h"
-#include "asserthandler.h"
-#include "debughandler.h"
 
 
 /**

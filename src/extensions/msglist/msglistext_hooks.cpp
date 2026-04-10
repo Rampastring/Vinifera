@@ -25,24 +25,19 @@
  *                 If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
-#include "msglistext_hooks.h"
-#include "vinifera_globals.h"
-#include "tibsun_globals.h"
-#include "session.h"
-#include "msglist.h"
-#include "house.h"
-#include "housetype.h"
-#include "uicontrol.h"
-#include "rules.h"
-#include "fatal.h"
-#include "optionsext.h"
-#include "gadget.h"
-#include "txtlabel.h"
-#include "debughandler.h"
-#include "asserthandler.h"
 
+#include "always.h"
+
+#include "msglistext_hooks.h"
+
+#include "debughandler.h"
+#include "extension_globals.h"
 #include "hooker.h"
+#include "msglist.h"
+#include "optionsext.h"
 #include "syringe.h"
+#include "txtlabel.h"
+#include "uicontrol.h"
 
 class MessageListClassExt final : public MessageListClass
 {
