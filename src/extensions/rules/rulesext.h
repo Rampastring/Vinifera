@@ -140,6 +140,11 @@ public:
     int AINavalYardAdjacency;
 
     /**
+     *  Should the AI automatically repair buildings built as Base Nodes?
+     */
+    bool AIRepairBaseNodes;
+
+    /**
      *  The "double penalty" or "half penalty". Multiply this by the power
      *  units you are short of to get the actual penalty to the build speed.
      */
@@ -196,6 +201,18 @@ public:
     VocType PlaceBeaconSound;
     VoxType PlaceBeaconVoice;
     VoxType DetectBeaconVoice;
+
+    /**
+     *  Defines the game-wide cap (in percentages) that technos can self-heal.
+     *  This is the default used by technos that don't have this key explicitly specified for them.
+     */
+    double SelfHealingCap;
+
+    /**
+     *  Defines the game-wide rate (in minutes) that technos will self-heal.
+     *  This is the default used by technos that don't have this key explicitly specified for them.
+     */
+    double SelfHealingRate;
 
     /**
      *  Is LandType Beach considered as "requires crushing" for passability purposes, as opposed to water?

@@ -90,6 +90,7 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     IsRecheckPrerequisites(false),
     IsMultiMCV(false),
     AINavalYardAdjacency(20),
+    AIRepairBaseNodes(false),
     LowPowerPenaltyModifier(1.0f),
     MultipleFactoryCap(0),
     VoxelLightAzimuth(0),
@@ -106,6 +107,8 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     PlaceBeaconSound(VOC_NONE),
     PlaceBeaconVoice(VOX_NONE),
     DetectBeaconVoice(VOX_NONE),
+    SelfHealingCap(-1),
+    SelfHealingRate(-1),
     IsBeachIsCrush(false),
     BuildingFlameSpawnBlockFrames(0),
     StrengthenDestroyedValueThreshold(0),
@@ -342,6 +345,7 @@ void RulesClassExtension::Object_CRC(CRCEngine &crc) const
     crc(IsRecheckPrerequisites);
     crc(IsMultiMCV);
     crc(AINavalYardAdjacency);
+    crc(AIRepairBaseNodes);
     crc(BuildingFlameSpawnBlockFrames);
     crc(StrengthenDestroyedValueThreshold);
     crc(StrengthenBuildingValueMultiplier);
@@ -795,6 +799,8 @@ bool RulesClassExtension::General(CCINIClass &ini)
     IsBeaconsEnabled = ini.Get_Bool(GENERAL, "BeaconsEnabled", IsBeaconsEnabled);
     IsSPBeacons = ini.Get_Bool(GENERAL, "SPBeacons", IsSPBeacons);
     MaxBeacons = ini.Get_Int(GENERAL, "MaxBeacons", MaxBeacons);
+    SelfHealingCap = ini.Get_Float(GENERAL, "SelfHealingCap", SelfHealingCap);    
+    SelfHealingRate = ini.Get_Float(GENERAL, "SelfHealingRate", SelfHealingRate);
 
     /**
      *  Allow replacing any signle movement zone with a copy of RA2's water MZone.
@@ -905,6 +911,7 @@ bool RulesClassExtension::AI(CCINIClass& ini)
     }
 
     AINavalYardAdjacency = ini.Get_Int(AI, "AINavalYardAdjacency", AINavalYardAdjacency);
+    AIRepairBaseNodes = ini.Get_Bool(AI, "AIRepairBaseNodes", AIRepairBaseNodes);
     IsUseAdvancedAI = ini.Get_Bool(AI, "UseAdvancedAI", IsUseAdvancedAI);
     IsAdvancedAIMultiConYard = ini.Get_Bool(AI, "AdvancedAIMultiConYard", IsAdvancedAIMultiConYard);
     AdvancedAIMaxExpansionDistance = ini.Get_Int(AI, "AdvancedAIMaxExpansionDistance", AdvancedAIMaxExpansionDistance);
