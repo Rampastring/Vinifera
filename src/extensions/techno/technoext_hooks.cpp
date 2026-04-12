@@ -65,6 +65,7 @@
 #include "fatal.h"
 #include "asserthandler.h"
 #include "buildingext.h"
+#include "buildingtypeext.h"
 #include "debughandler.h"
 #include "drawshape.h"
 #include "cell.h"
@@ -1856,56 +1857,6 @@ int TechnoClassExt::_How_Many_Survivors() const
 
 
 /**
- *  #issue-977
- *
- *  Adds check for IsLegalTargetComputer when evaluating a target for attacking.
- *
- *  @author: CCHyper
- */
-DECLARE_PATCH(_TechnoClass_Evaluate_Object_Is_Legal_Target_Patch)
-{
-    GET_REGISTER_STATIC(TechnoClass *, this_ptr, edi);
-    GET_REGISTER_STATIC(const TechnoClass *, object, esi); // The target object being evaluated.
-    static TechnoClassExtension *this_technoext;
-    static TechnoClassExtension *object_technoext;
-    static const TechnoTypeClass *object_tclass;
-    static const TechnoTypeClassExtension *object_tclassext;
-
-    //this_technoext = Extension::Fetch(this_ptr);
-    //object_technoext = Extension::Fetch(object);
-
-    object_tclass = object->TClass;
-    object_tclassext = Extension::Fetch(object_tclass);
-
-    /**
-     *  Determine if the target is theoretically allowed to be a target.
-     */
-    if (!object_tclass->IsLegalTarget) {
-        goto return_false;
-    }
-
-    /**
-     *  Now, determine if "we" are owned by a non-human house and the target is not theoretically allowed to be a target.
-     */
-    if (!this_ptr->House->Is_Human_Player() && !object_tclassext->IsLegalTargetComputer) {
-        goto return_false;
-    }
-
-    /**
-     *  Target object passed the "theoretical" check, for now...
-     */
-continue_eval:
-    JMP_REG(edx, 0x0062D4D8);
-
-    /**
-     *  Target object is not a "theoretically legal" target.
-     */
-return_false:
-    JMP_REG(edx, 0x0062D8C0);
-}
-
-
-/**
  *  Adds check for if the warhead forbids passively acquiring this unit.
  *
  *  @author: ZivDero
@@ -2952,40 +2903,6 @@ bool _TechnoClass_Evaluate_Object_Zone_Evaluation_Is_Valid_Target(TechnoClass co
 
 
 /**
- *  #issue-1161
- *
- *  Makes Technos consider their TargetZoneScan when potential targets are in a
- *  different movement zone. Makes the AI smarter when targeting objects on different
- *  movement zones (for example, ships targeting ground targets).
- *  Implementation inspired by respective feature for the "Phobos" Yuri's Revenge engine extension.
- *
- *  @author: Rampastring
- */
-DECLARE_PATCH(_TechnoClass_Evaluate_Object_Zone_Evaluation_TargetZoneScanType_Patch)
-{
-    GET_REGISTER_STATIC(int, targetzone, eax);
-    GET_REGISTER_STATIC(int, ourzone, ebp);
-    GET_REGISTER_STATIC(TechnoClass *, target, esi);
-    GET_REGISTER_STATIC(TechnoClass*, this_ptr, edi);
-
-    enum {
-        Continue = 0x0062D220,
-        InvalidTarget = 0x0062D8C0
-    };
-
-    if (targetzone == ourzone) {
-        JMP(Continue);
-    }
-
-    if (!_TechnoClass_Evaluate_Object_Zone_Evaluation_Is_Valid_Target(this_ptr, target, ourzone, targetzone)) {
-        JMP(InvalidTarget);
-    }
-
-    JMP(Continue);
-}
-
-
-/**
  *  Custom Evaluate_Object implementation to allow player-owned defenses to target
  *  enemy defenses without ignoring weaponless objects.
  *
@@ -3110,6 +3027,7 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
         return(false);
     }
 
+    // If the object is a building, check if we are allowed to target it without explicit orders.
     if (object->RTTI == RTTI_BUILDING) {
 
         const BuildingClass* bldg = reinterpret_cast<const BuildingClass*>(object);
@@ -3117,10 +3035,16 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
         if (bldg->Class->IsInvisibleInGame)
             return(false);
 
-        // Port over ts-patches hack that makes buildings not targeted by default if they have a weapon with a range of 0.
-        const WeaponTypeClass* bldgweapon = bldg->Class->Fetch_Weapon_Info(WEAPON_SLOT_PRIMARY).Weapon;
-        if (bldgweapon != nullptr && bldgweapon->Range == 0) {
-            return false;
+        if (!Extension::Fetch(bldg->Class)->IsDefaultTarget) {
+
+            // This object is likely a neutral-owned explosive object, like an oil derrick. Skip it.
+            if (bldg->House->Class->IsMultiplayPassive) {
+                return false;
+            }
+
+            if (House->Is_Human_Player()) {
+                return false;
+            }
         }
     }
 
@@ -3144,6 +3068,17 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
     TechnoTypeClass const* tclass = object->TClass;
     if (!tclass->IsLegalTarget) {
         return(false);		// Legality failure.
+    }
+
+    /**
+     *  #issue-977
+     *
+     *  Determine if "we" are owned by a non-human house and the target is not theoretically allowed to be a target.
+     *
+     *  @author: CCHyper
+     */
+    if (!House->Is_Human_Player() && !Extension::Fetch(tclass)->IsLegalTargetComputer) {
+        return false;
     }
 
     if (tclass->IsTrain && RTTI == RTTI_INFANTRY && ((InfantryClass*)this)->Class->IsVehicleThief) {
@@ -3522,7 +3457,6 @@ void TechnoClassExtension_Hooks()
     Patch_Jump(0x00631661, &_TechnoClass_Player_Assign_Mission_Response_Patch);
     Patch_Jump(0x00630390, &_TechnoClass_Fire_At_Suicide_Patch);
     Patch_Jump(0x00631223, &_TechnoClass_Fire_At_Electric_Bolt_Patch);
-    Patch_Jump(0x0062D4CA, &_TechnoClass_Evaluate_Object_Is_Legal_Target_Patch);
     Patch_Jump(0x00637540, &TechnoClassExt::_Draw_Pips);
     Patch_Jump(0x0062A0D0, &TechnoClassExt::_What_Weapon_Should_I_Use);
     Patch_Jump(0x00636F00, &TechnoClassExt::_Is_Allowed_To_Retaliate);
@@ -3554,7 +3488,6 @@ void TechnoClassExtension_Hooks()
     Patch_Jump(0x006336F0, &TechnoClassExt::_Record_The_Kill);
     //Patch_Jump(0x0062A3D0, &TechnoClassExt::_Fire_Coord); // Disabled because it's functionally identical to the vanilla function when there's no secondary coordinate
     Patch_Jump(0x00633745, (uintptr_t)0x00633762); // Do not trigger "Discovered by Player" when an object is destroyed
-    Patch_Jump(0x0062D218, &_TechnoClass_Evaluate_Object_Zone_Evaluation_TargetZoneScanType_Patch);
     Patch_Jump(0x0062A970, &TechnoClassExt::_Time_To_Build);
     Patch_Jump(0x0062FD70, &TechnoClassExt::_Assign_Target);
     Patch_Jump(0x0062D0F0, &TechnoClassExt::_Evaluate_Object);
