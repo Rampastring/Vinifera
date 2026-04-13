@@ -1839,7 +1839,7 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         // For SHP turrets with recoil
 
         // Draw main shape
-        Draw_Object(shapefile, shapenum, xdrawpoint, xcliprect, DIR_N, 256, 0, ZGRAD_GROUND, 0, brightness, NULL, 0, Point2D(0, 0), ShapeFlags_Type(SHAPE_NORMAL));
+        Draw_Object(shapefile, shapenum, xdrawpoint, xcliprect, DIR_N, 256, 0, Get_Z_Gradient(), 0, brightness, NULL, 0, Point2D(0, 0), ShapeFlags_Type(SHAPE_NORMAL));
 
         UnitTypeClassExtension* unittypeext = Extension::Fetch(Class);
         int turret_facings = unittypeext->TurretFacings;
