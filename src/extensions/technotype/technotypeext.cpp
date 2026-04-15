@@ -118,7 +118,7 @@ TechnoTypeClassExtension::TechnoTypeClassExtension(const TechnoTypeClass *this_p
     IdleWakeAnim(nullptr),
     IsHideWakeWhenCloaked(false),
     SelfHealingCap(-1),
-    SelfHealingRate(-1)
+    SelfHealingRate(-1),
     Buildability(TechnoTypeBuildability::BUILDABILITY_NORMAL),
     IsDetectDisguise(false),
     IronCurtainPriorityTarget(false)
