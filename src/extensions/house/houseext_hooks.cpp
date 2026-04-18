@@ -1414,7 +1414,7 @@ void AdvAI_Check_Split_And_Commence_Team(TeamClass* team)
                 for (int unitindex = 0; unitindex < RuleExtension->AdvancedAIMaxTeamSize; unitindex++)
                 {
                     if (!other->Add(team->Member)) {
-                        Vinifera_Log_WWMessageBox("AdvAI_Check_Split_And_Commence_Team: Failed to add unit to new team!");
+                        Vinifera_Log_And_Show_WWMessageBox("AdvAI_Check_Split_And_Commence_Team: Failed to add unit to new team!");
                     }
                 }
 
@@ -3383,6 +3383,14 @@ void HouseClassExt::_Active_Add(TechnoClass const* techno)
 Cell HouseClassExt::_Find_Build_Location(BuildingTypeClass* btype, int(__fastcall* callback)(int, Cell&, int, int), int a3)
 {
     // Rampastring: fix edge case crash where this function is called with null btype
+    if (btype == nullptr) {
+        return Cell(0, 0);
+    }
+
+    /**
+     *  Fix an edge case crash where this function is called with a null btype.
+     *  @author: Rampastring
+     */
     if (btype == nullptr) {
         return Cell(0, 0);
     }

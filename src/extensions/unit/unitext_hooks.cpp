@@ -1465,15 +1465,15 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
 
     ColorSchemeType oldscheme = House->Scheme;
 
-    if (RuleExtension->IronCurtainChangeRemap && unitext->IronCurtainTimer > 0)
-    {
-        House->Scheme = Fetch_Scheme_Index_By_Name("IronCurtain", 63);
-        if (House->Scheme < 0) {
-            DEBUG_ERROR("IronCurtainChangeRemap= is set to true, but a color named IronCurtain does not exist!\n");
-            WWMessageBox().Process("IronCurtainChangeRemap= is set to true, but a color named IronCurtain does not exist!", 0, TXT_OK);
-            return;
-        }
-    }
+    // if (RuleExtension->IronCurtainChangeRemap && unitext->IronCurtainTimer > 0)
+    // {
+    //     House->Scheme = Fetch_Scheme_Index_By_Name("IronCurtain", 63);
+    //     if (House->Scheme < 0) {
+    //         DEBUG_ERROR("IronCurtainChangeRemap= is set to true, but a color named IronCurtain does not exist!\n");
+    //         WWMessageBox().Process("IronCurtainChangeRemap= is set to true, but a color named IronCurtain does not exist!", 0, TXT_OK);
+    //         return;
+    //     }
+    // }
     
     /*
     **	If there is a turret, then it must be rendered as well. This may include
@@ -1681,10 +1681,10 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         Draw_Object(shapefile, shapenum, xdrawpoint, xcliprect, DIR_N, 256, _zadj, Get_Z_Gradient(), 0, brightness, NULL, 0, Point2D(0, 0), SHAPE_NORMAL);
     }
 
-    if (RuleExtension->IronCurtainChangeRemap && unitext->IronCurtainTimer > 0)
-    {
-        House->Scheme = oldscheme;
-    }
+    // if (RuleExtension->IronCurtainChangeRemap && unitext->IronCurtainTimer > 0)
+    // {
+    //     House->Scheme = oldscheme;
+    // }
 }
 
 

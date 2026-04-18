@@ -417,14 +417,17 @@ public:
     bool IsHideWakeWhenCloaked;
 
     /**
-     *  Specifies whether this object is available to be built by all players, only AI players, or only human players.
+     *  Specifies whether this unit can see through the disguise of disguised enemy units.
      */
-    TechnoTypeBuildability Buildability;
-
     bool IsDetectDisguise;
 
     /**
      *  Specifies whether the AI should use the Iron Curtain to protect this object.
      */
     bool IronCurtainPriorityTarget;
+
+    /**
+     *  Specifies whether this object is available to be built by all players, only AI players, or only human players.
+     */
+    TechnoTypeBuildability Buildability;
 };

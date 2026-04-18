@@ -420,10 +420,10 @@ int Vinifera_Do_WWMessageBox(const char *msg, const char *btn1, const char *btn2
  *
  *  @author: Rampastring
  */
-void Vinifera_Log_WWMessageBox(const char* msg, ...)
+void Vinifera_Log_And_Show_WWMessageBox(const char* msg, ...)
 {
-    char buffer[510];	    // Working staging buffer.
-    va_list	arg;		    // Argument list var.
+    char buffer[510]; // Working staging buffer.
+    va_list arg;      // Argument list var.
 
     va_start(arg, msg);
     vsnprintf(buffer, sizeof(buffer), msg, arg);

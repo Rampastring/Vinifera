@@ -119,9 +119,9 @@ TechnoTypeClassExtension::TechnoTypeClassExtension(const TechnoTypeClass *this_p
     IsHideWakeWhenCloaked(false),
     SelfHealingCap(-1),
     SelfHealingRate(-1),
-    Buildability(TechnoTypeBuildability::BUILDABILITY_NORMAL),
     IsDetectDisguise(false),
-    IronCurtainPriorityTarget(false)
+    IronCurtainPriorityTarget(false),
+    Buildability(TechnoTypeBuildability::BUILDABILITY_NORMAL)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("TechnoTypeClassExtension::TechnoTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
@@ -455,8 +455,6 @@ bool TechnoTypeClassExtension::Read_INI(CCINIClass &ini)
 
     BuiltAt = TGet_TypeList(ini, ini_name, "BuiltAt", BuiltAt);
     IsOpportunityFire = ini.Get_Bool(ini_name, "OpportunityFire", IsOpportunityFire);
-    IsDetectDisguise = ini.Get_Bool(ini_name, "DetectDisguise", IsDetectDisguise);
-    IronCurtainPriorityTarget = ini.Get_Bool(ini_name, "IronCurtainPriorityTarget", IronCurtainPriorityTarget);
 
     WakeAnim = TGet_Class(ArtINI, graphic_name, "WakeAnim", WakeAnim);
     WakeAnimRate = ArtINI.Get_Int(graphic_name, "WakeAnimRate", WakeAnimRate);
@@ -466,16 +464,17 @@ bool TechnoTypeClassExtension::Read_INI(CCINIClass &ini)
     SelfHealingCap = ini.Get_Float(ini_name, "SelfHealingCap", SelfHealingCap);
     SelfHealingRate = ini.Get_Float(ini_name, "SelfHealingRate", SelfHealingRate);
 
+    IsDetectDisguise = ini.Get_Bool(ini_name, "DetectDisguise", IsDetectDisguise);
+
+    IronCurtainPriorityTarget = ini.Get_Bool(ini_name, "IronCurtainPriorityTarget", IronCurtainPriorityTarget);
+
     char buffer[32];
-    if (ini.Get_String(ini_name, "Buildability", "", buffer, std::size(buffer)) > 0)
-    {
+    if (ini.Get_String(ini_name, "Buildability", "", buffer, std::size(buffer)) > 0) {
         if (!strcasecmp("Normal", buffer)) {
             Buildability = TechnoTypeBuildability::BUILDABILITY_NORMAL;
-        }
-        else if (!strcasecmp("AIOnly", buffer)) {
+        } else if (!strcasecmp("AIOnly", buffer)) {
             Buildability = TechnoTypeBuildability::BUILDABILITY_AI_ONLY;
-        }
-        else if (!strcasecmp("HumanOnly", buffer)) {
+        } else if (!strcasecmp("HumanOnly", buffer)) {
             Buildability = TechnoTypeBuildability::BUILDABILITY_HUMAN_ONLY;
         }
     }

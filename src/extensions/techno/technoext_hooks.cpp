@@ -129,9 +129,9 @@ public:
     int _Refund_Amount() const;
     bool _Evaluate_Object(ThreatType method, int mask, int range, TechnoClass const* object, int& value, int zone, Coord const& coord) const;
     bool _Should_Self_Heal_Now() const;
-    int _Anti_Air() const;
     int _Apparent_Brightness(int brightness) const;
     void _Flashing_AI();
+    int _Anti_Air() const;
 };
 
 
@@ -1246,8 +1246,9 @@ ActionType TechnoClassExt::_What_Action(ObjectClass* object, bool disallow_force
     {
         const bool ctrldown = Keyboard->Down(Options.KeyForceAttack1) || Keyboard->Down(Options.KeyForceAttack2);
 
-        // Call the TechnoClass function so our TechnoClassExt override gets executed
-        // Otherwise, moving infantry would not hit our override
+        // Manually call the TechnoClass override so our TechnoClassExt override gets executed
+        // Otherwise, moving infantry would not hit our override due to vanilla game code
+        // returning early in InfantryClass::Can_Fire
         const FireErrorType error = TechnoClass::Can_Fire(object, What_Weapon_Should_I_Use(object));
 
         if (error == FIRE_ILLEGAL && !ctrldown)
@@ -2269,12 +2270,17 @@ DEFINE_HOOK(0x0062C5D5, _TechnoClass_Draw_Health_Bars_Unit_Draw_Pos_Patch, 0)
     return 0x0062C5DF;
 }
 
+
 static bool Should_Take_Damage(TechnoClass* this_ptr, TechnoClass* source, const WarheadTypeClass* warhead, int damage)
 {
     if (warhead) {
 
         /**
+         *  #issue-411
+         * 
          *  Is the warhead that hit us one that affects units allied with its firing owner?
+         *
+         *  @author: CCHyper
          */
         WarheadTypeClassExtension* warheadtypeext = Extension::Fetch(warhead);
         if (!warheadtypeext->IsAffectsAllies) {
@@ -2287,15 +2293,17 @@ static bool Should_Take_Damage(TechnoClass* this_ptr, TechnoClass* source, const
                 return false;
             }
         }
-
     }
 
     /**
+     *  #issue-425
+     *
      *  If this unit is shielded by the Iron Curtain, no damage should be dealt.
+     *
+     *  Author: Rampastring
      */
     TechnoClassExtension* technoext = Extension::Fetch(this_ptr);
-    if (technoext->IronCurtainTimer > 0)
-    {
+    if (technoext->IronCurtainTimer > 0) {
         return false;
     }
 
@@ -2303,10 +2311,8 @@ static bool Should_Take_Damage(TechnoClass* this_ptr, TechnoClass* source, const
      *  If this unit is a priority for shielding with the Iron Curtain and it would take major damage, shield it.
      */
     TechnoTypeClassExtension* technotypeext = Extension::Fetch(this_ptr->TClass);
-    if (technotypeext->IronCurtainPriorityTarget && this_ptr->Strength - damage <= Rule->ConditionYellow * this_ptr->TClass->MaxStrength)
-    {
-        if (technoext->Iron_Curtain_Me(false))
-        {
+    if (technotypeext->IronCurtainPriorityTarget && this_ptr->Strength - damage <= Rule->ConditionYellow * this_ptr->TClass->MaxStrength) {
+        if (technoext->Iron_Curtain_Me(false)) {
             Extension::Fetch(this_ptr->House)->Expend_Iron_Curtain();
             return false;
         }
@@ -2316,22 +2322,14 @@ static bool Should_Take_Damage(TechnoClass* this_ptr, TechnoClass* source, const
 }
 
 /**
- *  #issue-411
- * 
  *  Implements IsAffectsAllies for WarheadTypes as well as the Iron Curtain effect for Technos.
- * 
- *  @note: This patch does not replace "stolen" code as per our implementation
- *         rules, this is because the call to ObjectClass::Take_Damage that follows
- *         is too much of a risk to not have correctly implemented.
- * 
- *  @author: CCHyper, Rampastring
  */
 DEFINE_HOOK(0x006328DE, _TechnoClass_Take_Damage_Intercept_Patch, 7)
 {
-    GET(TechnoClass *, this_ptr, ESI);
-    GET_STACK(int *, damage, 0xEC);
-    GET_STACK(const WarheadTypeClass *, warhead, 0xF4);
-    GET_STACK(TechnoClass *, source, 0xF8);
+    GET(TechnoClass*, this_ptr, ESI);
+    GET_STACK(int*, damage, 0xEC);
+    GET_STACK(const WarheadTypeClass*, warhead, 0xF4);
+    GET_STACK(TechnoClass*, source, 0xF8);
 
     if (!Should_Take_Damage(this_ptr, source, warhead, *damage)) {
         *damage = 0;
@@ -2614,9 +2612,8 @@ bool TechnoClassExt::_Can_Deploy_Now() const
             blocked = true;
         }
 
-        // Hijacked units that are build-limited cannot be deployed.
-        if (unit->Class->DeploysInto != nullptr && unit->Class->BuildLimit < INT_MAX && EnteredByInfType != INFANTRY_NONE)
-        {
+        // Hijacked units that are build-limited cannot be deployed because that would allow circumventing the build limit.
+        if (unit->Class->DeploysInto != nullptr && unit->Class->BuildLimit < INT_MAX && EnteredByInfType != INFANTRY_NONE) {
             blocked = true;
         }
 
@@ -2935,7 +2932,7 @@ bool TechnoClassExt::_Should_Self_Heal_Now() const
         repair_cap = Rule->ConditionYellow;
     }
     
-    return repair_cap > HealthRatio;
+    return repair_cap >= HealthRatio;
 }
 
 
@@ -3100,8 +3097,8 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
     /*
     **  Never consider a spy to be a valid target, unless you're a dog
     */
-    if (House->Is_Human_Player() && otype == RTTI_INFANTRY && static_cast<InfantryTypeClass const*>(tclass)->IsDisguised) {
-        return false;
+    if ((House->Is_Human_Player() || !RuleExtension->IsAIDetectDisguise) && otype == RTTI_INFANTRY && ((InfantryTypeClass const*)tclass)->IsDisguised && !Extension::Fetch(TClass)->IsDetectDisguise) {
+        return (false);
     }
 
     /*
@@ -3199,6 +3196,32 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
         }
     }
 
+    WeaponSlotType which = _What_Weapon_Should_I_Use(const_cast<TechnoClass*>(object));
+
+    /**
+     *  #issue-444
+     *
+     *  If the weapon fires torpedoes and the target is on land,
+     *  then firing is not allowed.
+     *
+     *  UNLESS we're part of a team. Other team members might still be able to fire at the target,
+     *  and teams prefer to synchronize their target. Cancelling targeting in this case
+     *  could confuse other units of the team.
+     *
+     *  @author: Rampastring
+     */
+    if (which != WEAPON_SLOT_NONE && (!Is_Foot() || reinterpret_cast<const FootClass*>(this)->Team == nullptr)) {
+        const WeaponTypeClass* weapon = Get_Weapon(which)->Weapon;
+        if (weapon != nullptr) {
+            const auto bullettypeext = Extension::Fetch(weapon->Bullet);
+            if (bullettypeext->IsTorpedo) {
+                if (Map[object->Center_Coord()].Land_Type() != LAND_WATER) {
+                    return false;
+                }
+            }
+        }
+    }
+
     /*
     **  If this target value is better than the previously recorded best
     **  target value then record this target for possible return as the
@@ -3243,7 +3266,6 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
     **  If we cannot passively acquire the target, then ignore it.
     */
     if (object->RTTI != RTTI_BUILDING || RTTI != RTTI_INFANTRY || !reinterpret_cast<const InfantryClass*>(this)->Class->IsBomber) {
-        WeaponSlotType which = _What_Weapon_Should_I_Use(const_cast<TechnoClass*>(object));
         if (which != WEAPON_SLOT_NONE) {
             const WeaponTypeClass* weapon = TClass->Fetch_Weapon_Info(which).Weapon;
             if (weapon != nullptr) {
@@ -3289,11 +3311,94 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
 }
 
 
-/// <summary>
-/// Custom TechnoClass::Anti_Air implementation.
-/// Fixes a bug where a unit believes it is not AA-capable when its primary weapon has no AA capability,
-/// even when its secondary weapon is AA-capable.
-/// </summary>
+/**
+ *  Fixes a bug where placed buildings are not revealed for allies.
+ *
+ *  Author: Rampastring
+ */
+DEFINE_HOOK(0x0062AB5E, _TechnoClass_Revealed_Look_For_Allies_Patch, 0)
+{
+    GET(TechnoClass*, this_ptr, ESI);
+    if (this_ptr->IsOwnedByPlayer || (Session.Type != GAME_NORMAL && Rule->IsAllyReveal && this_ptr->House->Is_Ally(PlayerPtr))) {
+        // Tell the object to "look", revealing shroud around the object based on its sight range
+        return 0x0062AB9F;
+    }
+
+    // Player discovered a previously hidden object that wasn't owned by them or revealed by alliance,
+    // trigger TEVENT_DISCOVERED
+    return 0x0062AB68;
+}
+
+
+/**
+ *  Implements flashing for the Iron Curtain.
+ *
+ *  Author: tomsons26/ZivDero for original function code, Rampastring for Iron Curtain effect.
+ */
+int TechnoClassExt::_Apparent_Brightness(int brightness) const
+{
+    TechnoClassExtension* technoext = Extension::Fetch(this);
+
+    if (technoext->IronCurtainTimer > 0) {
+        int index = (technoext->IronCurtainTimer.Value() / RuleExtension->IronCurtainFlashRate) % RuleExtension->IronCurtainPulseTable.Count();
+        int extra = RuleExtension->IronCurtainPulseTable[index] * RuleExtension->IronCurtainFlashIntensityMultiplier;
+
+        float scale = Map[Center_Coord()].TileBrightness / 1000.0f;
+        int extrascaled = (int)(extra * scale);
+        int total = brightness + extrascaled;
+        if (total < 0) total = 0;
+
+        return total;
+    }
+
+    if (((FlashCount / 2) % 2) == 1) {
+        return (brightness > 1500 ? 500 : 2000);
+    } else {
+        return (brightness);
+    }
+}
+
+
+void TechnoClassExt::_Flashing_AI()
+{
+    int flash = FlashCount;
+    unsigned b = ((FlashCount / 2) % 2) == 1;
+    TechnoClassExtension* technoext = Extension::Fetch(this);
+
+    if (FlasherClass::Process() || technoext->IronCurtainTimer > 0) {
+        Mark(MARK_CHANGE);
+    }
+
+    if (RTTI == RTTI_BUILDING && (technoext->IronCurtainTimer > 0 || (flash && flash != FlashCount))) {
+        unsigned b2 = ((FlashCount / 2) % 2) == 1;
+        if (b != (unsigned char)b2) {
+            TacticalMap->Register_Dirty_Area(entry_118(), false);
+            ((BuildingClass*)this)->Update_Anim_Appearance();
+        }
+    }
+}
+
+/**
+ *  Makes the game redraw an object while it is flashing with the Iron Curtain effect.
+ *
+ *  Author: Rampastring
+ */
+DEFINE_HOOK(0x0062ECE3, _TechnoClass_AI_Iron_Curtain_Flash_Redraw_Patch, 0)
+{
+    GET(TechnoClassExt*, this_ptr, ESI);
+
+    this_ptr->_Flashing_AI();
+
+    return 0x0062ED7A;
+}
+
+
+/**
+ *  Fixes a bug where a unit believes it is not AA-capable when its primary weapon has no AA capability,
+ *  even when its secondary weapon is AA-capable.
+ *
+ *  Author: Rampastring
+ */
 int TechnoClassExt::_Anti_Air(void) const
 {
     assert(IsActive);
@@ -3331,89 +3436,6 @@ int TechnoClassExt::_Anti_Air(void) const
 
 
 /**
- *  Fixes a bug where placed buildings are not revealed for allies.
- *
- *  Author: Rampastring
- */
-DEFINE_HOOK(0x0062AB5E, _TechnoClass_Revealed_Look_For_Allies_Patch, 0)
-{
-    GET(TechnoClass*, this_ptr, ESI);
-    if (this_ptr->IsOwnedByPlayer || (Session.Type != GAME_NORMAL && Rule->IsAllyReveal && this_ptr->House->Is_Ally(PlayerPtr))) {
-        // Tell the object to "look", revealing shroud around the object based on its sight range
-        return 0x0062AB9F;
-    }
-
-    // Player discovered a previously hidden object that wasn't owned by them or revealed by alliance,
-    // trigger TEVENT_DISCOVERED
-    return 0x0062AB68;
-}
-
-
-/**
- *  Implements flashing for the Iron Curtain.
- *
- *  Author: tomsons26/ZivDero for original function code, Rampastring for Iron Curtain effect.
- */
-int TechnoClassExt::_Apparent_Brightness(int brightness) const
-{
-    TechnoClassExtension* technoext = Extension::Fetch(this);
-    
-    if (technoext->IronCurtainTimer > 0)
-    {
-        int index = (technoext->IronCurtainTimer.Value() / RuleExtension->IronCurtainFlashRate) % RuleExtension->IronCurtainPulseTable.Count();
-        int extra = RuleExtension->IronCurtainPulseTable[index] * RuleExtension->IronCurtainFlashIntensityMultiplier;
-        int total = brightness + extra;
-        if (total < 0)
-            total = 0;
-    
-        return total;
-    }
-
-    if (((FlashCount / 2) % 2) == 1) {
-        return(brightness > 1500 ? 500 : 2000);
-    }
-    else {
-        return(brightness);
-    }
-}
-
-
-void TechnoClassExt::_Flashing_AI()
-{
-    int flash = FlashCount;
-    unsigned b = ((FlashCount / 2) % 2) == 1;
-    TechnoClassExtension* technoext = Extension::Fetch(this);
-
-    if (FlasherClass::Process() || technoext->IronCurtainTimer > 0) {
-        Mark(MARK_CHANGE);
-    }
-
-    if (RTTI == RTTI_BUILDING && (technoext->IronCurtainTimer > 0 || (flash && flash != FlashCount)))
-    {
-        unsigned b2 = ((FlashCount / 2) % 2) == 1;
-        if (b != (unsigned char)b2) {
-            TacticalMap->Register_Dirty_Area(entry_118(), false);
-            ((BuildingClass*)this)->Update_Anim_Appearance();
-        }
-    }
-}
-
-/**
- *  Makes the game redraw an object while it is flashing with the Iron Curtain effect.
- *
- *  Author: Rampastring
- */
-DEFINE_HOOK(0x0062ECE3, _TechnoClass_AI_Iron_Curtain_Flash_Redraw_Patch, 0)
-{
-    GET(TechnoClassExt*, this_ptr, ESI);
-
-    this_ptr->_Flashing_AI();
-
-    return 0x0062ED7A;
-}
-
-
-/**
  *  Main function for patching the hooks.
  */
 void TechnoClassExtension_Hooks()
@@ -3441,8 +3463,9 @@ void TechnoClassExtension_Hooks()
     Patch_Jump(0x00633745, 0x00633762); // Do not trigger "Discovered by Player" when an object is destroyed
     Patch_Jump(0x0062A970, &TechnoClassExt::_Time_To_Build);
     Patch_Jump(0x0062FD70, &TechnoClassExt::_Assign_Target);
+    Patch_Jump(0x00638090, &TechnoClassExt::_Refund_Amount);
     Patch_Jump(0x0062D0F0, &TechnoClassExt::_Evaluate_Object);
     Patch_Jump(0x00638CA0, &TechnoClassExt::_Should_Self_Heal_Now);
-    Patch_Jump(0x006380F0, &TechnoClassExt::_Anti_Air);
     Patch_Jump(0x00639C70, &TechnoClassExt::_Apparent_Brightness);
+    Patch_Jump(0x006380F0, &TechnoClassExt::_Anti_Air);
 }

@@ -240,6 +240,12 @@ public:
      */
     WAYPOINT SpawnWaypoint;
 
+    /**
+     *  Provides a timer for the availability of the Iron Curtain for this house.
+     *  Used until we have a proper superweapon based Iron Curtain implementation.
+     */
+    CDTimerClass<FrameTimerClass> IronCurtainAvailabilityTimer;
+
     int StrengthenDestroyedCost;
 
     /**
@@ -359,6 +365,4 @@ public:
     AdvancedAINavalOnlyState IsNavalOnly;
 
     int LastNavalOnlyCheckFrame;
-
-    CDTimerClass<FrameTimerClass> IronCurtainAvailabilityTimer;
 };

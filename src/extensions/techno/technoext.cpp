@@ -661,18 +661,16 @@ Coord TechnoClassExtension::Fire_Coord(WeaponSlotType which, TPoint3D<int> offse
  */
 bool TechnoClassExtension::Iron_Curtain_Me(bool forced)
 {
-    if (!forced)
-    {
+    if (!forced) {
         HouseClassExtension* houseext = Extension::Fetch(This()->House);
 
-        if (!houseext->Can_Use_Iron_Curtain())
-        {
+        if (!houseext->Can_Use_Iron_Curtain()) {
             return false;
         }
     }
 
     IronCurtainTimer = RuleExtension->IronCurtainDuration;
-    Static_Sound(VocClass::From_Name("IRONCUR9"), This()->Center_Coord());
+    Static_Sound(RuleExtension->IronCurtainSound, This()->Center_Coord());
     return true;
 }
 

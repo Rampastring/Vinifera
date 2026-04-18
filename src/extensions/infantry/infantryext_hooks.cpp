@@ -35,6 +35,7 @@
 #include "building.h"
 #include "buildingtype.h"
 #include "extension.h"
+#include "fetchres.h"
 #include "hooker.h"
 #include "house.h"
 #include "infantry.h"
@@ -90,8 +91,7 @@ const ShapeSet* InfantryClassExt::_Get_Image_Data() const
         return Rule->WebbedInfantry->Get_Image_Data();
     }
 
-    if (!House->Is_Ally(PlayerPtr) && Class->IsDisguised)
-    {
+    if (!House->Is_Ally(PlayerPtr) && Class->IsDisguised) {
         const auto disguise = SideClassExtension::Get_Disguise(House);
         if (disguise) {
             return disguise->Image;
@@ -118,8 +118,7 @@ const char* InfantryClassExt::_Full_Name(void) const
         return Fetch_String(TXT_TECHNICIAN);
     }
 
-    if (Class->IsDisguised && !House->Is_Ally(PlayerPtr) && Rule->Disguise != NULL)
-    {
+    if (Class->IsDisguised && !House->Is_Ally(PlayerPtr) && Rule->Disguise != NULL) {
         const auto disguise = SideClassExtension::Get_Disguise(House);
         if (disguise) {
             return disguise->GivenName.c_str();
@@ -641,8 +640,7 @@ DEFINE_HOOK(0x004D7267, _InfantryClass_What_Action_Prevent_Hijacking_Allied_Vehi
     GET(TechnoClass*, target, ESI);
     GET(InfantryClass*, this_ptr, EDI);
 
-    if (this_ptr->House->Is_Ally(target))
-    {
+    if (this_ptr->House->Is_Ally(target)) {
         // The target is allied to the hijacker. Move on.
         return 0x004D72B7;
     }

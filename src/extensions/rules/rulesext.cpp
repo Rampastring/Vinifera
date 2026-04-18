@@ -90,7 +90,7 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     IsRecheckPrerequisites(false),
     IsMultiMCV(false),
     AINavalYardAdjacency(20),
-    AIRepairBaseNodes(false),
+    IsAIRepairBaseNodes(false),
     LowPowerPenaltyModifier(1.0f),
     MultipleFactoryCap(0),
     VoxelLightAzimuth(0),
@@ -111,6 +111,14 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     SelfHealingRate(-1),
     IsBeachIsCrush(false),
     BuildingFlameSpawnBlockFrames(0),
+    IronCurtainDuration(675),
+    IronCurtainRechargeTime(9900),
+    IronCurtainFlashRate(8),
+    IronCurtainFlashIntensityMultiplier(50),
+    IronCurtainSound(VOC_NONE),
+    ComesNearWaypointDistance(CELL_LEPTON_W * 5),
+    IsAIDetectDisguise(true),
+    IsAIOneHarvesterInSingleplayer(true),
     StrengthenDestroyedValueThreshold(0),
     StrengthenBuildingValueMultiplier(3),
     IsStrengtheningEnabled(false),
@@ -141,14 +149,7 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AdvancedAIMaxTeamSize(20),
     AdvancedAITeamInfantryCostPunishmentThreshold(3000),
     AdvancedAICheapInfantryCostThreshold(500),
-    AdvancedAITeamCheapInfantryMax(30),
-    IsAIDetectDisguise(true),
-    ComesNearWaypointDistance(CELL_LEPTON_W * 5),
-    IronCurtainDuration(675),
-    IronCurtainRechargeTime(9900),
-    IronCurtainFlashRate(8),
-    IronCurtainFlashIntensityMultiplier(50),
-    IronCurtainChangeRemap(false)
+    AdvancedAITeamCheapInfantryMax(30)
 {
     //if (this_ptr) EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
 
@@ -171,23 +172,7 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     MaxPips.Add(10);    // PIPSCALE_POWER
     MaxPips.Add(8);     // PIPSCALE_CHARGE
 
-    BuildNavalYard = TypeList<BuildingTypeClass*>(0);
     IronCurtains = TypeList<BuildingTypeClass*>(0);
-
-    AIKiteChance = TypeList<int>(DIFF_COUNT);
-    AIKiteChance.Add(100);
-    AIKiteChance.Add(20);
-    AIKiteChance.Add(0);
-
-    AdvancedAITacticSelectionDelay = TypeList<int>(DIFF_COUNT);
-    AdvancedAITacticSelectionDelay.Add(0);
-    AdvancedAITacticSelectionDelay.Add(300);
-    AdvancedAITacticSelectionDelay.Add(900);
-
-    AdvancedAIIonCannonRandomizationFactors = TypeList<int>(DIFF_COUNT);
-    AdvancedAIIonCannonRandomizationFactors.Add(1);
-    AdvancedAIIonCannonRandomizationFactors.Add(2);
-    AdvancedAIIonCannonRandomizationFactors.Add(3);
 
     IronCurtainPulseTable = TypeList<int>(8);
     IronCurtainPulseTable.Add(-16);
@@ -203,6 +188,23 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AIHarvestersPerRefinery.Add(2);
     AIHarvestersPerRefinery.Add(2);
     AIHarvestersPerRefinery.Add(1);
+
+    BuildNavalYard = TypeList<BuildingTypeClass*>(0);
+
+    AIKiteChance = TypeList<int>(DIFF_COUNT);
+    AIKiteChance.Add(100);
+    AIKiteChance.Add(20);
+    AIKiteChance.Add(0);
+
+    AdvancedAITacticSelectionDelay = TypeList<int>(DIFF_COUNT);
+    AdvancedAITacticSelectionDelay.Add(0);
+    AdvancedAITacticSelectionDelay.Add(300);
+    AdvancedAITacticSelectionDelay.Add(900);
+
+    AdvancedAIIonCannonRandomizationFactors = TypeList<int>(DIFF_COUNT);
+    AdvancedAIIonCannonRandomizationFactors.Add(1);
+    AdvancedAIIonCannonRandomizationFactors.Add(2);
+    AdvancedAIIonCannonRandomizationFactors.Add(3);
 }
 
 
@@ -214,12 +216,13 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
 RulesClassExtension::RulesClassExtension(const NoInitClass &noinit) :
     GlobalExtensionClass(noinit),
     MaxPips(noinit),
+    IronCurtains(noinit),
+    IronCurtainPulseTable(noinit),
+    AIHarvestersPerRefinery(noinit),
     BuildNavalYard(noinit),
     AIKiteChance(noinit),
     AdvancedAITacticSelectionDelay(noinit),
-    AdvancedAIIonCannonRandomizationFactors(noinit),
-    IronCurtainPulseTable(noinit),
-    AIHarvestersPerRefinery(noinit)
+    AdvancedAIIonCannonRandomizationFactors(noinit)
 {
     //EXT_DEBUG_TRACE("RulesClassExtension::RulesClassExtension(NoInitClass) - 0x%08X\n", (uintptr_t)(ThisPtr));
 }
@@ -246,12 +249,13 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
     //EXT_DEBUG_TRACE("RulesClassExtension::Load - 0x%08X\n", (uintptr_t)(This()));
 
     MaxPips.Clear();
+    IronCurtains.Clear();
+    IronCurtainPulseTable.Clear();
+    AIHarvestersPerRefinery.Clear();
     BuildNavalYard.Clear();
     AIKiteChance.Clear();
     AdvancedAITacticSelectionDelay.Clear();
     AdvancedAIIonCannonRandomizationFactors.Clear();
-    IronCurtainPulseTable.Clear();
-    AIHarvestersPerRefinery.Clear();
 
     HRESULT hr = GlobalExtensionClass::Load(pStm);
     if (FAILED(hr)) {
@@ -261,17 +265,17 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
     new (this) RulesClassExtension(NoInitClass());
 
     MaxPips.Load(pStm);
-    BuildNavalYard.Load(pStm);
     IronCurtains.Load(pStm);
+    IronCurtainPulseTable.Load(pStm);
+    AIHarvestersPerRefinery.Load(pStm);
+    BuildNavalYard.Load(pStm);
     AIKiteChance.Load(pStm);
     AdvancedAITacticSelectionDelay.Load(pStm);
     AdvancedAIIonCannonRandomizationFactors.Load(pStm);
-    IronCurtainPulseTable.Load(pStm);
-    AIHarvestersPerRefinery.Load(pStm);
 
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(BuildNavalYard, "BuildNavalYard");
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(IronCurtains, "IronCurtains");
-    
+
     return hr;
 }
 
@@ -291,13 +295,13 @@ HRESULT RulesClassExtension::Save(IStream *pStm, BOOL fClearDirty)
     }
 
     MaxPips.Save(pStm);
-    BuildNavalYard.Save(pStm);
     IronCurtains.Save(pStm);
+    IronCurtainPulseTable.Save(pStm);
+    AIHarvestersPerRefinery.Save(pStm);
+    BuildNavalYard.Save(pStm);
     AIKiteChance.Save(pStm);
     AdvancedAITacticSelectionDelay.Save(pStm);
     AdvancedAIIonCannonRandomizationFactors.Save(pStm);
-    IronCurtainPulseTable.Save(pStm);
-    AIHarvestersPerRefinery.Save(pStm);
 
     return hr;
 }
@@ -345,15 +349,19 @@ void RulesClassExtension::Object_CRC(CRCEngine &crc) const
     crc(IsRecheckPrerequisites);
     crc(IsMultiMCV);
     crc(AINavalYardAdjacency);
-    crc(AIRepairBaseNodes);
+    crc(IsAIRepairBaseNodes);
     crc(BuildingFlameSpawnBlockFrames);
+    crc(IronCurtainDuration);
+    crc(IronCurtainRechargeTime);
+    crc(IronCurtains.Count());
+    crc(ComesNearWaypointDistance);
+    crc(IsAIDetectDisguise);
+    crc(AIHarvestersPerRefinery.Count());
+    crc(IsAIOneHarvesterInSingleplayer);
     crc(StrengthenDestroyedValueThreshold);
     crc(StrengthenBuildingValueMultiplier);
     crc(IsStrengtheningEnabled);
     crc(BuildNavalYard.Count());
-    crc(IsAIDetectDisguise);
-    crc(IronCurtains.Count());
-    crc(AIHarvestersPerRefinery.Count());
 }
 
 
@@ -812,7 +820,6 @@ bool RulesClassExtension::General(CCINIClass &ini)
     }
 
     IsBeachIsCrush = ini.Get_Bool(GENERAL, "BeachIsCrush", IsBeachIsCrush);
-    AIKiteChance = ini.Get_IntList(GENERAL, "AIKiteChance", AIKiteChance);
     ComesNearWaypointDistance = ini.Get_Int(GENERAL, "ComesNearWaypointDistance", ComesNearWaypointDistance);
 
     IronCurtains = ::TGet_TypeList(ini, GENERAL, "IronCurtains", IronCurtains);
@@ -822,6 +829,8 @@ bool RulesClassExtension::General(CCINIClass &ini)
     if (icrecharge != 0.0) {
         IronCurtainRechargeTime = icrecharge * 900.0f;
     }
+
+    AIKiteChance = ini.Get_IntList(GENERAL, "AIKiteChance", AIKiteChance);
 
     return true;
 }
@@ -864,7 +873,7 @@ bool RulesClassExtension::AudioVisual(CCINIClass &ini)
     IronCurtainFlashRate = ini.Get_Int(AUDIOVISUAL, "IronCurtainFlashRate", IronCurtainFlashRate);
     IronCurtainFlashIntensityMultiplier = ini.Get_Int(AUDIOVISUAL, "IronCurtainFlashIntensityMultiplier", IronCurtainFlashIntensityMultiplier);
     IronCurtainPulseTable = ini.Get_IntList(AUDIOVISUAL, "IronCurtainPulseTable", IronCurtainPulseTable);
-    IronCurtainChangeRemap = ini.Get_Bool(AUDIOVISUAL, "IronCurtainChangeRemap", IronCurtainChangeRemap);
+    IronCurtainSound = ini.Get_VocType(AUDIOVISUAL, "IronCurtainSound", IronCurtainSound);
 
     return true;
 }
@@ -911,7 +920,11 @@ bool RulesClassExtension::AI(CCINIClass& ini)
     }
 
     AINavalYardAdjacency = ini.Get_Int(AI, "AINavalYardAdjacency", AINavalYardAdjacency);
-    AIRepairBaseNodes = ini.Get_Bool(AI, "AIRepairBaseNodes", AIRepairBaseNodes);
+    IsAIRepairBaseNodes = ini.Get_Bool(AI, "AIRepairBaseNodes", IsAIRepairBaseNodes);
+    IsAIDetectDisguise = ini.Get_Bool(AI, "AIDetectDisguise", IsAIDetectDisguise);
+    AIHarvestersPerRefinery = ini.Get_IntList(AI, "HarvestersPerRefinery", AIHarvestersPerRefinery);
+    IsAIOneHarvesterInSingleplayer = ini.Get_Bool(AI, "AIOneHarvesterInSingleplayer", IsAIOneHarvesterInSingleplayer);
+    BuildNavalYard = ::TGet_TypeList(ini, AI, "BuildNavalYard", BuildNavalYard);
     IsUseAdvancedAI = ini.Get_Bool(AI, "UseAdvancedAI", IsUseAdvancedAI);
     IsAdvancedAIMultiConYard = ini.Get_Bool(AI, "AdvancedAIMultiConYard", IsAdvancedAIMultiConYard);
     AdvancedAIMaxExpansionDistance = ini.Get_Int(AI, "AdvancedAIMaxExpansionDistance", AdvancedAIMaxExpansionDistance);
@@ -942,10 +955,6 @@ bool RulesClassExtension::AI(CCINIClass& ini)
     AdvancedAITeamInfantryCostPunishmentThreshold = ini.Get_Int(AI, "AdvancedAITeamInfantryCostPunishmentThreshold", AdvancedAITeamInfantryCostPunishmentThreshold);
     AdvancedAICheapInfantryCostThreshold = ini.Get_Int(AI, "AdvancedAICheapInfantryCostThreshold", AdvancedAICheapInfantryCostThreshold);
     AdvancedAITeamCheapInfantryMax = ini.Get_Int(AI, "AdvancedAITeamCheapInfantryMax", AdvancedAITeamCheapInfantryMax);
-
-    BuildNavalYard = ::TGet_TypeList(ini, AI, "BuildNavalYard", BuildNavalYard);
-    IsAIDetectDisguise = ini.Get_Bool(AI, "AIDetectDisguise", IsAIDetectDisguise);
-    AIHarvestersPerRefinery = ini.Get_IntList(AI, "HarvestersPerRefinery", AIHarvestersPerRefinery);
 
     return true;
 }

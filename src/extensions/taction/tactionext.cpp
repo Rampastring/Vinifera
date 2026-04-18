@@ -35,7 +35,6 @@
 #include "house.h"
 #include "houseext.h"
 #include "housetype.h"
-#include "msgbox.h"
 #include "object.h"
 #include "rules.h"
 #include "scenario.h"
@@ -59,7 +58,7 @@ TActionClass::ActionDescriptionStruct TActionClassExtension::ExtActionDescriptio
     { "Give Credits", "Gives or removes credits from the specified house. A positive amount gives money, a negative amount subtracts it." },
     { "Enable Short Game", "Enables Short Game. Players will lose if all buildings are destroyed." },
     { "Disable Short Game", "Disables Short Game. Players can continue playing even after all buildings are destroyed." },
-    { "Create Building At", "Places a building to given waypoint position." },
+    { "Create Building At", "Places a building at given waypoint position." },
     { "Destroy all of...", "Kills everything of the specified house and marks them as defeated." },
     { "Make Elite", "All technos attached to this trigger will be promoted to elite status." },
     { "Enable Ally Reveal", "Enables Ally Reveal, allowing allied players to see each other's explored areas." },
@@ -95,9 +94,7 @@ TActionClass::ActionDescriptionStruct TActionClassExtension::ExtActionDescriptio
  *
  *  @author: ZivDero
  */
-TActionClassExtension::TActionClassExtension(const TActionClass* this_ptr) :
-    AbstractClassExtension(this_ptr),
-    Text {""}
+TActionClassExtension::TActionClassExtension(const TActionClass* this_ptr) : AbstractClassExtension(this_ptr), Text {""}
 {
     // if (this_ptr) EXT_DEBUG_TRACE("TActionClassExtension::TActionClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 
@@ -110,9 +107,7 @@ TActionClassExtension::TActionClassExtension(const TActionClass* this_ptr) :
  *
  *  @author: ZivDero
  */
-TActionClassExtension::TActionClassExtension(const NoInitClass& noinit) :
-    AbstractClassExtension(noinit),
-    Text(noinit)
+TActionClassExtension::TActionClassExtension(const NoInitClass& noinit) : AbstractClassExtension(noinit), Text(noinit)
 {
     // EXT_DEBUG_TRACE("TActionClassExtension::TActionClassExtension(NoInitClass) - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
@@ -279,12 +274,18 @@ bool TActionClassExtension::Execute(HouseClass* house, ObjectClass* object, Trig
         object = nullptr;
     }
 
-    #define DISPATCH(a) case TACTION_ ## a: success = Do_ ## a (house, object, trig, cell); break;
-    #define EXT_DISPATCH(a) case EXT_TACTION_ ## a: success = Do_ ## a (house, object, trig, cell); break;
+#define DISPATCH(a)                                  \
+    case TACTION_##a:                                \
+        success = Do_##a(house, object, trig, cell); \
+        break;
+#define EXT_DISPATCH(a)                              \
+    case EXT_TACTION_##a:                            \
+        success = Do_##a(house, object, trig, cell); \
+        break;
 
-    // warning C4063: case '#' is not a valid value for switch of enum 'TActionType'
-    #pragma warning(push)
-    #pragma warning(disable : 4063)
+// warning C4063: case '#' is not a valid value for switch of enum 'TActionType'
+#pragma warning(push)
+#pragma warning(disable : 4063)
 
     switch (This()->Action) {
 
@@ -342,7 +343,7 @@ bool TActionClassExtension::Execute(HouseClass* house, ObjectClass* object, Trig
         break;
     }
 
-    #pragma warning(pop)
+#pragma warning(pop)
 
     return success;
 }
@@ -480,7 +481,7 @@ bool TActionClassExtension::Do_LOSE(HouseClass* house, ObjectClass* object, Trig
     } else {
         PlayerPtr->Flag_To_Lose();
     }
-    
+
     if (Session.Type != GAME_NORMAL) {
 
         /**
@@ -715,8 +716,7 @@ bool TActionClassExtension::Do_CREATE_BUILDING_AT(HouseClass* house, ObjectClass
 {
     Cell wpcell = ScenExtension->Waypoint_Cell(This()->EffectLocation);
 
-    if (wpcell != CELL_NONE)
-    {
+    if (wpcell != CELL_NONE) {
         HouseClass* hptr = HouseClassExtension::House_From_HousesType(This()->Data.House);
 
         int buildingtypeid = This()->TriggerRect.X;
@@ -725,28 +725,21 @@ bool TActionClassExtension::Do_CREATE_BUILDING_AT(HouseClass* house, ObjectClass
 
         bool success = false;
 
-        if (forced)
-        {
+        if (forced) {
             ScenarioInit++;
             success = btc->Create_And_Place(wpcell, hptr);
             ScenarioInit--;
-        }
-        else
-        {
+        } else {
             // Create_And_Place does not play buildup anim
             BuildingClass* building = new BuildingClass(btc, hptr);
 
-            if (building != nullptr)
-            {
+            if (building != nullptr) {
                 building->Assign_Mission(MISSION_CONSTRUCTION);
                 success = building->Unlimbo(wpcell.As_Coord());
 
-                if (!success)
-                {
+                if (!success) {
                     delete building;
-                }
-                else
-                {
+                } else {
                     building->Revealed(hptr);
                     building->IsReadyToCommence = true;
                 }
@@ -938,8 +931,7 @@ bool TActionClassExtension::Do_MAKE_ENEMY_ONE_WAY(HouseClass* house, ObjectClass
 /**
  *  An enum for the operations that the actions can perform.
  */
-enum VariableOperation
-{
+enum VariableOperation {
     OP_ASSIGN,
     OP_ADD,
     OP_SUBTRACT,
@@ -1021,10 +1013,6 @@ static int Operate(int lhs, int rhs, VariableOperation operation)
  */
 bool TActionClassExtension::Do_MODIFY_GLOBAL_CONSTANT(HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
-    WWMessageBox().Process("TAction::Do_MODIFY_GLOBAL_CONSTANT is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return false;
-
     /**
      *  Save the parameters for convenience.
      */
@@ -1061,10 +1049,6 @@ bool TActionClassExtension::Do_MODIFY_GLOBAL_CONSTANT(HouseClass* house, ObjectC
  */
 bool TActionClassExtension::Do_MODIFY_GLOBAL_GLOBAL(HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
-    WWMessageBox().Process("TAction::Do_MODIFY_GLOBAL_GLOBAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return false;
-
     /**
      *  Save the parameters for convenience.
      */
@@ -1109,10 +1093,6 @@ bool TActionClassExtension::Do_MODIFY_GLOBAL_GLOBAL(HouseClass* house, ObjectCla
  */
 bool TActionClassExtension::Do_MODIFY_GLOBAL_LOCAL(HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
-    WWMessageBox().Process("TAction::Do_MODIFY_GLOBAL_LOCAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return false;
-
     /**
      *  Save the parameters for convenience.
      */
@@ -1157,10 +1137,6 @@ bool TActionClassExtension::Do_MODIFY_GLOBAL_LOCAL(HouseClass* house, ObjectClas
  */
 bool TActionClassExtension::Do_INCREMENT_GLOBAL(HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
-    WWMessageBox().Process("TAction::Do_INCREMENT_GLOBAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return false;
-
     /**
      *  Save the parameters for convenience.
      */
@@ -1195,10 +1171,6 @@ bool TActionClassExtension::Do_INCREMENT_GLOBAL(HouseClass* house, ObjectClass* 
  */
 bool TActionClassExtension::Do_DECREMENT_GLOBAL(HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
-    WWMessageBox().Process("TAction::Do_DECREMENT_GLOBAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return false;
-
     /**
      *  Save the parameters for convenience.
      */
@@ -1269,10 +1241,6 @@ bool TActionClassExtension::Do_MODIFY_LOCAL_CONSTANT(HouseClass* house, ObjectCl
  */
 bool TActionClassExtension::Do_MODIFY_LOCAL_GLOBAL(HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
-    WWMessageBox().Process("TAction::Do_MODIFY_LOCAL_GLOBAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return false;
-
     /**
      *  Save the parameters for convenience.
      */
@@ -1429,10 +1397,6 @@ bool TActionClassExtension::Do_DECREMENT_LOCAL(HouseClass* house, ObjectClass* o
  */
 bool TActionClassExtension::Do_RANDOM_NUMBER_GLOBAL(HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
-    WWMessageBox().Process("TAction::Do_RANDOM_NUMBER_GLOBAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return false;
-
     /**
      *  Save the parameters for convenience.
      */
@@ -1493,10 +1457,6 @@ bool TActionClassExtension::Do_RANDOM_NUMBER_LOCAL(HouseClass* house, ObjectClas
  */
 bool TActionClassExtension::Do_PRINT_GLOBAL(HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
-    WWMessageBox().Process("TAction::Do_PRINT_GLOBAL is currently not supported in DTA. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return false;
-
     /**
      *  Save the parameters for convenience.
      */
@@ -1591,8 +1551,7 @@ bool TActionClassExtension::Do_ADJUST_HOUSE_MODIFIER(HouseClass* house, ObjectCl
 {
     int amount = This()->TriggerRect.X;
 
-    switch (This()->Data.Value)
-    {
+    switch (This()->Data.Value) {
     case 0:
         house->FirepowerBias += (double)amount / 100.0;
         break;
@@ -1620,7 +1579,6 @@ bool TActionClassExtension::Do_ADJUST_HOUSE_MODIFIER(HouseClass* house, ObjectCl
 }
 
 
-
 /**
  *  Applies the Iron Curtain to attached objects.
  *
@@ -1628,14 +1586,12 @@ bool TActionClassExtension::Do_ADJUST_HOUSE_MODIFIER(HouseClass* house, ObjectCl
  */
 bool TActionClassExtension::Do_APPLY_IRON_CURTAIN(HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
 {
-    // Check for legality, unless this is forced.
     HouseClassExtension* houseext = Extension::Fetch(house);
 
+    // Check for legality, unless this is forced.
     bool forced = This()->Data.Bool;
-    if (!forced)
-    {
-        if (!houseext->Can_Use_Iron_Curtain())
-        {
+    if (!forced) {
+        if (!houseext->Can_Use_Iron_Curtain()) {
             // If the application is not forced and the house is unable to use the Iron Curtain, skip.
             return true;
         }
@@ -1644,14 +1600,11 @@ bool TActionClassExtension::Do_APPLY_IRON_CURTAIN(HouseClass* house, ObjectClass
     /**
      *  Iterate all technos, and if their tag is attached to this trigger, apply Iron Curtain on them.
      */
-    for (int i = 0; i < Technos.Count(); i++) 
-    {
+    for (int i = 0; i < Technos.Count(); i++) {
         TechnoClass* techno = Technos[i];
 
-        if (techno->IsActive && techno->IsDown && !techno->IsInLimbo) 
-        {
-            if (techno->Tag && techno->Tag->Is_Trigger_Attached(trig)) 
-            {
+        if (techno->IsActive && techno->IsDown && !techno->IsInLimbo) {
+            if (techno->Tag && techno->Tag->Is_Trigger_Attached(trig)) {
                 TechnoClassExtension* technoext = Extension::Fetch(techno);
                 technoext->Iron_Curtain_Me(true);
             }
