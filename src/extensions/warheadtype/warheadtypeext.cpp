@@ -1,29 +1,10 @@
 /*******************************************************************************
 /*                 O P E N  S O U R C E  --  V I N I F E R A                  **
 /*******************************************************************************
+ *  @brief  Extended WarheadTypeClass class.
  *
- *  @project       Vinifera
- *
- *  @file          WARHEADTYPEEXT.CPP
- *
- *  @author        CCHyper
- *
- *  @brief         Extended WarheadTypeClass class.
- *
- *  @license       Vinifera is free software: you can redistribute it and/or
- *                 modify it under the terms of the GNU General Public License
- *                 as published by the Free Software Foundation, either version
- *                 3 of the License, or (at your option) any later version.
- *
- *                 Vinifera is distributed in the hope that it will be
- *                 useful, but WITHOUT ANY WARRANTY; without even the implied
- *                 warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- *                 PURPOSE. See the GNU General Public License for more details.
- *
- *                 You should have received a copy of the GNU General Public
- *                 License along with this program.
- *                 If not, see <http://www.gnu.org/licenses/>.
- *
+ *  SPDX-License-Identifier: GPL-3.0-or-later
+ *  Copyright (c) 2020-2026 Vinifera contributors
  ******************************************************************************/
 
 #include "always.h"
@@ -147,7 +128,7 @@ HRESULT WarheadTypeClassExtension::Load(IStream *pStm)
 
     new (this) WarheadTypeClassExtension(NoInitClass());
 
-    CellAnim.Load(pStm);
+    CellAnim.Load_Self(pStm);
 
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(CellAnim, "CellAnim");
     
@@ -169,7 +150,7 @@ HRESULT WarheadTypeClassExtension::Save(IStream *pStm, BOOL fClearDirty)
         return hr;
     }
 
-    CellAnim.Save(pStm);
+    CellAnim.Save_Self(pStm);
 
     return hr;
 }

@@ -1,29 +1,10 @@
 /*******************************************************************************
 /*                 O P E N  S O U R C E  --  V I N I F E R A                  **
 /*******************************************************************************
+ *  @brief  Extended TechnoTypeClass class.
  *
- *  @project       Vinifera
- *
- *  @file          TECHNOTYPEEXT.CPP
- *
- *  @author        CCHyper
- *
- *  @brief         Extended TechnoTypeClass class.
- *
- *  @license       Vinifera is free software: you can redistribute it and/or
- *                 modify it under the terms of the GNU General Public License
- *                 as published by the Free Software Foundation, either version
- *                 3 of the License, or (at your option) any later version.
- *
- *                 Vinifera is distributed in the hope that it will be
- *                 useful, but WITHOUT ANY WARRANTY; without even the implied
- *                 warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- *                 PURPOSE. See the GNU General Public License for more details.
- *
- *                 You should have received a copy of the GNU General Public
- *                 License along with this program.
- *                 If not, see <http://www.gnu.org/licenses/>.
- *
+ *  SPDX-License-Identifier: GPL-3.0-or-later
+ *  Copyright (c) 2020-2026 Vinifera contributors
  ******************************************************************************/
 
 #include "always.h"
@@ -178,11 +159,11 @@ HRESULT TechnoTypeClassExtension::Load(IStream *pStm)
         return E_FAIL;
     }
 
-    VoiceCapture.Load(pStm);
-    VoiceEnter.Load(pStm);
-    VoiceDeploy.Load(pStm);
-    VoiceHarvest.Load(pStm);
-    BuiltAt.Load(pStm);
+    VoiceCapture.Load_Self(pStm);
+    VoiceEnter.Load_Self(pStm);
+    VoiceDeploy.Load_Self(pStm);
+    VoiceHarvest.Load_Self(pStm);
+    BuiltAt.Load_Self(pStm);
 
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP(UnloadingClass, "UnloadingClass");
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP(Spawns, "Spawns");
@@ -233,11 +214,11 @@ HRESULT TechnoTypeClassExtension::Save(IStream *pStm, BOOL fClearDirty)
         return hr;
     }
 
-    VoiceCapture.Save(pStm);
-    VoiceEnter.Save(pStm);
-    VoiceDeploy.Save(pStm);
-    VoiceHarvest.Save(pStm);
-    BuiltAt.Save(pStm);
+    VoiceCapture.Save_Self(pStm);
+    VoiceEnter.Save_Self(pStm);
+    VoiceDeploy.Save_Self(pStm);
+    VoiceHarvest.Save_Self(pStm);
+    BuiltAt.Save_Self(pStm);
 
     return hr;
 }
