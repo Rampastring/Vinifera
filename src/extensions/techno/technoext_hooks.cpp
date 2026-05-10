@@ -15,6 +15,7 @@
 #include "aircraftext.h"
 #include "asserthandler.h"
 #include "buildingext.h"
+#include "buildingtypeext.h"
 #include "bullettype.h"
 #include "bullettypeext.h"
 #include "cell.h"
@@ -3089,10 +3090,17 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
 
         if (bldg->Class->IsInvisibleInGame) return false;
 
-        // Port over ts-patches hack that makes buildings not targeted by default if they have a weapon with a range of 0.
-        const WeaponTypeClass* bldgweapon = bldg->Class->Fetch_Weapon_Info(WEAPON_SLOT_PRIMARY).Weapon;
-        if (bldgweapon != nullptr && bldgweapon->Range == 0) {
-            return false;
+        if (!Extension::Fetch(bldg->Class)->IsDefaultTarget) {
+
+            if (bldg->House->Class->IsMultiplayPassive) {
+                // This object is likely a neutral-owned explosive object, like an oil derrick. Skip it.
+                return false;
+            }
+
+            if (House->Is_Human_Player()) {
+                // Even if it's not neutral-owned, human players' units don't target buildings automatically if they've been marked as not targetable by default.
+                return false;
+            }
         }
     }
 
@@ -3116,6 +3124,17 @@ bool TechnoClassExt::_Evaluate_Object(ThreatType method, int mask, int range, Te
     TechnoTypeClass const* tclass = object->TClass;
     if (!tclass->IsLegalTarget) {
         return false; // Legality failure.
+    }
+
+    /**
+    *  #issue-977
+    *
+    *  Determine if "we" are owned by a non-human house and the target is not theoretically allowed to be a target.
+    *
+    *  @author: CCHyper
+    */
+    if (!House->Is_Human_Player() && !Extension::Fetch(tclass)->IsLegalTargetComputer) {
+        return false;
     }
 
     if (tclass->IsTrain && RTTI == RTTI_INFANTRY && reinterpret_cast<InfantryClass const*>(this)->Class->IsVehicleThief) {

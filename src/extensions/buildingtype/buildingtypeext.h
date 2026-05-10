@@ -129,4 +129,9 @@ public:
      *  Should the Advanced AI ignore prerequisites when considering whether it can build this building?
      */
     bool IsAdvancedAIIgnoresPrerequisites;
+
+    /**
+     *  Should this building be targeted automatically if it has a weapon?
+     */
+    bool IsDefaultTarget;
 };
