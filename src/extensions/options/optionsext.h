@@ -12,6 +12,7 @@
 #include "SDL3/SDL_surface.h"
 #include "extension.h"
 #include "options.h"
+#include "uicontrol.h"
 
 
 class CCINIClass;
@@ -32,6 +33,13 @@ public:
         RENDERER_DRIVER_VULKAN
     };
 
+    enum SubtitleModeType {
+        SUBTITLE_MODE_NONE,
+        SUBTITLE_MODE_ALL,
+        SUBTITLE_MODE_SCENARIO,
+        SUBTITLE_MODE_SYSTEM
+    };
+
 public:
     OptionsClassExtension(const OptionsClass* this_ptr);
     OptionsClassExtension(const NoInitClass& noinit);
@@ -42,7 +50,6 @@ public:
      *  implement them for completeness.
      */
     virtual int Get_Object_Size() const override;
-    virtual void Detach(AbstractClass* target, bool all = true) override;
     virtual void Object_CRC(CRCEngine& crc) const override;
 
     virtual const char* Name() const override { return "Options"; }
@@ -53,10 +60,19 @@ public:
     void Save_Settings();
 
     void Set();
+    SidebarViewType Get_Sidebar_View_Type() const;
+
+private:
+    void Apply_Volumes();
+
+public:
 
     static RendererDriverType Parse_Renderer_Driver(const char* name);
     static const char* Get_Renderer_Driver_Config_Name(RendererDriverType driver);
     static const char* Get_Renderer_Driver_SDL_Name(RendererDriverType driver);
+
+    static SubtitleModeType Parse_Subtitle_Mode(const char* name);
+    static const char* Subtitle_Mode_Config_Name(SubtitleModeType mode);
 
 public:
     /**
@@ -68,6 +84,11 @@ public:
      *  Are harvesters and MCVs excluded from a band-box selection that includes combat units?
      */
     bool FilterBandBoxSelection;
+
+    /**
+     *  User override for the battle sidebar view type. SIDEBAR_COUNT means use UI.INI.
+     */
+    SidebarViewType SidebarViewTypeOverride;
 
     /**
      *  Customizable hotkeys for starting a chat.
@@ -101,6 +122,11 @@ public:
      *  Preferred SDL renderer backend.
      */
     RendererDriverType RendererDriver;
+
+    /**
+     *  Which VOX subtitles should be displayed.
+     */
+    SubtitleModeType SubtitleMode;
 
     /**
      *  Are messages drawn top-left rather than bottom-left?

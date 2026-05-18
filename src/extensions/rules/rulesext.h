@@ -29,7 +29,6 @@ public:
     virtual ~RulesClassExtension();
 
     virtual int Get_Object_Size() const override;
-    virtual void Detach(AbstractClass* target, bool all = true) override;
     virtual void Object_CRC(CRCEngine& crc) const override;
 
     virtual const char* Name() const override { return "Rule"; }
@@ -257,6 +256,16 @@ public:
      *  Determines whether the AI is limited to one harvester in singleplayer scenarios, like in original Tiberian Sun.
      */
     bool IsAIOneHarvesterInSingleplayer;
+
+    /**
+     *  Determines whether repairs would pause instead of stopping when a house has insufficient funds.
+     */
+    bool IsPauseRepairs;
+
+    /**
+     *  Determines the wrench shape frame that should be used while repairs are paused.
+     */
+    int PausedRepairsFrame;
 
     /**
      *  How much value (in credits) a house needs to destroy to strengthen their objects by one percentage.

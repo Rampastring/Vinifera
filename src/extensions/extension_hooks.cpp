@@ -18,6 +18,8 @@
 #include "animext_hooks.h"
 #include "animtypeext_hooks.h"
 #include "astarext_hooks.h"
+#include "audio_hooks.h"
+#include "audio_ui_hooks.h"
 #include "beacon_hooks.h"
 #include "buildingext_hooks.h"
 #include "buildingtypeext_hooks.h"
@@ -282,4 +284,7 @@ void Extension_Hooks()
     AircraftTracker_Hooks();
     PrerequisiteGroup_Hooks();
     Beacon_Hooks();
+
+    Audio_Hooks();
+    Audio_UI_Hooks();
 }

@@ -22,6 +22,45 @@ UIControlsClass* UIControls = nullptr;
 
 
 /***************************************************************************
+**  Sidebar view type helpers
+***************************************************************************/
+
+
+/**
+ *  Parses the sidebar view type name.
+ *
+ *  @author: ZivDero
+ */
+SidebarViewType Sidebar_View_From_Name(const char* name, SidebarViewType default_type)
+{
+    if (name == nullptr || *name == '\0') {
+        return default_type;
+    }
+
+    if (_stricmp(name, "Tabbed") == 0) {
+        return SIDEBAR_TABBED;
+    }
+
+    if (_stricmp(name, "Classic") == 0) {
+        return SIDEBAR_CLASSIC;
+    }
+
+    return default_type;
+}
+
+
+/**
+ *  Returns the INI-facing name for a sidebar view type.
+ *
+ *  @author: ZivDero
+ */
+const char* Name_From_Sidebar_View_Type(SidebarViewType view_type)
+{
+    return view_type == SIDEBAR_TABBED ? "Tabbed" : "Classic";
+}
+
+
+/***************************************************************************
 **  Battle sidebar layout config
 ***************************************************************************/
 
@@ -32,6 +71,7 @@ UIControlsClass* UIControls = nullptr;
  *  @author: CCHyper
  */
 void BattleSidebarLayoutBase::Read_INI(CCINIClass const& ini, const char* section)
+
 {
     RepairButton.Position = ini.Get_Point(section, "RepairButtonPos", RepairButton.Position);
     RepairButton.IsVisible = ini.Get_Bool(section, "RepairButtonVisible", RepairButton.IsVisible);
@@ -249,12 +289,8 @@ bool UIControlsClass::Read_INI(CCINIClass const& ini)
     static char const* const SIDEBAR_CLASSIC_SECTION = "SidebarClassic";
     static char const* const SIDEBAR_TABBED_SECTION = "SidebarTabbed";
 
-    std::string sidebar_view = ini.Get_String(SIDEBAR_SECTION, "ViewType", BattleSidebarViewType == SIDEBAR_TABBED ? "Tabbed" : "Classic");
-    if (_stricmp(sidebar_view.c_str(), "Tabbed") == 0) {
-        BattleSidebarViewType = SIDEBAR_TABBED;
-    } else {
-        BattleSidebarViewType = SIDEBAR_CLASSIC;
-    }
+    std::string sidebar_view = ini.Get_String(SIDEBAR_SECTION, "ViewType", Name_From_Sidebar_View_Type(BattleSidebarViewType));
+    BattleSidebarViewType = Sidebar_View_From_Name(sidebar_view.c_str(), SIDEBAR_CLASSIC);
 
     UnitHealthBarDrawPos = ini.Get_Point(INGAME, "UnitHealthBarPos", UnitHealthBarDrawPos);
     InfantryHealthBarDrawPos = ini.Get_Point(INGAME, "InfantryHealthBarPos", InfantryHealthBarDrawPos);
@@ -336,6 +372,15 @@ bool UIControlsClass::Read_INI(CCINIClass const& ini)
             BeaconPreviewText[i] = buffer;
         }
     }
+
+    SubtitleFontName = ini.Get_String(INGAME, "SubtitleFontName", SubtitleFontName);
+    SubtitleFontHeight = ini.Get_Int(INGAME, "SubtitleFontHeight", SubtitleFontHeight);
+    SubtitleFontWeight = ini.Get_Int(INGAME, "SubtitleFontWeight", SubtitleFontWeight);
+    SubtitleTextColor = ini.Get_RGBColor(INGAME, "SubtitleTextColor", SubtitleTextColor);
+    SubtitleOutlineColor = ini.Get_RGBColor(INGAME, "SubtitleOutlineColor", SubtitleOutlineColor);
+    SubtitleOutlineWidth = ini.Get_Int(INGAME, "SubtitleOutlineWidth", SubtitleOutlineWidth);
+    SubtitleMarginX = ini.Get_Int(INGAME, "SubtitleMarginX", SubtitleMarginX);
+    SubtitleMarginBottom = ini.Get_Int(INGAME, "SubtitleMarginBottom", SubtitleMarginBottom);
 
     MessageListPositionX = ini.Get_Int(INGAME, "MessageListPositionX", MessageListPositionX);
 

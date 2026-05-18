@@ -14,6 +14,7 @@
 #include "addon.h"
 #include "aircraft.h"
 #include "aircrafttracker.h"
+#include "audio_static_sound.h"
 #include "aircrafttype.h"
 #include "aitrigtype.h"
 #include "alphashape.h"
@@ -351,6 +352,8 @@ bool Vinifera_Put_All(IStream *pStm, bool save_net)
     KamikazeTracker->Save(pStm, false);
     AircraftTracker->Save(pStm);
 
+    Save_Tracked_Static_Sounds(pStm);
+
     /**
      *  Save skirmish values.
      */
@@ -605,6 +608,8 @@ bool Vinifera_Get_All(IStream *pStm, bool load_net)
 
     AircraftTracker->Clear();
     AircraftTracker->Load(pStm);
+
+    Load_Tracked_Static_Sounds(pStm);
 
     /**
      *  Load skirmish values.

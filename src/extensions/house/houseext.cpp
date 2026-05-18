@@ -50,6 +50,7 @@
  */
 HouseClassExtension::HouseClassExtension(const HouseClass* this_ptr) :
     AbstractClassExtension(this_ptr),
+    Vinifera::Detach::Listener<FactoryClass>(),
     TiberiumStorage(Tiberiums.Count()),
     WeedStorage(Tiberiums.Count()),
     NavalFactories(0),
@@ -128,6 +129,7 @@ HouseClassExtension::HouseClassExtension(const HouseClass* this_ptr) :
  */
 HouseClassExtension::HouseClassExtension(const NoInitClass &noinit) :
     AbstractClassExtension(noinit),
+    Vinifera::Detach::Listener<FactoryClass>(noinit),
     TiberiumStorage(noinit),
     WeedStorage(noinit)
 {
@@ -227,14 +229,10 @@ int HouseClassExtension::Get_Object_Size() const
 
 
 /**
- *  Removes the specified target from any targeting and reference trackers.
- *  
- *  @author: CCHyper
+ *  Clears NavalFactory if it pointed at the destroyed factory.
  */
-void HouseClassExtension::Detach(AbstractClass * target, bool all)
+void HouseClassExtension::On_Detach(FactoryClass *target, bool all)
 {
-    //EXT_DEBUG_TRACE("HouseClassExtension::Detach - 0x%08X\n", (uintptr_t)(This()));
-
     if (NavalFactory == target) {
         NavalFactory = nullptr;
     }

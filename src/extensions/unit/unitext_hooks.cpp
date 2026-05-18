@@ -1686,6 +1686,13 @@ void UnitClassExtension_Hooks()
 
     Patch_Byte(0x00658961, 0xEB); // Allow pre-placed units to have missions in multiplayer, change JZ to JMP
 
+    /*
+    *  Patches the MISSION_HARVEST logic that handles harvesters becoming idle due to being unable to find tiberium in its area.
+    *  It does this by removing the MISSION_GUARD assignment inside the function and instead sets it to MISSION_GUARD_AREA,
+    *  which naturally seeks out tiberium to harvest.
+    */  
+    Patch_Byte(0x0065521C + 1, (unsigned char)MISSION_GUARD_AREA); 
+
     // Require more precision when units face their targets
     Patch_Byte(0x00656FF9 + 2, 0x02);
     Patch_Byte(0x00656FFC + 2, 0x02);

@@ -30,6 +30,9 @@ enum SidebarViewType {
     SIDEBAR_COUNT
 };
 
+SidebarViewType Sidebar_View_From_Name(const char* name, SidebarViewType default_type);
+const char* Name_From_Sidebar_View_Type(SidebarViewType view_type);
+
 
 struct SidebarButtonLayout
 {
@@ -92,7 +95,11 @@ struct SidebarClassicLayout : BattleSidebarLayoutBase
 
 struct SidebarTabbedLayout : BattleSidebarLayoutBase
 {
-    SidebarTabbedLayout() { PowerBarHeightAdjust = 28; }
+    SidebarTabbedLayout()
+    {
+        PowerBarPosition = { 8, 53 };
+        PowerBarHeightAdjust = 0;
+    }
     void Read_INI(CCINIClass const& ini, const char* section) override;
 
     TPoint2D<int> TabButtonPosition[4] = { {20, 24}, {55, 24}, {90, 24}, {125, 24} };
@@ -341,6 +348,19 @@ class UIControlsClass
          *  Text presets for beacons *shown as a tooltip* when holding modifier keys when placing.
          */
         std::string BeaconPreviewText[7] = {"Expand", "Attack", "Move", "", "", "Defend", ""};
+
+        /**
+         *  Subtitle styling. Used by TacticalExtension::Draw_Subtitle to render
+         *  the currently playing VOX's text at the bottom of the tactical view.
+         */
+        std::string SubtitleFontName = "Arial";
+        int SubtitleFontHeight = 22;
+        int SubtitleFontWeight = FW_BOLD;
+        RGBStruct SubtitleTextColor = {255, 255, 255};
+        RGBStruct SubtitleOutlineColor = {0, 0, 0};
+        int SubtitleOutlineWidth = 2;
+        int SubtitleMarginX = 40;
+        int SubtitleMarginBottom = 24;
 
         /**
          *  Horizontal left-most pixel position of the message list.
