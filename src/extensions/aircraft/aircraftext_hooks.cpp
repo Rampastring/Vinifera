@@ -54,7 +54,7 @@ public:
     LONG STDMETHODCALLTYPE _Landing_Altitude();
     LONG STDMETHODCALLTYPE _Landing_Altitude_Thunk();
     RadioMessageType _Receive_Message(RadioClass * from, RadioMessageType message, long& param);
-    bool Do_MISSION_MOVE_Apply_QMove();
+    bool _Do_MISSION_MOVE_Apply_QMove();
     int _Mission_Retreat();
     bool _Enter_Idle_Mode(bool initial, bool a2);
     int _Do_MISSION_GUARD();
@@ -1361,7 +1361,7 @@ DEFINE_HOOK(0x0040B35A, _AircraftClass_Enter_Idle_Mode_QMove_Patch, 6)
  *
  *  @author: JoyfulShush
  */
-bool AircraftClassExt::Do_MISSION_MOVE_Apply_QMove()
+bool AircraftClassExt::_Do_MISSION_MOVE_Apply_QMove()
 {
     if (NavQueue.Count() <= 0) {
         return false;
@@ -1410,7 +1410,7 @@ DEFINE_HOOK(0x0040A655, _AircraftClass_Do_MISSION_MOVE__QMove_Patch, 6)
 {    
     GET(AircraftClassExt*, this_ptr, ESI);
 
-    bool qmove_applied = this_ptr->Do_MISSION_MOVE_Apply_QMove();
+    bool qmove_applied = this_ptr->_Do_MISSION_MOVE_Apply_QMove();
 
     if (qmove_applied) {
         return 0x0040A711; // jump to statement resetting status to 0 and returning 1
@@ -1430,7 +1430,7 @@ DEFINE_HOOK(0x0040AD38, _AircraftClass_Do_MISSION_MOVE_Carryall_QMove_Patch, 6)
 {
     GET(AircraftClassExt*, this_ptr, ESI);
 
-    bool qmove_applied = this_ptr->Do_MISSION_MOVE_Apply_QMove();
+    bool qmove_applied = this_ptr->_Do_MISSION_MOVE_Apply_QMove();
 
     if (qmove_applied) {
         return 0x0040ACFC; // jump to statement resetting status to 0 and returning 1

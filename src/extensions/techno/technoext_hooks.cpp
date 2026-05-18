@@ -14,6 +14,7 @@
 #include "aircraft.h"
 #include "aircraftext.h"
 #include "asserthandler.h"
+#include "audio_vox.h"
 #include "buildingext.h"
 #include "buildingtypeext.h"
 #include "bullettype.h"
@@ -670,7 +671,7 @@ void TechnoClassExt::_Mission_AI()
                  */
                 if (House->Is_Player_Control()) {
                     Static_Sound(RuleExtension->UpgradeEliteSound, PositionCoord);
-                    Speak(RuleExtension->VoxUnitPromoted);
+                    AudioVoxClass::Speak(RuleExtension->VoxUnitPromoted);
                 }
 
                 /**
@@ -684,7 +685,7 @@ void TechnoClassExt::_Mission_AI()
                  */
                 if (House->Is_Player_Control()) {
                     Static_Sound(RuleExtension->UpgradeVeteranSound, PositionCoord);
-                    Speak(RuleExtension->VoxUnitPromoted);
+                    AudioVoxClass::Speak(RuleExtension->VoxUnitPromoted);
                 }
             }
 
@@ -3479,6 +3480,24 @@ int TechnoClassExt::_Anti_Air(void) const
         }
     }
     return (0);
+}
+
+/**
+ *  Patches Find_Docking_Bay to make aircraft search for an un-occupied dock to land on.
+ *  This is achieved by changing the "only_unocciped" parameter (third argument, bool) into true when it's aircraft.
+ *
+ *  @author: JoyfulShush
+ */
+DEFINE_HOOK(0x00637F0B, _TechnoClass_Find_Docking_Bay_Unoccupied_Aircraft_Patch, 6)
+{
+    GET(TechnoClass*, this_ptr, ESI);
+    REF_STACK(bool, only_unoccupied_ptr, 0x48);
+
+    if (this_ptr->Fetch_RTTI() == RTTI_AIRCRAFT) {
+        only_unoccupied_ptr = true;
+    }
+
+    return 0;
 }
 
 
