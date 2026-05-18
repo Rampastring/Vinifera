@@ -535,7 +535,7 @@ void TeamClassExt::_TMission_ATTACK(ScriptMissionClass* mission, bool)
 			break;
 
 		case VINIFERA_QUARRY_HARVESTERS:
-			Assign_Mission_Target(candidate->Greatest_Threat((ThreatType)VINIFERA_THREAT_HARVESTERS, candidate->PositionCoord, Class->OnlyTargetHouseEnemy));
+			Assign_Mission_Target(candidate->Greatest_Threat((ThreatType)EXT_THREAT_HARVESTERS, candidate->PositionCoord, Class->OnlyTargetHouseEnemy));
 			break;
 
 		default:
