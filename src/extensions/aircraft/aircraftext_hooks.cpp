@@ -27,6 +27,7 @@
 #include "rules.h"
 #include "rulesext.h"
 #include "syringe.h"
+#include "tibsun_globals.h"
 #include "team.h"
 #include "technotype.h"
 #include "technotypeext.h"
@@ -491,7 +492,7 @@ DEFINE_HOOK(0x0040BDCF, _AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TA
     GET(AircraftClass *, this_ptr, ESI);
 
     AircraftTypeClassExtension* class_ext = Extension::Fetch(this_ptr->Class);
-    bool is_curley_shuffle = class_ext->IsCurleyShuffle;
+    bool is_curley_shuffle = class_ext->Get_IsCurleyShuffle();
     R->AL(is_curley_shuffle);
 
     return 0x0040BDDB;
@@ -503,7 +504,7 @@ DEFINE_HOOK(0x0040C054, _AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TA
     GET(AircraftClass *, this_ptr, ESI);
 
     AircraftTypeClassExtension* class_ext = Extension::Fetch(this_ptr->Class);
-    bool is_curley_shuffle = class_ext->IsCurleyShuffle;
+    bool is_curley_shuffle = class_ext->Get_IsCurleyShuffle();
     R->CL(is_curley_shuffle);
 
     return 0x0040BFA8;
@@ -514,7 +515,7 @@ DEFINE_HOOK(0x0040BF9D, _AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TA
     GET(AircraftClass *, this_ptr, ESI);
 
     AircraftTypeClassExtension* class_ext = Extension::Fetch(this_ptr->Class);
-    bool is_curley_shuffle = class_ext->IsCurleyShuffle;
+    bool is_curley_shuffle = class_ext->Get_IsCurleyShuffle();
     R->DL(is_curley_shuffle);
 
     return 0x0040C060;
@@ -525,7 +526,7 @@ DEFINE_HOOK(0x0040C0AC, _AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TA
     GET(AircraftClass *, this_ptr, ESI);
 
     AircraftTypeClassExtension* class_ext = Extension::Fetch(this_ptr->Class);
-    bool is_curley_shuffle = class_ext->IsCurleyShuffle;
+    bool is_curley_shuffle = class_ext->Get_IsCurleyShuffle();
     R->AL(is_curley_shuffle);
 
     return 0x0040C0B8;
@@ -927,7 +928,7 @@ void AdvAI_Aircraft_Maintenance(AircraftClass* aircraft)
 
             CellClass& aircraftcell = Map[aircraft->PositionCell];
             if (aircraftcell.Cell_Building() != nullptr && aircraftcell.Cell_Building()->Class->IsCanUnitReload) {
-                int reloadtime = Extension::Fetch(aircraft->Class)->ReloadRate * TICKS_PER_MINUTE;
+                int reloadtime = Extension::Fetch(aircraft->Class)->Get_ReloadRate() * TICKS_PER_MINUTE;
                 if (Frame - aircraftext->DockedFrame > reloadtime * aircraft->Class->MaxAmmo + 500) {
                     Aircraft_Move_Near_Dock(aircraft);
                     shoulddock = false;

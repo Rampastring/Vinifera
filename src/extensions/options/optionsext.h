@@ -129,6 +129,11 @@ public:
     SubtitleModeType SubtitleMode;
 
     /**
+     *  Should building repairs be paused instead of stopped when the player has insufficient funds?
+     */
+    bool IsPauseRepairs;
+
+    /**
      *  Are messages drawn top-left rather than bottom-left?
      */
     bool IsClassicMessagePosition;

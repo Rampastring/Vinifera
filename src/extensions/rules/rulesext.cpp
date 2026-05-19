@@ -102,7 +102,6 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     ComesNearWaypointDistance(CELL_LEPTON_W * 5),
     IsAIDetectDisguise(true),
     IsAIOneHarvesterInSingleplayer(true),
-    IsPauseRepairs(true),
     PausedRepairsFrame(6),
     StrengthenDestroyedValueThreshold(0),
     StrengthenBuildingValueMultiplier(3),
@@ -334,7 +333,6 @@ void RulesClassExtension::Object_CRC(CRCEngine &crc) const
     crc(IsAIDetectDisguise);
     crc(AIHarvestersPerRefinery.Count());
     crc(IsAIOneHarvesterInSingleplayer);
-    crc(IsPauseRepairs);
     crc(PausedRepairsFrame);
     crc(StrengthenDestroyedValueThreshold);
     crc(StrengthenBuildingValueMultiplier);
@@ -792,7 +790,6 @@ bool RulesClassExtension::General(CCINIClass &ini)
     MaxBeacons = ini.Get_Int(GENERAL, "MaxBeacons", MaxBeacons);
     SelfHealingCap = ini.Get_Float(GENERAL, "SelfHealingCap", SelfHealingCap);    
     SelfHealingRate = ini.Get_Float(GENERAL, "SelfHealingRate", SelfHealingRate);
-    IsPauseRepairs = ini.Get_Bool(GENERAL, "PauseRepairs", IsPauseRepairs);
     PausedRepairsFrame = ini.Get_Int(GENERAL, "PausedRepairsFrame", PausedRepairsFrame);
 
     /**

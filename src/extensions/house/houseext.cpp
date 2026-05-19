@@ -58,6 +58,7 @@ HouseClassExtension::HouseClassExtension(const HouseClass* this_ptr) :
     BuildNavalUnit(UNIT_NONE),
     SpawnWaypoint(WAYPOINT_NONE),
     IronCurtainAvailabilityTimer(),
+    IsPauseRepairs(false),
     StrengthenDestroyedCost(0),
     NextExpansionPointLocation(0, 0),
     ArchivedExpansionPointLocation(0, 0),
@@ -244,10 +245,15 @@ void HouseClassExtension::On_Detach(FactoryClass *target, bool all)
  *  
  *  @author: CCHyper
  */
-void HouseClassExtension::Object_CRC(CRCEngine &crc) const
+void HouseClassExtension::Object_CRC(CRCEngine& crc) const
 {
     //EXT_DEBUG_TRACE("HouseClassExtension::Object_CRC - 0x%08X\n", (uintptr_t)(This()));
 
+    crc(NavalFactories);
+    crc(BuildNavalUnit);
+    crc(SpawnWaypoint);
+    crc(IronCurtainAvailabilityTimer);
+    crc(IsPauseRepairs);
     crc(StrengthenDestroyedCost);
     crc(NextExpansionPointLocation.As_Cell_Number());
     crc(LastExcessRefineryCheckFrame);
