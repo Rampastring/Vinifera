@@ -38,6 +38,7 @@
 #include "noinit.h"
 #include "optionsext.h"
 #include "overlay.h"
+#include "ownrdraw.h"
 #include "playmovie.h"
 #include "radarevent.h"
 #include "restate.h"
@@ -1163,6 +1164,8 @@ bool ScenarioClassExtension::Start_Scenario(char* name, bool briefing, CampaignT
         MouseCursor->Release_Mouse();
         MouseCursor->Show_Mouse();
 
+        OwnerDraw::Cache_Images();
+
         Restate_Mission(Scen);
 
         MouseCursor->Hide_Mouse();
@@ -1237,16 +1240,21 @@ bool ScenarioClassExtension::Start_Scenario(char* name, bool briefing, CampaignT
         Change_Video_Mode(Options.ScreenWidth, Options.ScreenHeight);
     }
 
-    /**
-     *  Print a message stating the current difficulty level.
-     */
-    static const char* difficulty_names[] = {
-        "Difficulty: Hard",
-        "Difficulty: Medium",
-        "Difficulty: Easy",
-    };
+    if (Session.Type == GAME_NORMAL) {
 
-    Session.Messages.Add_Message(nullptr, 0, difficulty_names[Scen->CDifficulty], Fetch_Scheme_Index_By_Name("DarkGold"), TPF_6PT_GRAD | TPF_USE_GRAD_PAL | TPF_FULLSHADOW, Rule->MessageDelay * TICKS_PER_MINUTE);
+        /**
+         *  Print a message stating the current difficulty level.
+         */
+        static const char* difficulty_names[] = {
+            "Difficulty: Hard",
+            "Difficulty: Medium",
+            "Difficulty: Easy",
+        };
+
+        const char* diff_name = ScenExtension->DifficultyName[0] == '\0' ? difficulty_names[Scen->CDifficulty] : ScenExtension->DifficultyName;
+
+        Session.Messages.Add_Message(nullptr, 0, diff_name, Fetch_Scheme_Index_By_Name("DarkGold"), TPF_6PT_GRAD | TPF_USE_GRAD_PAL | TPF_FULLSHADOW, Rule->MessageDelay * TICKS_PER_MINUTE);
+    }
 
     /**
      *  Mark the game as having started.
