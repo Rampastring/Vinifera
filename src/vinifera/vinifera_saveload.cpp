@@ -61,9 +61,11 @@
 #include "rockettype.h"
 #include "rules.h"
 #include "saveload.h"
+#include "spawner.h"
 #include "savever.h"
 #include "scenario.h"
 #include "scenarioext.h"
+#include "sessionext.h"
 #include "script.h"
 #include "scripttype.h"
 #include "session.h"
@@ -102,6 +104,12 @@
 #include "waypointpath.h"
 #include "weapontype.h"
 #include "windialog.h"
+#include "fetchres.h"
+#include "optionsext.h"
+#include "spawner.h"
+#include "technoext.h"
+#include "verses.h"
+#include "scenarioext.h"
 
 #include <atlbase.h>
 
@@ -266,9 +274,7 @@ bool Vinifera_Put_All(IStream *pStm, bool save_net)
     if (FAILED(Logic.Save(pStm))) { return false; }
 
     DEBUG_INFO("Saving TacticalMap...\n");
-    {
-        if (FAILED(OleSaveToStream(TacticalMap, pStm))) { return false; }
-    }
+    if (FAILED(OleSaveToStream(TacticalMap, pStm))) { return false; }
 
     /**
      *  Save all game objects. This code saves every object that's stored in a DynamicVector class.
@@ -447,17 +453,6 @@ bool Vinifera_Get_All(IStream *pStm, bool load_net)
 
     Enable_Addon(Scen->RequiredAddOn);
 
-    SideType side = Scen->IsGDI ? SIDE_GDI : SIDE_NOD;
-#if defined(TS_CLIENT)
-    side = static_cast<SideType>(Scen->IsGDI);
-#endif
-
-    DEBUG_INFO("About to call Prep_For_Side()...\n");
-    if (!Prep_For_Side(side)) {
-        DEBUG_ERROR("Prep_For_Side() failed!\n");
-        return false;
-    }
-
     {
     Rect tactical_rect = Get_Tactical_Rect();
     Rect composite_rect(0, 0, tactical_rect.Width, VisibleRect.Height);
@@ -485,12 +480,6 @@ bool Vinifera_Get_All(IStream *pStm, bool load_net)
 
     DEBUG_INFO("Loading Rule...\n");
     Rule->Load(pStm);
-
-    DEBUG_INFO("About to call Prep_Speech_For_Side()...\n");
-    if (!Prep_Speech_For_Side(side)) {
-        DEBUG_ERROR("Prep_Speech_For_Side() failed!\n");
-        return false;
-    }
 
     if (FAILED(Vinifera_Load_Vector(pStm, AnimTypes, "AnimTypes"))) { return false; }
 
@@ -633,6 +622,51 @@ bool Vinifera_Get_All(IStream *pStm, bool load_net)
      */
     DEBUG_INFO("Loading BattleUI...\n");
     if (FAILED(BattleUI.Load(pStm))) { return false; }
+    
+    /**
+     *  #issue-218
+     *
+     *  We now abuse ScenarioClass::IsGDI to store the player house so it can be used to
+     *  fetch the SideType from it for loading the assets. This also means this
+     *  bugfix works without extending any of the games classes, but this does mean we
+     *  are limited to 255 unique houses!
+     */
+    const HousesType house = ScenExtension->House;
+    ASSERT_FATAL(house != HOUSE_NONE & house < HouseTypes.Count());
+    const HouseTypeClass* housetype = HouseTypes[house];
+    ASSERT_FATAL(housetype != nullptr);
+
+    /**
+     *  Fetch the houses side type and use this to decide which assets to load.
+     */
+    DEBUG_INFO("About to call Prep_For_Side()...\n");
+    if (!Prep_For_Side(ScenExtension->SidebarSide)) {
+        DEBUG_WARNING("Prep_For_Side(%d) failed! Trying with side 0...\n", housetype->Side);
+
+        /**
+         *  Try once again but with the Side 0 (GDI) assets.
+         */
+        if (!Prep_For_Side(SIDE_GDI)) {
+            DEBUG_ERROR("Prep_For_Side() failed!\n");
+            return false;
+        }
+    }
+
+    /**
+     *  Fetch the houses side type and use this to decide which speech assets to load.
+     */
+    DEBUG_INFO("About to call Prep_Speech_For_Side()...\n");
+    if (!Prep_Speech_For_Side(housetype->Side)) {
+        DEBUG_WARNING("Prep_Speech_For_Side(%d) failed! Trying with side 0...\n", housetype->Side);
+
+        /**
+         *  Try once again but with the Side 0 (GDI) assets.
+         */
+        if (!Prep_Speech_For_Side(SIDE_GDI)) {
+            DEBUG_ERROR("Prep_Speech_For_Side() failed!\n");
+            return false;
+        }
+    }
 
     Map.Flag_To_Redraw(GS_REDRAW_ALL);
 
@@ -725,13 +759,6 @@ bool Vinifera_Save_Game(const char* file_name, const char* descr, bool)
     DEBUG_INFO("SAVING GAME [%s - %s]\n", formatted_file_name, descr);
 
     /**
-     *  This is required for compatibility with TS Client's sidebar hack.
-     */
-#if defined(TS_CLIENT)
-    Scen->IsGDI = Session.IsGDI;
-#endif
-
-    /**
      *  Make sure our saved games folder exists.
      */
     if (!Directory_Exists(Vinifera_SavedGamesDirectory)) {
@@ -772,7 +799,7 @@ bool Vinifera_Save_Game(const char* file_name, const char* descr, bool)
 
     versioninfo.Set_Vinifera_Version(ViniferaGameVersion);
     versioninfo.Set_Vinifera_Commit_Hash(Vinifera_Git_Hash());
-    versioninfo.Set_Session_ID(Session.UniqueID);
+    versioninfo.Set_Playthrough_ID(Vinifera_PlaythroughID);
     versioninfo.Set_Difficulty(Scen->Difficulty);
     versioninfo.Set_Total_Play_Time(Vinifera_TotalPlayTime + Scen->ElapsedTimer.Value());
 
@@ -882,6 +909,7 @@ bool Vinifera_Load_Game(const char* file_name)
     storage.Release();
     Session.Type = static_cast<GameEnum>(saveversion.Get_Game_Type());
     Vinifera_TotalPlayTime = saveversion.Get_Total_Play_Time();
+    Vinifera_PlaythroughID = saveversion.Get_Playthrough_ID();
     SwizzleManager.Reset();
 
     DEBUG_INFO("Opening DocFile\n");
@@ -946,6 +974,11 @@ bool Vinifera_Load_Game(const char* file_name)
     Map.Total_Radar_Refresh();
     ScenarioActive = true;
     TacticalActive = true;
+
+    /**
+     *  Restore the loaded autosave state.
+     */
+    SessionExtension->Restore_Autosave_After_Load();
 
     DEBUG_INFO("LOADING GAME [%s] - Complete\n", formatted_file_name);
 
@@ -1070,6 +1103,23 @@ bool LoadOptionsClassExt::_Read_File(FileEntryClass* file, WIN32_FIND_DATA* file
             if (vinifera_version != ViniferaGameVersion) {
                 DEBUG_WARNING("Save file \"%s\" is incompatible! Vinifera: File version 0x%X, Expected version 0x%X.\n", formatted_file_name, vinifera_version, ViniferaGameVersion);
                 return false;
+            }
+
+            /**
+             *  Don't allow loading saves from other campaign playthroughs, or campaign saves in general if we're not in campaign
+             *  (to facilitate the client's playthrough tracking).
+             */
+            if (GameActive) {
+
+                if (Session.Type == GAME_NORMAL && saveversion.Get_Playthrough_ID() != Vinifera_PlaythroughID) {
+                    DEBUG_INFO("Save file \"%s\" belongs to a different playthough, skipping.\n", formatted_file_name);
+                    return false;
+                }
+
+                if (Session.Type != GAME_NORMAL && saveversion.Get_Game_Type() == GAME_NORMAL) {
+                    DEBUG_INFO("Save file \"%s\" is a campaign save and the player is currently not in campaign, skipping.\n", formatted_file_name);
+                    return false;
+                }
             }
 
             wsprintfA(file->Descr, "%s", saveversion.Get_Scenario_Description());

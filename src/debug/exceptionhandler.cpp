@@ -681,7 +681,7 @@ static void Dump_Exception_Info(unsigned int e_code, struct _EXCEPTION_POINTERS 
      */
     CurrentExceptionCRC = CRC32_Memory(ExceptionBuffer.data(), ExceptionBuffer.size());
 
-    DEBUG_WARNING("****************************** END EXEPTION DUMP ******************************!\n");
+    DEBUG_WARNING("****************************** END EXCEPTION DUMP ******************************!\n");
 }
 
 

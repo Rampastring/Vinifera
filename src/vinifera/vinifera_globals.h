@@ -17,6 +17,7 @@
 
 
 class PrerequisiteGroupClass;
+class HouseClass;
 class KamikazeTrackerClass;
 class AircraftTrackerClass;
 class SpawnManagerClass;
@@ -31,6 +32,7 @@ class AdvancedAITacticTypeClass;
 struct SDL_Window;
 struct SDL_Renderer;
 struct SDL_Texture;
+class SpawnerConfig;
 
 
 extern bool Vinifera_DeveloperMode;
@@ -113,6 +115,8 @@ extern int EnvironmentGlobals[/*std::size(ScenExtension->GlobalFlags)*/500];
 extern std::unordered_map<std::string, std::string> Vinifera_TutorialText;
 
 extern bool Vinifera_PlayerOptionsSent;
+
+extern unsigned Vinifera_PlaythroughID;
 
 /**
  *  Global vectors and heaps.

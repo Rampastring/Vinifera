@@ -12,6 +12,8 @@
 
 #include "extension.h"
 #include "scenario.h"
+#include "uicontrol.h"
+#include "wstring.h"
 
 
 class ScenarioClassExtension final : public GlobalExtensionClass<ScenarioClass>
@@ -74,19 +76,27 @@ class ScenarioClassExtension final : public GlobalExtensionClass<ScenarioClass>
 
         static std::string Substitute_Variable_Placeholders(std::string input);
 
+        static bool Start_Scenario(char* name, bool briefing, CampaignType campaignid);
+        static bool Read_Scenario_INI(CCINIClass& ini, bool random = false);
+        static void Init_Forced_Alliances();
+
+        void Assign_Starting_Positions(bool official);
         static void Assign_Houses();
         static void Create_Units(bool official);
+        bool Read_Loading_Screen_INI(const char* filename);
+
+        UIControlsClass::LoadingScreen const* Pick_Loading_Screen_Override(HousesType house) const;
 
     public:
         /**
-         *  This is an vector of waypoints; each waypoint corresponds to a letter of
+         *  This is an array of waypoints; each waypoint corresponds to a letter of
          *  the alphabet, and points to a cell position.
          * 
          *  The CellClass has a bit that tells if that cell has a waypoint attached to
          *  it; the only way to find which waypoint it is, is to scan this array. This
          *  shouldn't be needed often; usually, you know the waypoint & you want the "Cell".
          */
-        VectorClass<Cell> Waypoint;
+        Cell Waypoint[NEW_WAYPOINT_COUNT];
 
         /**
          *  Can ice get destroyed when hit by certain weapons?
@@ -102,6 +112,39 @@ class ScenarioClassExtension final : public GlobalExtensionClass<ScenarioClass>
         };
         ScenarioFlagExtType GlobalFlags[500];
         ScenarioFlagExtType LocalFlags[500];
+
+        /**
+         *  The side to use for the sidebar assets (singleplayer only).
+         */
+        SideType SidebarSide;
+
+        /**
+         *  Scenarios can override the loading screen with a custom variant, these
+         *  define the filename to load and position overrides.
+         */
+        std::vector<UIControlsClass::LoadingScreen> LoadingScreens;
+
+        /**
+         *  Should the AI use base nodes outside of campaign, instead of skirmish AI base building logic.
+         */
+        bool IsUseMPAIBaseNodes;
+
+        bool HasSpawnerScenarioOverrides;
+        DiffType CampaignDifficultyOverride;
+        DiffType CampaignCDifficultyOverride;
+        bool SkipScoreScreenOverride;
+        char StatsMapName[44];
+        char StatsMapHash[0xff];
+        char CustomLoadScreen[PATH_MAX];
+        Point2D CustomLoadScreenPos;
+        bool HasCustomLoadScreen;
+        bool HasCustomLoadScreenPos;
+
+        /**
+         *  Convenient property to access IsGDI as a HousesType.
+         */
+        HousesType Get_House() const { return static_cast<HousesType>(reinterpret_cast<unsigned char&>(This()->IsGDI)); }
+        void Set_House(HousesType house) { reinterpret_cast<unsigned char&>(This()->IsGDI) = house; }
+        __declspec(property(get = Get_House, put = Set_House)) HousesType House;
 };
 
-int Vinifera_Scan_Place_Object(ObjectClass* obj, Cell cell, int min_dist, int max_dist, bool no_scatter);

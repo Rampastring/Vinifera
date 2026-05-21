@@ -296,6 +296,7 @@ enum ExtEventType {
      *  Add new ExtEventTypes from here.
      */
     EXT_EVENT_PLAYER_OPTIONS,
+    EXT_EVENT_RESPONSE_TIME2,
 
     /**
      *  The new total ExtEventTypes count.

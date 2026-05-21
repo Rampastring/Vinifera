@@ -24,6 +24,12 @@
 #include "event.h"
 #include "eventext.h"
 #include "fatal.h"
+#include "debughandler.h"
+#include "asserthandler.h"
+#include "asserthandler.h"
+#include "extension_globals.h"
+#include "session.h"
+
 #include "hooker.h"
 #include "house.h"
 #include "infantry.h"
@@ -44,6 +50,11 @@
 #include "uicontrol.h"
 #include "unit.h"
 #include "vinifera_globals.h"
+#include "voxelinit.h"
+#include "optionsext.h"
+#include "saveload.h"
+#include "spawner.h"
+#include "textprint.h"
 
 
 /**
@@ -184,6 +195,8 @@ static void After_Main_Loop()
          */
         Vinifera_Developer_IsToReloadRules = false;
     }
+
+    SessionExtension->Service_Autosave_After_Main_Loop();
 }
 
 

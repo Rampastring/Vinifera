@@ -30,6 +30,7 @@
 #include "scenarioext.h"
 #include "sdl_functions.h"
 #include "session.h"
+#include "sessionext.h"
 #include "special.h"
 #include "syringe.h"
 #include "theme.h"
@@ -39,8 +40,8 @@
 #include "vinifera_globals.h"
 
 #include <bcrypt.h>
-#include <windows.h>
 #include <tlhelp32.h> // must be after windows.h
+#include <windows.h>
 
 
 extern HMODULE DLLInstance;
@@ -51,6 +52,31 @@ extern HMODULE DLLInstance;
  */
 #define TS_MAINICON         93
 #define TS_MAINCURSOR       104
+
+
+/**
+ *  #issue-218
+ *
+ *  We abuse SessionClass::IsGDI in this patch to store the current player's
+ *  HouseType so it can be used to fetch the SideType from it for loading
+ *  the assets. This also means this bugfix works without extending any of
+ *  the games classes.
+ *
+ *  @warning: This does mean we are limited to 255 unique houses (oh no!).
+ *
+ *  @author: CCHyper
+ */
+DEFINE_HOOK(0x004E2CE4, _Select_Game_PreStart_SetPlayerHouse_Patch, 0)
+{
+    /**
+     *  This patch removes the code that sets the "IsGDI" member of SessionClass
+     *  bool based on if the house name matched "GDI" or not and stores
+     *  the player HouseType directly.
+     */
+    SessionExtension->House = Session.Players.Fetch_Head()->Player.House;
+
+    return 0x004E2D13;
+}
 
 
 /**
@@ -969,6 +995,7 @@ void GameInit_Hooks()
     /**
      *  TS Client file structure assumes Firestorm is always installed and enabled.
      */
-    //Patch_Jump(0x00407050, &Vinifera_Detect_Addons);
+    Patch_Jump(0x00407050, &Vinifera_Detect_Addons);
 #endif
+
 }

@@ -103,6 +103,7 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     IsAIDetectDisguise(true),
     IsAIOneHarvesterInSingleplayer(true),
     PausedRepairsFrame(6),
+	BaseUnit(),
     StrengthenDestroyedValueThreshold(0),
     StrengthenBuildingValueMultiplier(3),
     IsStrengtheningEnabled(false),
@@ -203,6 +204,7 @@ RulesClassExtension::RulesClassExtension(const NoInitClass &noinit) :
     IronCurtains(noinit),
     IronCurtainPulseTable(noinit),
     AIHarvestersPerRefinery(noinit),
+	BaseUnit(noinit),
     BuildNavalYard(noinit),
     AIKiteChance(noinit),
     AdvancedAITacticSelectionDelay(noinit),
@@ -236,6 +238,7 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
     IronCurtains.Clear();
     IronCurtainPulseTable.Clear();
     AIHarvestersPerRefinery.Clear();
+	BaseUnit.Clear();
     BuildNavalYard.Clear();
     AIKiteChance.Clear();
     AdvancedAITacticSelectionDelay.Clear();
@@ -252,6 +255,7 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
     IronCurtains.Load_Self(pStm);
     IronCurtainPulseTable.Load_Self(pStm);
     AIHarvestersPerRefinery.Load_Self(pStm);
+	BaseUnit.Load_Self(pStm);
     BuildNavalYard.Load_Self(pStm);
     AIKiteChance.Load_Self(pStm);
     AdvancedAITacticSelectionDelay.Load_Self(pStm);
@@ -259,6 +263,7 @@ HRESULT RulesClassExtension::Load(IStream *pStm)
     
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(IronCurtains, "IronCurtains");
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(BuildNavalYard, "BuildNavalYard");
+	VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(BaseUnit, "BaseUnit");
 
     return hr;
 }
@@ -282,6 +287,7 @@ HRESULT RulesClassExtension::Save(IStream *pStm, BOOL fClearDirty)
     IronCurtains.Save_Self(pStm);
     IronCurtainPulseTable.Save_Self(pStm);
     AIHarvestersPerRefinery.Save_Self(pStm);
+	BaseUnit.Save_Self(pStm);
     BuildNavalYard.Save_Self(pStm);
     AIKiteChance.Save_Self(pStm);
     AdvancedAITacticSelectionDelay.Save_Self(pStm);
@@ -302,8 +308,6 @@ int RulesClassExtension::Get_Object_Size() const
 
     return sizeof(*this);
 }
-
-
 
 
 /**
@@ -334,7 +338,8 @@ void RulesClassExtension::Object_CRC(CRCEngine &crc) const
     crc(AIHarvestersPerRefinery.Count());
     crc(IsAIOneHarvesterInSingleplayer);
     crc(PausedRepairsFrame);
-    crc(StrengthenDestroyedValueThreshold);
+    crc(BaseUnit.Count());
+	crc(StrengthenDestroyedValueThreshold);
     crc(StrengthenBuildingValueMultiplier);
     crc(IsStrengtheningEnabled);
     crc(BuildNavalYard.Count());
@@ -811,6 +816,13 @@ bool RulesClassExtension::General(CCINIClass &ini)
     if (icrecharge != 0.0) {
         IronCurtainRechargeTime = icrecharge * 900.0f;
     }
+
+    /**
+     *  Reload the BaseUnit entry and store the value in the new class extension.
+     *  This allows us to expand the original BaseUnit logic without impacting
+     *  the original behaviour of BaseUnit.
+     */
+    BaseUnit = TGet_TypeList(ini, GENERAL, "BaseUnit", BaseUnit);
 
     AIKiteChance = ini.Get_IntList(GENERAL, "AIKiteChance", AIKiteChance);
 
@@ -1411,9 +1423,9 @@ void RulesClassExtension::Fixups(CCINIClass &ini)
      *  Workaround because NOD has Side=GDI and Prefix=B in unmodded Tiberian Sun.
      *
      *  Match criteria;
-     *   - Are we currently processing RuleINI?
+     *   - Are we currently processing one of the unmodified rule INI's?
      */
-    if (is_ruleini) {
+    if (rule_unmodified || fsrule_unmodified) {
 
         /**
          *  Ensure at least two HouseTypes are defined before performing this fixup case.

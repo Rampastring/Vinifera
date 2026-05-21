@@ -9,19 +9,100 @@
 
 #include "always.h"
 
+#include "commandext_hooks.h"
+
 #include "asserthandler.h"
+#include "building.h"
 #include "ccini.h"
 #include "commandext.h"
 #include "debughandler.h"
 #include "hooker.h"
+#include "house.h"
+#include "mouse.h"
 #include "object.h"
+#include "rulesext.h"
 #include "session.h"
 #include "syringe.h"
+#include "tactical.h"
 #include "tibsun_functions.h"
 #include "tibsun_globals.h"
 #include "unit.h"
 #include "unittype.h"
 #include "vinifera_globals.h"
+
+/**
+  *  A fake class for implementing new member functions which allow
+  *  access to the "this" pointer of the intended class.
+  *
+  *  @note: This must not contain a constructor or deconstructor!
+  *  @note: All functions must be prefixed with "_" to prevent accidental virtualization.
+  */
+class CenterBaseCommandClassExt final : public CommandClass
+{
+public:
+    bool _Process();
+    
+};
+
+
+/**
+ *  #issue-177
+ *
+ *  Replaces CenterBaseCommandClass::Process to use the entire BuildConst list,
+ *  as well as the new BaseUnit list.
+ *
+ *  @author: ZivDero
+ */
+bool CenterBaseCommandClassExt::_Process()
+{
+    Coord conyard_coord = COORD_NONE;
+    Coord any_building_coord = COORD_NONE;
+
+    if (PlayerPtr->CurBuildings) {
+        for (int index = 0; index < Buildings.Count(); index++) {
+            BuildingClass* building = Buildings[index];
+            if (building != nullptr && !building->IsInLimbo && building->House->Is_Player_Control())
+            {
+                if (Rule->BuildConst.Is_Present(building->Class)) {
+                    conyard_coord = building->Center_Coord();
+                    if (building->IsLeader) {
+                        break;
+                    }
+                } else if (any_building_coord == COORD_NONE) {
+                    any_building_coord = building->Center_Coord();
+                }
+            }
+        }
+    }
+
+    if (any_building_coord == COORD_NONE && conyard_coord == COORD_NONE) {
+        if (PlayerPtr->CurUnits) {
+            for (int index = 0; index < Units.Count(); index++) {
+                UnitClass* unit = Units[index];
+                if (unit != nullptr && !unit->IsInLimbo && unit->House->Is_Player_Control() && RuleExtension->BaseUnit.Is_Present(unit->Class)) {
+                    conyard_coord = unit->Center_Coord();
+                    break;
+                }
+            }
+        }
+    }
+
+    if (conyard_coord != COORD_NONE) {
+        TacticalMap->Set_Tactical_Position(conyard_coord);
+    } else if (any_building_coord != COORD_NONE) {
+        TacticalMap->Set_Tactical_Position(any_building_coord);
+    }
+
+    if (Map.PendingObject) {
+        Map.Set_Cursor_Pos();
+    }
+
+    Map.Break_Follow_Mode();
+    Map.Flag_To_Redraw(GS_REDRAW_TACTICAL);
+
+    return true;
+}
+
 
 
 /**
@@ -327,6 +408,8 @@ void CommandExtension_Hooks()
     Hook_Virtual(0x004EAAD0, PNGScreenCaptureCommandClass::Get_Category);
     Hook_Virtual(0x004EAAF0, PNGScreenCaptureCommandClass::Get_Description);
     Hook_Virtual(0x004EAB00, PNGScreenCaptureCommandClass::Process);
+
+    Patch_Jump(0x004E97E0, &CenterBaseCommandClassExt::_Process);
 
     /**
      *  Replace DeleteWaypointCommandClass with DeleteCommandClass.

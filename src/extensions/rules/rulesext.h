@@ -10,8 +10,10 @@
 #pragma once
 
 #include "extension.h"
+#include "point.h"
 #include "rules.h"
 #include "tibsun_defines.h"
+#include "typelist.h"
 
 
 class CCINIClass;
@@ -56,8 +58,8 @@ public:
     static bool Set_Voxel_Light_Angle(float azimuth, float elevation, float offset);
 
 private:
-    void Check();
     void Fixups(CCINIClass& ini);
+    void Check();
 
 public:
     /**
@@ -261,6 +263,11 @@ public:
      *  Determines the wrench shape frame that should be used while repairs are paused.
      */
     int PausedRepairsFrame;
+
+    /**
+     *  List of units to consider "home".
+     */
+    TypeList<UnitTypeClass *> BaseUnit;
 
     /**
      *  How much value (in credits) a house needs to destroy to strengthen their objects by one percentage.

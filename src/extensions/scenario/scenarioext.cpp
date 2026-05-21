@@ -11,34 +11,68 @@
 
 #include "scenarioext.h"
 
+#include "addon.h"
+#include "aircraft.h"
+#include "aitrigtype.h"
+#include "armortype.h"
 #include "asserthandler.h"
 #include "beacon.h"
 #include "building.h"
 #include "buildingtype.h"
+#include "campaign.h"
+#include "campaignext.h"
 #include "ccini.h"
+#include "cd.h"
 #include "commandext.h"
 #include "debughandler.h"
 #include "house.h"
 #include "houseext.h"
 #include "housetype.h"
+#include "infantry.h"
 #include "infantrytype.h"
 #include "iomap.h"
 #include "language.h"
 #include "msgbox.h"
+#include "lightsource.h"
+#include "multimiss.h"
 #include "noinit.h"
+#include "optionsext.h"
+#include "overlay.h"
+#include "playmovie.h"
+#include "radarevent.h"
+#include "restate.h"
 #include "rules.h"
+#include "rulesext.h"
+#include "scripttype.h"
 #include "session.h"
 #include "sessionext.h"
+#include "smudge.h"
+#include "swizzle.h"
+#include "tactical.h"
 #include "tacticalext.h"
 #include "tag.h"
+#include "tagtype.h"
+#include "taskforce.h"
+#include "teamtype.h"
+#include "terrain.h"
+#include "theme.h"
+#include "tiberium.h"
 #include "tibsun_defines.h"
+#include "tibsun_functions.h"
 #include "tibsun_globals.h"
+#include "tracker.h"
+#include "triggertype.h"
+#include "tube.h"
 #include "unit.h"
 #include "unittype.h"
+#include "unittypeext.h"
+#include "veinholemonster.h"
 #include "vinifera_globals.h"
 #include "vinifera_saveload.h"
 #include "waypoint.h"
+#include "wwmouse.h"
 
+#include <algorithm>
 #include <regex>
 
 
@@ -49,8 +83,17 @@
  */
 ScenarioClassExtension::ScenarioClassExtension(const ScenarioClass *this_ptr) :
     GlobalExtensionClass(this_ptr),
-    Waypoint(NEW_WAYPOINT_COUNT),
-    IsIceDestruction(true)
+    IsIceDestruction(true),
+    SidebarSide(SIDE_NONE),
+    IsUseMPAIBaseNodes(false),
+    HasSpawnerScenarioOverrides(false),
+    CampaignDifficultyOverride(DIFF_NORMAL),
+    CampaignCDifficultyOverride(DIFF_NORMAL),
+    SkipScoreScreenOverride(false),
+    CustomLoadScreenPos(0, 0),
+    HasCustomLoadScreen(false),
+    HasCustomLoadScreenPos(false),
+    LoadingScreens()
 {
     //if (this_ptr) EXT_DEBUG_TRACE("ScenarioClassExtension::ScenarioClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
 
@@ -67,8 +110,7 @@ ScenarioClassExtension::ScenarioClassExtension(const ScenarioClass *this_ptr) :
  *  @author: CCHyper
  */
 ScenarioClassExtension::ScenarioClassExtension(const NoInitClass &noinit) :
-    GlobalExtensionClass(noinit),
-    Waypoint(noinit)
+    GlobalExtensionClass(noinit)
 {
     //EXT_DEBUG_TRACE("ScenarioClassExtension::ScenarioClassExtension(NoInitClass) - 0x%08X\n", (uintptr_t)(ThisPtr));
 }
@@ -83,10 +125,6 @@ ScenarioClassExtension::~ScenarioClassExtension()
 {
     //EXT_DEBUG_TRACE("ScenarioClassExtension::~ScenarioClassExtension - 0x%08X\n", (uintptr_t)(ThisPtr));
 
-    /**
-     *  Free up the cell array.
-     */
-    Waypoint.Clear();
 }
 
 
@@ -105,8 +143,6 @@ HRESULT ScenarioClassExtension::Load(IStream *pStm)
     }
 
     new (this) ScenarioClassExtension(NoInitClass());
-
-    Load_Primitive_Vector(pStm, Waypoint, "ScenarioClassExtension::Waypoint");
     
     return hr;
 }
@@ -125,8 +161,6 @@ HRESULT ScenarioClassExtension::Save(IStream *pStm, BOOL fClearDirty)
     if (FAILED(hr)) {
         return hr;
     }
-
-    Save_Primitive_Vector(pStm, Waypoint, "ScenarioClassExtension::Waypoint");
 
     return hr;
 }
@@ -157,6 +191,17 @@ void ScenarioClassExtension::Object_CRC(CRCEngine &crc) const
     //EXT_DEBUG_TRACE("ScenarioClassExtension::Object_CRC - 0x%08X\n", (uintptr_t)(This()));
 
     crc(IsIceDestruction);
+    crc(HasSpawnerScenarioOverrides);
+    crc(static_cast<int>(CampaignDifficultyOverride));
+    crc(static_cast<int>(CampaignCDifficultyOverride));
+    crc(SkipScoreScreenOverride);
+    crc(StatsMapName);
+    crc(StatsMapHash);
+    crc(CustomLoadScreen);
+    crc(CustomLoadScreenPos.X);
+    crc(CustomLoadScreenPos.Y);
+    crc(HasCustomLoadScreen);
+    crc(HasCustomLoadScreenPos);
 }
 
 
@@ -170,8 +215,20 @@ void ScenarioClassExtension::Init_Clear()
     IsIceDestruction = true;
     ScorePlayerColor = RGBStruct{ 253, 181, 28 }; // Default to TS GDI score color
     ScoreEnemyColor = RGBStruct{ 250, 28, 28 };   // Default to TS Nod score color
+    HasSpawnerScenarioOverrides = false;
+    CampaignDifficultyOverride = DIFF_NORMAL;
+    CampaignCDifficultyOverride = DIFF_NORMAL;
+    SkipScoreScreenOverride = false;
+    StatsMapName[0] = '\0';
+    StatsMapHash[0] = '\0';
+    CustomLoadScreen[0] = '\0';
+    CustomLoadScreenPos = Point2D(0, 0);
+    HasCustomLoadScreen = false;
+    HasCustomLoadScreenPos = false;
 
     //EXT_DEBUG_TRACE("ScenarioClassExtension::Init_Clear - 0x%08X\n", (uintptr_t)(This()));
+
+    LoadingScreens.clear();
 
     {
         /**
@@ -225,6 +282,7 @@ bool ScenarioClassExtension::Read_INI(CCINIClass &ini)
     IsIceDestruction = ini.Get_Bool(BASIC, "IceDestructionEnabled", IsIceDestruction);
     ScorePlayerColor = ini.Get_RGBColor(BASIC, "ScorePlayerColor", ScorePlayerColor);
     ScoreEnemyColor = ini.Get_RGBColor(BASIC, "ScoreEnemyColor", ScoreEnemyColor);
+    IsUseMPAIBaseNodes = ini.Get_Bool(BASIC, "UseMPAIBaseNodes", IsUseMPAIBaseNodes);
 
     /**
      *  #issue-123
@@ -236,6 +294,65 @@ bool ScenarioClassExtension::Read_INI(CCINIClass &ini)
     BeaconManager.Load_Art();
 
     return true;
+}
+
+
+/**
+ *  Read the loading screen overrides from the scenario INI.
+ *
+ *  @author: CCHyper
+ */
+bool ScenarioClassExtension::Read_Loading_Screen_INI(const char *filename)
+{
+    //EXT_DEBUG_TRACE("ScenarioClassExtension::Read_Loading_Screen_INI - 0x%08X\n", (uintptr_t)(This()));
+
+    static const char * const BASIC = "Basic";
+
+    CCFileClass file(filename);
+    CCINIClass ini;
+    ini.Load(file, false);
+
+    if (!ini.Is_Loaded()) {
+        return false;
+    }
+
+    if (Session.Type == GAME_NORMAL) {
+        static char const* const LOADING_SCREENS = "LoadingScreens";
+        for (int i = 0; i < ini.Entry_Count(LOADING_SCREENS); i++) {
+            UIControlsClass::LoadingScreen screen(ini.Get_Entry(LOADING_SCREENS, i));
+            if (screen.IsValid) {
+                LoadingScreens.emplace_back(screen);
+            }
+        }
+    }
+
+    return true;
+}
+
+
+UIControlsClass::LoadingScreen const* ScenarioClassExtension::Pick_Loading_Screen_Override(HousesType house) const
+{
+    std::vector<UIControlsClass::LoadingScreen const*> screens;
+
+    int largest_size = 0;
+    for (auto& screen : LoadingScreens) {
+        if (screen.House == house && VisibleRect.Width >= screen.Size.Size.X && VisibleRect.Height >= screen.Size.Size.Y) {
+            int size = screen.Size.Size.X * screen.Size.Size.Y;
+            if (size > largest_size) {
+                screens.clear();
+                screens.emplace_back(&screen);
+                largest_size = size;
+            } else if (size == largest_size) {
+                screens.emplace_back(&screen);
+            }
+        }
+    }
+
+    if (!screens.empty()) {
+        return screens[Sim_Random_Pick(0u, screens.size() - 1)];
+    }
+
+    return nullptr;
 }
 
 
@@ -279,7 +396,7 @@ bool ScenarioClassExtension::Read_Tutorial_INI(CCINIClass const& ini)
 Cell ScenarioClassExtension::Waypoint_Cell(WAYPOINT wp) const
 {
     //EXT_DEBUG_TRACE("ScenarioClassExtension::Waypoint_CellClass - 0x%08X\n", (uintptr_t)(This()));
-    ASSERT_FATAL(wp < Waypoint.Length());
+    ASSERT_FATAL(wp < std::size(Waypoint));
 
     return Waypoint[wp];
 }
@@ -293,7 +410,7 @@ Cell ScenarioClassExtension::Waypoint_Cell(WAYPOINT wp) const
 CellClass *ScenarioClassExtension::Waypoint_CellClass(WAYPOINT wp) const
 {
     //EXT_DEBUG_TRACE("ScenarioClassExtension::Waypoint_CellClassPtr - 0x%08X\n", (uintptr_t)(This()));
-    ASSERT_FATAL(wp < Waypoint.Length());
+    ASSERT_FATAL(wp < std::size(Waypoint));
 
     return &Map[Waypoint[wp]];
 }
@@ -309,7 +426,7 @@ CellClass *ScenarioClassExtension::Waypoint_CellClass(WAYPOINT wp) const
 Coord ScenarioClassExtension::Waypoint_Coord(WAYPOINT wp) const
 {
     //EXT_DEBUG_TRACE("ScenarioClassExtension::Waypoint_Coord - 0x%08X\n", (uintptr_t)(This()));
-    ASSERT_FATAL(wp < Waypoint.Length());
+    ASSERT_FATAL(wp < std::size(Waypoint));
 
     CellClass *cell = &Map[Waypoint[wp]];
     Coord coord = cell->Center_Coord();
@@ -328,7 +445,7 @@ Coord ScenarioClassExtension::Waypoint_Coord(WAYPOINT wp) const
 void ScenarioClassExtension::Set_Waypoint_Cell(WAYPOINT wp, Cell &cell)
 {
     //EXT_DEBUG_TRACE("ScenarioClassExtension::Waypoint_CellClass - 0x%08X\n", (uintptr_t)(This()));
-    ASSERT_FATAL(wp < Waypoint.Length());
+    ASSERT_FATAL(wp < std::size(Waypoint));
 
     Waypoint[wp] = cell;
 }
@@ -355,9 +472,9 @@ void ScenarioClassExtension::Set_Waypoint_Coord(WAYPOINT wp, Coord &coord)
 bool ScenarioClassExtension::Is_Waypoint_Valid(WAYPOINT wp) const
 {
     //EXT_DEBUG_TRACE("ScenarioClassExtension::Is_Waypoint_Valid - 0x%08X\n", (uintptr_t)(This()));
-    ASSERT_FATAL(wp < Waypoint.Length());
+    ASSERT_FATAL(wp < std::size(Waypoint));
 
-    return (wp >= WAYPOINT_FIRST && wp < Waypoint.Length()) ? (Waypoint[wp] != CELL_NONE) : false;
+    return (wp >= WAYPOINT_FIRST && wp < std::size(Waypoint)) ? (Waypoint[wp] != CELL_NONE) : false;
 }
 
 
@@ -369,7 +486,7 @@ bool ScenarioClassExtension::Is_Waypoint_Valid(WAYPOINT wp) const
 void ScenarioClassExtension::Clear_Waypoint(WAYPOINT wp)
 {
     //EXT_DEBUG_TRACE("ScenarioClassExtension::Clear_Waypoint - 0x%08X\n", (uintptr_t)(This()));
-    ASSERT_FATAL(wp < Waypoint.Length());
+    ASSERT_FATAL(wp < std::size(Waypoint));
 
     Waypoint[wp] = Cell(0, 0);
 }
@@ -384,11 +501,8 @@ void ScenarioClassExtension::Clear_All_Waypoints()
 {
     //EXT_DEBUG_TRACE("ScenarioClassExtension::Clear_All_Waypoints - 0x%08X\n", (uintptr_t)(This()));
 
-    new (&Waypoint) VectorClass<Cell>;
-    Waypoint.Resize(NEW_WAYPOINT_COUNT);
-
-    for (int i = 0; i < Waypoint.Length(); i++) {
-        Waypoint[i] = CELL_NONE;
+    for (auto& waypoint : Waypoint) {
+        waypoint = CELL_NONE;
     }
 }
 
@@ -410,7 +524,7 @@ void ScenarioClassExtension::Read_Waypoint_INI(CCINIClass &ini)
     /**
      *  Read the Waypoint entries.
      */
-    for (WAYPOINT wp = WAYPOINT_FIRST; wp < Waypoint.Length(); ++wp) {
+    for (WAYPOINT wp = WAYPOINT_FIRST; wp < std::size(Waypoint); ++wp) {
 
         /**
          *  Get a waypoint entry.
@@ -456,15 +570,6 @@ void ScenarioClassExtension::Read_Waypoint_INI(CCINIClass &ini)
          */
         Waypoint[wp_num] = cell;
 
-#if defined(TS_CLIENT)
-        /**
-         *  Also store original waypoint value for the CnCNet ts-patches spawner.
-         */
-        if (wp_num < WAYPOINT_COUNT) {
-            Scen->Waypoint[wp_num] = cell;
-        }
-#endif
-
         /**
          *  If the cell location is valid, flag the cell on the map as a waypoint holder.
          */
@@ -503,7 +608,7 @@ void ScenarioClassExtension::Write_Waypoint_INI(CCINIClass &ini)
     /**
      * Save the Waypoint entries.
      */
-    for (WAYPOINT wp = WAYPOINT_FIRST; wp < Waypoint.Length(); ++wp) {
+    for (WAYPOINT wp = WAYPOINT_FIRST; wp < std::size(Waypoint); ++wp) {
         if (Is_Waypoint_Valid(wp)) {
             std::snprintf(entry, sizeof(entry), "%d", wp);
             int value = Waypoint[wp].X + 1000 * Waypoint[wp].Y;
@@ -540,11 +645,6 @@ const char * ScenarioClassExtension::Waypoint_As_String(WAYPOINT wp) const
  */
 int ScenarioClassExtension::Set_Global_To(int global, int value)
 {
-    DEBUG_ERROR("ScenarioClassExtension::Set_Global_To(int, int) called!\n");
-    WWMessageBox().Process("ScenarioClassExtension::Set_Global_To called. If you see this, please report this error to the developers. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return 0;
-
     if ((unsigned)global < std::size(GlobalFlags)) {
 
         int previous = GlobalFlags[global].Value;
@@ -579,11 +679,6 @@ int ScenarioClassExtension::Set_Global_To(int global, int value)
  */
 int ScenarioClassExtension::Set_Global_To(char const* name, int value)
 {
-    DEBUG_ERROR("ScenarioClassExtension::Set_Global_To(char*, int) called!\n");
-    WWMessageBox().Process("ScenarioClassExtension::Set_Global_To called. If you see this, please report this error to the developers. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return 0;
-
     int global = Find_Global_Variable_Index(name);
     if (global != -1) {
         return Set_Global_To(global, value);
@@ -599,11 +694,6 @@ int ScenarioClassExtension::Set_Global_To(char const* name, int value)
  */
 bool ScenarioClassExtension::Get_Global_Value(int global, int& value)
 {
-    DEBUG_ERROR("ScenarioClassExtension::Get_Global_Value(int, int) called!\n");
-    WWMessageBox().Process("ScenarioClassExtension::Get_Global_Value(int, int) called. If you see this, please report this error to the developers. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return false;
-
     if (global >= 0 && global < std::size(GlobalFlags)) {
         value = GlobalFlags[global].Value;
         return true;
@@ -619,11 +709,6 @@ bool ScenarioClassExtension::Get_Global_Value(int global, int& value)
  */
 bool ScenarioClassExtension::Get_Global_Value(char const* name, int& value)
 {
-    DEBUG_ERROR("ScenarioClassExtension::Get_Global_Value(char*, int) called!\n");
-    WWMessageBox().Process("ScenarioClassExtension::Get_Global_Value(char, int) called. If you see this, please report this error to the developers. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return false;
-
     int global = Find_Global_Variable_Index(name);
     if (global != -1) {
         return Get_Global_Value(global, value);
@@ -639,11 +724,6 @@ bool ScenarioClassExtension::Get_Global_Value(char const* name, int& value)
  */
 int ScenarioClassExtension::Find_Global_Variable_Index(char const* name)
 {
-    DEBUG_ERROR("ScenarioClassExtension::Find_Global_Variable_Index called!\n");
-    WWMessageBox().Process("ScenarioClassExtension::Find_Global_Variable_Index called. If you see this, please report this error to the developers. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return 0;
-
     for (int i = 0; i < std::size(GlobalFlags); i++) {
         if (!strcmp(name, GlobalFlags[i].VariableName)) {
             return i;
@@ -660,11 +740,6 @@ int ScenarioClassExtension::Find_Global_Variable_Index(char const* name)
  */
 bool ScenarioClassExtension::Read_Global_INI(INIClass& ini)
 {
-    DEBUG_ERROR("ScenarioClassExtension::Read_Global_INI called!\n");
-    WWMessageBox().Process("ScenarioClassExtension::Read_Global_INI called. If you see this, please report this error to the developers. The game will now exit.", 0, TXT_OK);
-    Emergency_Exit(0);
-    return 0;
-
     int count = std::min(ini.Entry_Count("VariableNames"), static_cast<int>(std::size(GlobalFlags)));
 
     for (int i = 0; i < count; i++) {
@@ -930,32 +1005,1195 @@ int ScenarioClassExtension::Find_Free_Local() const
 
 
 /**
+ *  Starts the scenario.
+ *
+ *  @author: 07/04/1995 JLB : Red Alert Source Code
+ *           01/11/2024 ZivDero : Adjustments for Tiberian Sun
+ */
+bool ScenarioClassExtension::Start_Scenario(char* name, bool briefing, CampaignType campaignid)
+{
+    /**
+     *  If there is no scenario name supplied, but we got a campaign id, fetch the scenario name from the campaign.
+     */
+    if ((name == nullptr || std::strlen(name) == 0) && campaignid != CAMPAIGN_NONE) {
+        name = Campaigns[campaignid]->Scenario;
+    }
+
+    /**
+     *  Set the current campaign ID.
+     */
+    Scen->Campaign = campaignid;
+
+    DEBUG_INFO("\n----- Starting scnenario: %s -----\n", name);
+    DEBUG_INFO("Player Count: %d\n", Session.Players.Count());
+
+    /**
+     *  Set the scenario name.
+     */
+    std::strcpy(Scen->ScenarioName, name);
+    _strupr(Scen->ScenarioName);
+
+    Theme.Stop();
+
+    /**
+     *  Play the winning movie and then start the next scenario.
+     */
+    CD::SetRequiredDisk(DISK_ANY);
+
+    if (Session.Type == GAME_NORMAL) {
+        if (Scen->Campaign != CAMPAIGN_NONE) {
+            CD::SetRequiredDisk(Campaigns[Scen->Campaign]->WhichCD);
+        }
+    } else if (Session.Options.ScenarioIndex != -1) {
+        MultiMission* multi = Session.Scenarios[Session.Options.ScenarioIndex];
+        if (!multi->Is_Available(CD::GetCurrentDisk())) {
+            CD::SetRequiredDisk(multi->Get_Disk());
+        }
+    }
+
+    Session.Suspended++;
+
+    if (CD::ForceAvailable() == false) {
+        Session.Suspended--;
+        return false;
+    }
+
+    Session.Suspended--;
+
+    if (briefing && campaignid != CAMPAIGN_NONE && Scen->Scenario == 1) {
+
+        /**
+         *  #issue-95
+         *
+         *  Patch for handling the campaign intro movies
+         *  for "The First Decade" and "Freeware TS" installations.
+         *
+         *  @author: CCHyper
+         */
+        char movie_filename[32];
+
+        /**
+         *  Fetch the campaign disk id.
+         */
+        CampaignClass* campaign = Campaigns[campaignid];
+        DiskID cd_num = campaign->WhichCD;
+
+        /**
+         *  Check if the current campaign is an original GDI or NOD campaign.
+         */
+        bool is_original_gdi = (cd_num == DISK_GDI && (campaign->IniName == "GDI1" || campaign->IniName == "GDI1A") && std::string_view(campaign->Scenario) == "GDI1A.MAP");
+        bool is_original_nod = (cd_num == DISK_NOD && (campaign->IniName == "NOD1" || campaign->IniName == "NOD1A") && std::string_view(campaign->Scenario) == "NOD1A.MAP");
+
+        /**
+         *  #issue-762
+         *
+         *  Fetch the campaign extension (if available) and get the custom intro movie.
+         *
+         *  @author: CCHyper
+         */
+        CampaignClassExtension* campaignext = Extension::Fetch(campaign);
+        if (campaignext->IntroMovie[0] != '\0') {
+            std::snprintf(movie_filename, sizeof(movie_filename), "%s.VQA", campaignext->IntroMovie);
+            DEBUG_INFO("About to play \"%s\".\n", movie_filename);
+            Play_Movie(movie_filename);
+        }
+        /**
+         *  If this is an original Tiberian Sun campaign, play the respective intro movie.
+         */
+        else if (is_original_gdi || is_original_nod) {
+
+            /**
+             *  "The First Decade" and "Freeware TS" installations reshuffle
+             *  the movie files due to all mix files being local now and a
+             *  primitive "no-cd" added;
+             *
+             *  MOVIES01.MIX -> INTRO.VQA (GDI) is now INTR0.VQA
+             *  MOVIES02.MIX -> INTRO.VQA (NOD) is now INTR1.VQA
+             *
+             *  Build the movie filename based on the current campaign's desired CD (see DiskID enum).
+             */
+            std::snprintf(movie_filename, sizeof(movie_filename), "INTR%d.VQA", cd_num);
+
+            /**
+             *  Now play the movie if it is found, falling back to original behavior otherwise.
+             */
+            if (CCFileClass(movie_filename).Is_Available()) {
+                DEBUG_INFO("About to play \"%s\".\n", movie_filename);
+                Play_Movie(movie_filename);
+
+            } else if (CCFileClass("INTRO.VQA").Is_Available()) {
+                DEBUG_INFO("About to play \"INTRO.VQA\".\n");
+                Play_Movie("INTRO.VQA");
+
+            } else {
+                DEBUG_WARNING("Failed to find Intro movie, continuing without it.\n");
+            }
+
+        } else {
+            DEBUG_WARNING("No campaign intro movie defined.\n");
+        }
+    }
+
+    DEBUG_INFO("Reading scenario: %s\n", name);
+
+    if (!Read_Scenario(name)) {
+        return false;
+    }
+
+    Theme.Stop();
+
+    if (briefing) {
+        Play_Movie(Scen->IntroMovie, THEME_NONE);
+        Play_Movie(Scen->BriefMovie, THEME_NONE);
+    }
+
+    /**
+     *  If there's no briefing movie, restate the mission at the beginning.
+     */
+    char buffer[32];
+    if (Scen->BriefMovie != VQ_NONE) {
+        std::snprintf(buffer, std::size(buffer), "%s.VQA", Movies[Scen->BriefMovie]);
+    }
+
+    if (Session.Type == GAME_NORMAL && (Scen->BriefMovie == VQ_NONE || !CCFileClass(buffer).Is_Available())) {
+
+        /**
+         *  Make sure the mouse is visible before showing the restatement.
+         */
+        MouseCursor->Release_Mouse();
+        MouseCursor->Show_Mouse();
+
+        Restate_Mission(Scen);
+
+        MouseCursor->Hide_Mouse();
+        MouseCursor->Capture_Mouse();
+    }
+
+    /**
+     *  Show the dropship loadout screen if this mission has a dropship.
+     */
+    if (Scen->StartingDropships > 0) {
+
+        /**
+         *  issue-284
+         *
+         *  Play a background theme during the loadout menu.
+         *
+         *  @author: CCHyper
+         */
+        if (!Theme.Still_Playing()) {
+
+            /**
+             *  If DSHPLOAD is defined in THEME.INI, play that, otherwise default
+             *  to playing the TS Maps theme.
+             */
+            ThemeType theme = Theme.From_Name("DSHPLOAD");
+            if (theme == THEME_NONE) {
+                theme = Theme.From_Name("MAPS");
+            }
+
+            Theme.Play_Song(theme);
+        }
+
+        MouseCursor->Release_Mouse();
+        MouseCursor->Show_Mouse();
+
+        Dropship_Loadout();
+
+        MouseCursor->Hide_Mouse();
+        MouseCursor->Capture_Mouse();
+
+        if (Theme.Still_Playing()) {
+            Theme.Stop(true); // Smoothly fade out the track.
+        }
+    }
+
+    if (briefing) {
+        Play_Movie(Scen->ActionMovie, Scen->TransitTheme);
+    }
+
+    if (Scen->ActionMovie != VQ_NONE || Scen->TransitTheme == THEME_NONE) {
+        Theme.Queue_Song(THEME_PICK_ANOTHER);
+    } else {
+        Theme.Queue_Song(Scen->TransitTheme);
+    }
+
+    /**
+     *  Set the options values, since the palette has been initialized by Read_Scenario.
+     */
+    Options.Set();
+
+    /**
+     *  Black out the screen.
+     */
+    HiddenSurface->Fill(0);
+    Update_Visible_Surface();
+
+    /**
+     *  Toggle the display mode if mode toggling is allowed.
+     */
+    if (Debug_AllowModeToggle && (VisibleRect.Width != Options.ScreenWidth || VisibleRect.Height != Options.ScreenHeight)) {
+        DEBUG_INFO("Toggle display mode to %d X %d\n", Options.ScreenWidth, Options.ScreenHeight);
+        Change_Video_Mode(Options.ScreenWidth, Options.ScreenHeight);
+    }
+
+    /**
+     *  Print a message stating the current difficulty level.
+     */
+    static const char* difficulty_names[] = {
+        "Difficulty: Hard",
+        "Difficulty: Medium",
+        "Difficulty: Easy",
+    };
+
+    Session.Messages.Add_Message(nullptr, 0, difficulty_names[Scen->CDifficulty], Fetch_Scheme_Index_By_Name("DarkGold"), TPF_6PT_GRAD | TPF_USE_GRAD_PAL | TPF_FULLSHADOW, Rule->MessageDelay * TICKS_PER_MINUTE);
+
+    /**
+     *  Mark the game as having started.
+     */
+    Scen->ElapsedTimer.Start();
+
+    ScenarioActive = true;
+    TacticalActive = true;
+
+    return true;
+}
+
+
+/**
+ *  Process additions to the Rules data from the input file.
+ *
+ *  @author: CCHyper
+ */
+static bool Rule_Addition(const char* fname, bool with_digest = false)
+{
+    CCFileClass file(fname);
+    if (!file.Is_Available()) {
+        return false;
+    }
+
+    CCINIClass ini;
+    if (!ini.Load(file, with_digest)) {
+        return false;
+    }
+
+    DEBUG_INFO("Calling Rule->Addition() with \"%s\" overrides.\n", fname);
+
+    Rule->Addition(ini);
+
+    return true;
+}
+
+
+/**
+ *  Load the scenario from the specified INI file.
+ *
+ *  @author: 10/07/1992 JLB - Red Alert source code.
+ *           ZivDero - Adjustments for Tiberian Sun.
+ */
+bool ScenarioClassExtension::Read_Scenario_INI(CCINIClass& ini, bool random)
+{
+    static const char* BASIC = "Basic";
+    static const char* MAP = "Map";
+    char buffer[32];
+
+    ScenarioInit++;
+
+    DEBUG_INFO("Clearing old scenario\n");
+    Clear_Scenario();
+
+    /**
+     *  Set up difficulty and fog of war settings.
+     */
+    if (Session.Type == GAME_NORMAL) {
+        if (ScenExtension->HasSpawnerScenarioOverrides) {
+            Scen->Difficulty = ScenExtension->CampaignDifficultyOverride;
+            Scen->CDifficulty = ScenExtension->CampaignCDifficultyOverride;
+        } else {
+            Scen->Difficulty = static_cast<DiffType>(Options.Difficulty);
+            Scen->CDifficulty = static_cast<DiffType>(2 - Options.Difficulty);
+        }
+        Scen->Special.IsFogOfWar = false;
+        Special.IsFogOfWar = false;
+    } else {
+        Scen->Difficulty = static_cast<DiffType>(Session.Options.AIDifficulty);
+        Scen->CDifficulty = static_cast<DiffType>(2 - Scen->Difficulty);
+        Scen->Special.IsFogOfWar = Session.Options.FogOfWar;
+        Special.IsFogOfWar = Session.Options.FogOfWar;
+    }
+
+    Scen->InitTime = ini.Get_Int(BASIC, "InitTime", 10000);
+    const bool official = ini.Get_Bool(BASIC, "Official", false);
+
+    /**
+     *  Set the unique playthrough ID.
+     */
+    Vinifera_PlaythroughID = std::time(nullptr);
+    DEBUG_INFO("[Vinifera] Starting new scenario. Playthrough ID: %u.\n", Vinifera_PlaythroughID);
+
+    /**
+     *  Make sure we have, and then enable the required addon.
+     */
+    if (Session.Type == GAME_NORMAL) {
+        Disable_Addon(ADDON_ANY);
+        Scen->RequiredAddOn = static_cast<AddonType>(ini.Get_Bool(BASIC, "RequiredAddOn", ADDON_BASE_GAME));
+        Set_Required_Addon(Scen->RequiredAddOn);
+        if (!Addon_Installed(Scen->RequiredAddOn)) {
+            return false;
+        }
+        Enable_Addon(Scen->RequiredAddOn);
+    } else {
+        Scen->RequiredAddOn = Get_Required_Addon();
+    }
+
+    Session.Loading_Callback(3);
+
+    /**
+     *  Reset the swizzle manager.
+     */
+    SwizzleManager.Reset();
+
+    /**
+     *  Recreate the tactical map.
+     */
+    DEBUG_INFO("Creating new tactical map\n");
+    delete TacticalMap;
+    TacticalMap = new Tactical;
+    TacticalMap->Set_View_Dimensions(TacticalRect);
+
+    /**
+     *  Initialize the theater.
+     */
+    DEBUG_INFO("Initializing Theater\n");
+    Scen->Theater = ini.Get_TheaterType(MAP, "Theater", THEATER_FIRST);
+    Init_Theater(Scen->Theater);
+    Session.Loading_Callback(8);
+
+    /**
+     *  Load the main rules file.
+     */
+    DEBUG_INFO("Initializing Rules\n");
+    RuleExtension->Initialize(*RuleINI);
+    Rule->Initialize(*RuleINI);
+
+    Session.Loading_Callback(15);
+    Call_Back();
+
+    /**
+     *  Read the rules into ScenarioClass.
+     */
+    DEBUG_INFO("Calling Scen->Read_Global_INI(*RuleINI);\n");
+    Scen->Read_Global_INI(*RuleINI);
+
+    Call_Back();
+
+    /**
+     *  #issue-#671
+     *
+     *  Add loading of MPLAYER.INI to override Rules data for multiplayer games.
+     *
+     *  @author: CCHyper
+     */
+    if (Session.Type != GAME_NORMAL && Session.Type != GAME_WDT) {
+
+        /**
+         *  Process the multiplayer ini overrides.
+         */
+        Rule_Addition("MPLAYER.INI");
+        if (Addon_Enabled(ADDON_FIRESTORM)) {
+            Rule_Addition("MPLAYERFS.INI");
+        }
+    }
+
+    Session.Loading_Callback(30);
+
+    Call_Back();
+
+    /**
+     *  Read scenario overrides into our Rules.
+     */
+    DEBUG_INFO("Calling Rule->Addition() with scenario overrides\n");
+    Rule->Addition(ini);
+    DEBUG_INFO("Finished Rule->Addition() with scenario overrides\n");
+
+    Session.Loading_Callback(45);
+
+    /**
+     *  Read in the specific information for each of the house types. This creates
+     *  the houses of different types.
+     */
+    if (Session.Type == GAME_NORMAL) {
+        DEBUG_INFO("Reading in scenario house types\n");
+        HouseClass::Read_Scenario_INI(ini);
+    }
+
+    /**
+     *  Init the Scenario CRC value
+     */
+    ScenarioCRC = 0;
+
+    /**
+     *  Read scenario data from the scenario INI.
+     */
+    if (!Scen->Read_INI(ini) || !ScenExtension->Read_INI(ini)) {
+        ScenarioInit--;
+        return false;
+    }
+
+    Session.Loading_Callback(50);
+
+    /**
+     *  Determine the player's side.
+     */
+    if (Session.Type == GAME_NORMAL) {
+        ini.Get_String(BASIC, "Player", "GDI", buffer, 32);
+
+        /**
+         *  Fetch the house's side and use this to decide which assets to load.
+         */
+        const auto housetype = HouseTypes[HouseTypeClass::From_Name(buffer)];
+
+        ScenExtension->House = housetype->HeapID;
+        Scen->SpeechSide = housetype->Side;
+        ScenExtension->SidebarSide = housetype->Side;
+        Scen->Special.IsFogOfWar = false;
+        Special.IsFogOfWar = false;
+
+    } else {
+
+        /**
+         *  Fetch the house's side and use this to decide which assets to load.
+         */
+        const auto housetype = HouseTypes[SessionExtension->House];
+
+        ScenExtension->House = housetype->HeapID;
+        Scen->SpeechSide = housetype->Side;
+        ScenExtension->SidebarSide = housetype->Side;
+        Scen->Special.IsFogOfWar = Session.Options.FogOfWar;
+        Special.IsFogOfWar = Session.Options.FogOfWar;
+    }
+
+    /**
+     *  Init side-specific data.
+     */
+    DEBUG_INFO("Calling Prep_For_Side()\n");
+    if (!Prep_For_Side(ScenExtension->SidebarSide)) {
+        ScenarioInit--;
+        return false;
+    }
+
+    Call_Back();
+
+    /**
+     *  In single player, the speech and sidebar side can be overridden by the scenario.
+     */
+    if (Session.Type == GAME_NORMAL) {
+        Scen->SpeechSide = ini.Get_SideType("Basic", "SpeechSide", Scen->SpeechSide);
+        ScenExtension->SidebarSide = ini.Get_SideType("Basic", "SidebarSide", ScenExtension->SidebarSide);
+    }
+
+    /**
+     *  Init the speech for the side.
+     */
+    DEBUG_INFO("Calling Prep_Speech_For_Side()\n");
+    if (!Prep_Speech_For_Side(Scen->SpeechSide)) {
+        ScenarioInit--;
+        return false;
+    }
+
+    Session.Loading_Callback(58);
+
+    Scen->Read_Waypoints(ini);
+
+    /**
+     *  Outside of campaign, assign houses their starting positions.
+     *  This used to happen in Create_Units(), but needs to happen earlier
+     *  so that we can handle Spawn houses.
+     */
+    if (Session.Type != GAME_NORMAL) {
+        ScenExtension->Assign_Starting_Positions(official);
+    }
+
+    /**
+     *  Outside of campaign, whether the bridges are destructible can be controlled.
+     */
+    if (Session.Type != GAME_NORMAL && !Session.Options.BridgeDestruction) {
+        Special.IsDestroyableBridges = false;
+    }
+    // Special.Apply_To_Game(); // does nothing
+    Call_Back();
+
+    /**
+     *  Outside of campaign, the scenario may request that we read base nodes for
+     *  Spawn houses. Do that if necessary.
+     */
+    if (Session.Type != GAME_NORMAL && ScenExtension->IsUseMPAIBaseNodes) {
+        for (int i = 0; i < Session.Players.Count() + Session.Options.AIPlayers; i++) {
+
+            /**
+             *  Skip observers, they don't need base nodes.
+             */
+            const auto houseext = Extension::Fetch(Houses[i]);
+            if (houseext->IsObserver) {
+                continue;
+            }
+
+            /**
+             *  Read base nodes for this house.
+             */
+            std::snprintf(buffer, std::size(buffer), "Spawn%d", houseext->SpawnWaypoint + 1);
+            Houses[i]->Base.Read_INI(ini, buffer);
+        }
+    }
+
+    /**
+     *  Read in the team type data. The team types must be created before any
+     *  triggers can be created.
+     */
+    TeamTypeClass::Read_Scenario_INI(AIINI, true);
+    if (Addon_Enabled(ADDON_FIRESTORM)) {
+        TeamTypeClass::Read_Scenario_INI(FSAIINI, true);
+    }
+    TeamTypeClass::Read_Scenario_INI(ini, false);
+
+    /**
+     *  Read in the script type data.
+     */
+    ScriptTypeClass::Read_Scenario_INI(AIINI, true);
+    if (Addon_Enabled(ADDON_FIRESTORM)) {
+        ScriptTypeClass::Read_Scenario_INI(FSAIINI, true);
+    }
+    ScriptTypeClass::Read_Scenario_INI(ini, false);
+
+    /**
+     *  Read in the task force data.
+     */
+    TaskForceClass::Read_Scenario_INI(AIINI, true);
+    if (Addon_Enabled(ADDON_FIRESTORM)) {
+        TaskForceClass::Read_Scenario_INI(FSAIINI, true);
+    }
+    TaskForceClass::Read_Scenario_INI(ini, false);
+
+    /**
+     *  Read in the trigger data. The triggers must be created before any other
+     *  objects can be initialized.
+     */
+    TriggerTypeClass::Read_Scenario_INI(ini);
+
+    /**
+     *  Read in the trigger tag data.
+     */
+    TagTypeClass::Read_Scenario_INI(ini);
+
+    /**
+     *  Read in the AI trigger data.
+     */
+    AITriggerTypeClass::Read_Scenario_INI(AIINI, true);
+    if (Addon_Enabled(ADDON_FIRESTORM)) {
+        AITriggerTypeClass::Read_Scenario_INI(FSAIINI, true);
+    }
+    AITriggerTypeClass::Read_Scenario_INI(ini, 0);
+
+    Session.Loading_Callback(60);
+
+    /**
+     *  Read in the map control values. This includes dimensions
+     *  as well as theater information.
+     */
+    Map.Read_INI(ini);
+    Call_Back();
+
+    /**
+     *  Read in the tunnel values.
+     */
+    TubeClass::Read_Scenario_INI(ini);
+
+    /**
+     *  Buildings that convert into isometric tiles need to have
+     *  pointers to those tiles fetched now.
+     */
+    BuildingTypeClass::Fetch_ToTile_Types();
+
+    Map.Flag_To_Redraw(2);
+
+    Session.Loading_Callback(70);
+    Call_Back();
+
+    /**
+     *  Read in any normal overlay objects.
+     */
+    OverlayClass::Read_INI(ini);
+    Call_Back();
+
+    /**
+     *  Recalc the attributes of all cells of the map.
+     */
+    Map.Reset_Iterator();
+    for (CellClass* cell = Map.Iterate(); cell; cell = Map.Iterate()) {
+        cell->Recalc_Attributes(-1);
+    }
+
+    /**
+     *  Place veins onto the map.
+     */
+    OverlayClass::Scenario_Load_Fixup_Veins();
+
+    /**
+     *  Read in and place the 3D terrain objects.
+     */
+    TerrainClass::Read_INI(ini);
+    Call_Back();
+
+    /**
+     *  Place veinhole monsters onto the map.
+     */
+    VeinholeMonsterClass::Place_Monsters(true);
+
+    /**
+     *  Initialize Tiberium.
+     */
+    TiberiumClass::Initialize_Tiberium_Growth_System();
+    TiberiumClass::Initialize_Tiberium_Spread_System();
+
+    Session.Loading_Callback(72);
+
+    /**
+     *  Do something with the radar.
+     */
+    Map.Compute_Radar_Image();
+
+    /**
+     *  Read in and place the units (all sides).
+     */
+    UnitClass::Read_INI(ini);
+    Call_Back();
+    Session.Loading_Callback(74);
+
+    /**
+     *  Read in and place the aircraft units (all sides).
+     */
+    AircraftClass::Read_INI(ini);
+    Call_Back();
+
+    /**
+     *  Read in and place the infantry units (all sides).
+     */
+    InfantryClass::Read_INI(ini);
+    Call_Back();
+    Session.Loading_Callback(76);
+
+    /**
+     *  Read in and place all the buildings on the map.
+     */
+    LightSourceClass::Recalc = false;
+    BuildingClass::Read_INI(ini);
+    Call_Back();
+    Session.Loading_Callback(78);
+
+    LightSourceClass::Recalc = true;
+    Call_Back();
+
+    /**
+     *  Read in any smudge overlays.
+     */
+    SmudgeClass::Read_INI(ini);
+    Call_Back();
+
+    CCINIClass mini;
+    CCFileClass file;
+
+    if (Session.Type == GAME_NORMAL) {
+
+        /**
+         *  Reload the rules with out scenario file again? Not sure why.
+         */
+        _splitpath(Scen->ScenarioName, nullptr, nullptr, buffer, nullptr);
+        std::strncat(buffer, ".INI", std::size(buffer) - 1);
+
+        file.Set_Name(buffer);
+        if (file.Is_Available(false)) {
+            mini.Load(file, false);
+            Rule->Addition(mini);
+        }
+        file.Close();
+
+        /**
+         *  Read the name and briefing of the mission from the MISSION.INI file.
+         */
+        if (Scen->RequiredAddOn > ADDON_BASE_GAME) {
+            char fname[32];
+            std::snprintf(fname, std::size(fname), "MISSION%1d.INI", Scen->RequiredAddOn);
+            file.Set_Name(fname);
+        } else {
+            file.Set_Name("MISSION.INI");
+        }
+
+
+        if (file.Is_Available(false)) {
+            mini.Load(file, false);
+
+            if (mini.Is_Present("Name")) {
+                mini.Get_String(Scen->ScenarioName, "Name", "", Scen->Description, std::size(Scen->Description));
+            }
+
+            if (mini.Is_Present("Briefing")) {
+                mini.Get_String(Scen->ScenarioName, "Briefing", "", buffer, std::size(buffer));
+                if (std::strlen(buffer) > 0) {
+                    mini.Get_TextBlock(buffer, Scen->BriefingText, std::size(Scen->BriefingText));
+                }
+            }
+        }
+    }
+
+    /**
+     *  WW's "TheTeam" cheat.
+     */
+    if (Session.Type == GAME_SKIRMISH && Cheat_TheTeam) {
+        file.Close();
+        file.Set_Name("TMCJ4F.INI");
+
+        if (file.Is_Available(false)) {
+            mini.Load(file, false, false);
+            Rule->Addition(mini);
+        }
+    }
+
+    Session.Loading_Callback(82);
+    Call_Back();
+
+    /**
+     *  Do some last passes on some map stuff.
+     */
+    Map.Overpass();
+    Session.Loading_Callback(86);
+    Call_Back();
+
+    Session.Loading_Callback(90);
+    Call_Back();
+
+    /**
+     *  Multi-player last-minute fixups
+     */
+    if (Session.Type != GAME_NORMAL && !random) {
+        Last_Minute_Multiplayer_Fixups(official);
+    }
+
+    if (Session.Type != GAME_NORMAL) {
+        Init_Forced_Alliances();
+    }
+
+    Call_Back();
+
+    /**
+     *  Reset the swizzle manager.
+     */
+    SwizzleManager.Reset();
+    Session.Loading_Callback(96);
+    Call_Back();
+
+    /**
+     *  Remove all inactive objects.
+     */
+    Delete_Marked();
+
+    /**
+     *  Outside of campaign, the scenario's special flags are not used.
+     */
+    if (Session.Type != GAME_NORMAL) {
+        Scen->Special = Special;
+    }
+
+    ScenarioInit--;
+
+    /**
+     *  Set up laser fences.
+     */
+    int save_init = ScenarioInit;
+    ScenarioInit = 0;
+    BuildingClass::Init_Laser_Fences();
+    ScenarioInit = save_init;
+
+    Session.Loading_Callback(98);
+    Call_Back();
+
+    Map.Clear_Background_Update_Stack();
+
+    /**
+     *  If we have FoW turned on, fog the entire map.
+     */
+    if (Scen->Special.IsFogOfWar) {
+        Map.Initialize_Fog_System();
+    }
+
+    /**
+     *  Refresh the radar.
+     */
+    RadarEventClass::Clear();
+    Map.Total_Radar_Refresh();
+
+    /**
+     *  Schedule the next autosave.
+     */
+    SessionExtension->Schedule_Next_Autosave();
+
+    /**
+     *  Set the skip score bool.
+     */
+    if (ScenExtension->HasSpawnerScenarioOverrides) {
+        Scen->IsSkipScore = ScenExtension->SkipScoreScreenOverride;
+    }
+
+    /**
+     *  Return with flag saying that the scenario file was read.
+     */
+    return true;
+}
+
+
+/**
+ *  Creates alliances as dictated by the client.
+ *
+ *  @author: ZivDero
+ */
+void ScenarioClassExtension::Init_Forced_Alliances()
+{
+    /**
+     *  Process the client's forced alliances.
+     */
+    if (SessionExtension->IsSpawnerSession) {
+        for (int i = 0; i < Session.Players.Count() + Session.Options.AIPlayers; i++) {
+            HouseClass* housep = Houses[i];
+
+            /**
+             *  Multiplay passive houses don't get allies.
+             */
+            if (housep->Class->IsMultiplayPassive) continue;
+
+            const auto& slot_info = SessionExtension->SlotInfo[i];
+            for (int j = 0; j < std::size(slot_info.Alliances); j++) {
+                const int ally_index = slot_info.Alliances[j];
+                if (ally_index != -1) housep->Make_Ally(static_cast<HousesType>(ally_index));
+            }
+        }
+    }
+}
+
+
+/**
+ *  Build a list of valid multiplayer starting waypoints.
+ *
+ *  @author: CCHyper
+ */
+static DynamicVectorClass<Cell> _Fetch_Starting_Points(bool official)
+{
+    DynamicVectorClass<Cell> list;
+
+    /**
+     *  Find first valid player spawn waypoint.
+     */
+    int avail_waypoints = 0;
+    for (int i = 0; i < MAX_PLAYERS; i++) {
+        if (Scen->Is_Waypoint_Valid(i)) {
+            avail_waypoints++;
+        } else {
+            break;
+        }
+    }
+
+    /**
+     *  Calculate the number of waypoints (as a minimum) that will be lifted from the
+     *  mission file. Bias this number so that only the first 4 waypoints are used
+     *  if there are 4 or fewer players. Unofficial maps will pick from all the
+     *  available waypoints.
+     */
+    int look_for = std::max(avail_waypoints, Session.Players.Count() + Session.Options.AIPlayers);
+    if (!official) {
+        look_for = MAX_PLAYERS;
+    }
+
+    if (SessionExtension->IsSpawnerSession) {
+        for (int i = 0; i < Session.Players.Count() + Session.Options.AIPlayers; i++) {
+            const auto houseext = Extension::Fetch(Houses[i]);
+            if (houseext->IsObserver) {
+                look_for--;
+            }
+        }
+    }
+
+    for (int waycount = 0; waycount < look_for; ++waycount) {
+        if (Scen->Is_Waypoint_Valid(waycount)) {
+            list.Add(Scen->Waypoint_Cell(waycount));
+            DEBUG_INFO("Multiplayer start waypoint found at cell %d,%d.\n", Scen->Waypoint_Cell(waycount).X, Scen->Waypoint_Cell(waycount).Y);
+        }
+    }
+
+    /**
+     *  If there are insufficient waypoints to account for all players, then randomly
+     *  assign starting points until there is enough.
+     */
+    int deficiency = look_for - list.Count();
+    if (deficiency > 0) {
+        DEBUG_WARNING("Multiplayer start waypoint deficiency - looking for more start positions.\n");
+        for (int index = 0; index < deficiency; ++index) {
+            Cell trycell = Cell(Map.MapRect.X + Random_Pick(10, Map.MapRect.Width - 10), Map.MapRect.Y + Random_Pick(0, Map.MapRect.Height - 10) + 10);
+
+            trycell = Map.Nearby_Location(trycell, SPEED_TRACK, -1, MZONE_NORMAL, false, Point2D(8, 8));
+            if (trycell != CELL_NONE) {
+                list.Add(trycell);
+                DEBUG_INFO("Random multiplayer start waypoint added at cell %d,%d.\n", trycell.X, trycell.Y);
+            }
+        }
+    }
+
+    return list;
+}
+
+
+/**
+ *  Assigns starting positions to multiplayer houses.
+ *  Split from Create_Units().
+ *
+ *  @author: ZivDero, CCHyper
+ */
+void ScenarioClassExtension::Assign_Starting_Positions(bool official)
+{
+    int numtaken = 0;
+
+    /**
+     *  Build a list of the valid waypoints. This normally shouldn't be
+     *  necessary because the scenario level designer should have assigned
+     *  valid locations to the first N waypoints, but just in case, this
+     *  loop verifies that.
+     */
+    bool taken[26] = {};
+
+    DynamicVectorClass<Cell> starting_points = _Fetch_Starting_Points(official);
+
+    DEV_DEBUG_INFO("Assigning starting positions to houses.\n");
+
+    /**
+     *  If the spawner is active, assign the received starting positions to the houses.
+     */
+    if (SessionExtension->IsSpawnerSession) {
+        for (int house = 0; house < Session.Players.Count() + Session.Options.AIPlayers; house++) {
+            Extension::Fetch(Houses[house])->SpawnWaypoint = SessionExtension->SlotInfo[house].SpawnLocation;
+        }
+    }
+
+    /**
+     *  First pass - assign spawn waypoints given to use by the client.
+     */
+    if (SessionExtension->IsSpawnerSession) {
+        for (int house = HOUSE_FIRST; house < Houses.Count(); house++) {
+
+            /**
+             *  Get a pointer to this house.
+             */
+            HouseClass* hptr = Houses[house];
+            ASSERT(hptr != nullptr);
+
+            /**
+             *  Skip passive houses.
+             */
+            if (hptr->Class->IsMultiplayPassive) {
+                continue;
+            }
+
+            /**
+             *  Skip observers for now, we'll set them to observe another player later.
+             */
+            const auto houseext = Extension::Fetch(hptr);
+            if (houseext->IsObserver) {
+                continue;
+            }
+
+            const int chosen_spawn = houseext->SpawnWaypoint;
+            if (chosen_spawn >= 0 && chosen_spawn < MAX_PLAYERS && !taken[chosen_spawn]) {
+                taken[chosen_spawn] = true;
+                numtaken++;
+            }
+        }
+    }
+
+    /**
+     *  Second pass - assign spawn waypoints to houses that don't have one yet.
+     */
+    for (int house = HOUSE_FIRST; house < Houses.Count(); house++) {
+
+        /**
+         *  Get a pointer to this house.
+         */
+        HouseClass* hptr = Houses[house];
+        ASSERT(hptr != nullptr);
+        auto houseext = Extension::Fetch(hptr);
+
+        /**
+         *  Skip passive houses.
+         */
+        if (hptr->Class->IsMultiplayPassive) {
+            continue;
+        }
+
+        /**
+         *  Skip observers for now, we'll set them to observe another player later.
+         */
+        if (houseext->IsObserver) {
+            continue;
+        }
+
+        /**
+         *  Skip houses that already have a waypoint.
+         */
+        if (houseext->SpawnWaypoint != WAYPOINT_NONE) {
+            continue;
+        }
+
+        /**
+         *  Pick the starting location for this house. The first house just picks
+         *  one of the valid locations at random. The other houses pick the furthest
+         *  waypoint from the existing houses.
+         */
+        if (numtaken == 0) {
+            int pick = Random_Pick(0, starting_points.Count() - 1);
+            while (taken[pick]) {
+                pick = Random_Pick(0, starting_points.Count() - 1);
+            }
+            taken[pick] = true;
+            numtaken++;
+            houseext->SpawnWaypoint = pick;
+
+        } else {
+
+            /**
+             *  Set all waypoints to have a score of zero in preparation for giving
+             *  a distance score to all waypoints.
+             */
+            int score[std::size(taken)] = {};
+
+            /**
+             *  Scan through all waypoints and give a score as a value of the sum
+             *  of the distances from this waypoint to all taken waypoints.
+             */
+            for (int index = 0; index < starting_points.Count(); index++) {
+
+                /**
+                 *  If this waypoint has not already been taken, then accumulate the
+                 *  sum of the distance between this waypoint and all other taken
+                 *  waypoints.
+                 */
+                if (!taken[index]) {
+                    for (int trypoint = 0; trypoint < starting_points.Count(); trypoint++) {
+
+                        if (taken[trypoint]) {
+                            score[index] += Distance(starting_points[index], starting_points[trypoint]);
+                        }
+                    }
+                }
+            }
+
+            /**
+             *  Now find the waypoint with the largest score. This waypoint is the one
+             *  that is furthest from all other taken waypoints.
+             */
+            int best = 0;
+            int bestvalue = 0;
+            for (int searchindex = 0; searchindex < starting_points.Count(); searchindex++) {
+                if (score[searchindex] > bestvalue || bestvalue == 0) {
+                    bestvalue = score[searchindex];
+                    best = searchindex;
+                }
+            }
+
+            /**
+             *  Assign this best position to the house.
+             */
+            taken[best] = true;
+            numtaken++;
+            houseext->SpawnWaypoint = best;
+        }
+    }
+
+    
+    /**
+     *  Third pass - give observers someone to observe, and assign everyone their house centers.
+     */
+    for (int house = HOUSE_FIRST; house < Houses.Count(); house++) {
+        Cell centroid(0, 0); // centroid of this house's stuff.
+
+        /**
+         *  Get a pointer to this house.
+         */
+        HouseClass* hptr = Houses[house];
+        ASSERT(hptr != nullptr);
+
+        auto houseext = Extension::Fetch(hptr);
+
+        /**
+         *  Skip passive houses.
+         */
+        if (hptr->Class->IsMultiplayPassive) {
+            continue;
+        }
+
+        /**
+         *  Observers now pick a random house to observe.
+         */
+        if (houseext->IsObserver) {
+
+            /**
+             *  No players - just plop the spectator in the map center.
+             */
+            if (numtaken == 0) {
+                centroid = Cell(Map.MapRect.X + Map.MapRect.Width / 2, Map.MapRect.Y + Map.MapRect.Height / 2);
+            }
+
+            /**
+             *  Pick a random house to observe.
+             */
+            else {
+                int player_count = Session.Players.Count() + Session.Options.AIPlayers;
+                int pick = Random_Pick(0, player_count - 1);
+                while (!taken[pick]) {
+                    pick = Random_Pick(0, player_count - 1);
+                }
+                centroid = starting_points[pick];
+            }
+
+            /**
+             *  Ensure that observers do not have a spawn waypoint.
+             */
+            houseext->SpawnWaypoint = WAYPOINT_NONE;
+
+        } else {
+
+            /**
+             *  For normal players, the centroid is their starting waypoint.
+             */
+            centroid = starting_points[houseext->SpawnWaypoint];
+        }
+
+        /**
+         *  Assign the center of this house to the waypoint location.
+         */
+        hptr->Center = centroid.As_Coord();
+        DEBUG_INFO("  House %d (%s) starting at waypoint %d (%d,%d)\n", house, hptr->IniName.c_str(), houseext->SpawnWaypoint, centroid.X, centroid.Y);
+    }
+}
+
+
+/**
  *  Assigns multiplayer houses to various players.
- * 
+ *
  *  @author: 06/09/1995 BRR - Red Alert source code.
  *           CCHyper - Adjustments for Tiberian Sun.
  */
 void ScenarioClassExtension::Assign_Houses()
 {
-    bool assigned[MAX_PLAYERS];     // true = this house slot is in use.
-    bool color_used[MAX_PLAYERS];   // true = this color is in use.
-
-    HouseClass *housep;
-    HouseTypeClass *housetype;
-    HousesType house;
-    int lowest_color;
-    int index;
-    HousesType pref_house;
-    int color;
+    bool assigned[MAX_PLAYERS] = {};   // true = this house slot is in use.
+    bool color_used[MAX_PLAYERS] = {}; // true = this color is in use.
 
     DEBUG_INFO("Assign_Houses(enter)\n");
 
-    /**
-     *  Initialize
-     */
-    std::memset(assigned, 0, MAX_PLAYERS * sizeof(bool));
-    std::memset(color_used, 0, MAX_PLAYERS * sizeof(bool));
-    
     if (Session.Players.Count() > 0) {
         DEBUG_INFO("  Assigning players (%d)...\n", Session.Players.Count());
     }
@@ -970,8 +2208,8 @@ void ScenarioClassExtension::Assign_Houses()
         /**
          *  Find the player with the lowest color index.
          */
-        index = 0;
-        lowest_color = -1;
+        int index = 0;
+        int lowest_color = -1;
         for (int j = 0; j < Session.Players.Count(); j++) {
 
             /**
@@ -986,7 +2224,7 @@ void ScenarioClassExtension::Assign_Houses()
             }
         }
 
-        NodeNameTag &node = *Session.Players[index];
+        NodeNameTag& node = *Session.Players[index];
 
         /**
          *  Mark this player as having been assigned.
@@ -995,18 +2233,18 @@ void ScenarioClassExtension::Assign_Houses()
         color_used[node.Player.Color] = true;
 
         /**
-         *  Assign the lowest-color'd player to the next available slot
+         *  Assign the lowest-colored player to the next available slot
          *  in the HouseClass array.
          */
-        housep = new HouseClass(HouseTypes[node.Player.House]);
+        HouseClass* housep = new HouseClass(HouseTypes[node.Player.House]);
+        HouseClassExtension* houseext = Extension::Fetch(housep);
+        
         housep->IniName = node.Name;
 
-        /**
-         *  Set the house's IsHuman, Credits, ActLike, and RemapTable.
-         */
         housep->IsHuman = true;
-
-        housep->Control.TechLevel = BuildLevel;
+        /**
+         *  Set the house's properties.
+         */
         housep->Init_Data(node.Player.Color, node.Player.House, Session.Options.Credits);
         housep->Scheme = Session.Scheme_From_Color_ID(node.Player.Color);
         housep->Initialize_Radar_Color();
@@ -1019,15 +2257,43 @@ void ScenarioClassExtension::Assign_Houses()
             housep->IsPlayerControl = true;
         }
 
+        /**
+         *  Convert the build level into an actual tech level to assign to the house.
+         *  There isn't a one-to-one correspondence.
+         */
+        housep->Control.TechLevel = BuildLevel;
+
         housep->Assign_Handicap(DIFF_NORMAL);
+
+        /**
+         *  Process spawner overrides.
+         */
+        if (SessionExtension->IsSpawnerSession) {
+            int house_index = Houses.Count() - 1;
+            const auto& slot_info = SessionExtension->SlotInfo[house_index];
+
+            /**
+             *  Mark an observer accordingly.
+             */
+            if (slot_info.IsObserver) {
+                houseext->IsObserver = true;
+
+                /**
+                 *  If the local player starts as an observer, mark him as "Obi Wan" -
+                 *  prevents him from sending DMs to players (and removes fog).
+                 */
+                if (housep == PlayerPtr) {
+                    Session.ObiWan = true;
+                }
+            }
+        }
 
         /**
          *  Record where we placed this player.
          */
-        node.Player.ID = HousesType(housep->HeapID);
+        node.Player.ID = housep->HeapID;
 
-        DEBUG_INFO("    Assigned player \"%s\" (House: \"%s\", ID: %d, Color: \"%s\") to slot %d.\n",
-            node.Name, housep->Class->Name(), node.Player.ID, ColorSchemes[housep->Scheme]->Name, i);
+        DEBUG_INFO("    Assigned player \"%s\" (House: \"%s\", ID: %d, Color: \"%s\") to slot %d.\n", node.Name, housep->Class->Name(), node.Player.ID, ColorSchemes[housep->Scheme]->Name, i);
     }
 
     if (Session.Options.AIPlayers > 0) {
@@ -1038,53 +2304,52 @@ void ScenarioClassExtension::Assign_Houses()
      *  Now assign computer players to the remaining houses.
      */
     for (int i = Session.Players.Count(); i < Session.Players.Count() + Session.Options.AIPlayers; ++i) {
+        HousesType pref_house;
+        int color;
 
-#if 0
-        if (Percent_Chance(50)) {
-            pref_house = HOUSE_GDI;
+        if (!SessionExtension->IsSpawnerSession || !SessionExtension->SlotInfo[i].IsConfigured) {
+
+            /**
+             *  #issue-7
+             *
+             *  Fixes a limitation where the AI would only be able to choose
+             *  between the houses GDI (0) and Nod (1). Now, all houses that
+             *  have "IsMultiplay" true will be considered for sellection.
+             */
+            while (true) {
+                pref_house = static_cast<HousesType>(Random_Pick(0, HouseTypes.Count() - 1));
+                if (HouseTypes[pref_house]->IsMultiplay) {
+                    break;
+                }
+            }
+
+            /**
+             *  Pick a color for this house; keep looping until we find one.
+             */
+            while (true) {
+                color = Random_Pick(0, (MAX_PLAYERS - 1));
+                if (color_used[color] == false) {
+                    break;
+                }
+            }
+            color_used[color] = true;
         } else {
-            pref_house = HOUSE_NOD;
-        }
-#endif
-
-        /**
-         *  #issue-7
-         * 
-         *  Replaces code from above.
-         * 
-         *  Fixes a limitation where the AI would only be able to choose
-         *  between the houses GDI (0) and NOD (1). Now, all houses that
-         *  have "IsMultiplay" true will be considered for sellection.
-         */
-        while (true) {
-            pref_house = (HousesType)Random_Pick(0, HouseTypes.Count()-1);
-            if (HouseTypes[pref_house]->IsMultiplay) {
-                break;
-            }
+            const auto& slot_info = SessionExtension->SlotInfo[i];
+            color = slot_info.Color;
+            pref_house = static_cast<HousesType>(slot_info.House);
         }
 
-        /**
-         *  Pick a color for this house; keep looping until we find one.
-         */
-        while (true) {
-            color = Random_Pick(0, MAX_PLAYERS -1);
-            if (color_used[color] == false) {
-                break;
-            }
-        }
-        color_used[color] = true;
-
-        housep = new HouseClass(HouseTypes[pref_house]);
+        HouseClass* housep = new HouseClass(HouseTypes[pref_house]);
 
         /**
-         *  Set the house's IsHuman, Credits, ActLike, and RemapTable.
+         *  Set up the house.
          */
-        housep->IsHuman = false;
-        //housep->IsStarted = true;
-
         housep->Control.TechLevel = BuildLevel;
-        housep->Init_Data((PlayerColorType)color, pref_house, Session.Options.Credits);
-        housep->Scheme = Session.Scheme_From_Color_ID((PlayerColorType)color);
+        housep->IsHuman = false;
+
+        housep->Init_Data(static_cast<PlayerColorType>(color), pref_house, Session.Options.Credits);
+
+        housep->Scheme = Session.Scheme_From_Color_ID(static_cast<PlayerColorType>(color));
         housep->Initialize_Radar_Color();
 
         housep->IniName = Text_String(TXT_COMPUTER);
@@ -1096,45 +2361,72 @@ void ScenarioClassExtension::Assign_Houses()
         DiffType difficulty = Scen->CDifficulty;
 
         if (Session.Players.Count() > 1 && Rule->IsCompEasyBonus && difficulty > DIFF_EASY) {
-            difficulty = (DiffType)(difficulty - 1);
+            difficulty = static_cast<DiffType>(difficulty - 1);
         }
         housep->Assign_Handicap(difficulty);
 
-        DEBUG_INFO("    Assigned computer house \"%s\" (ID: %d, Color: \"%s\") to slot %d.\n",
-            housep->Class->Name(), housep->HeapID, ColorSchemes[housep->Scheme]->Name, i);
+        /**
+         *  Process spawner overrides.
+         */
+        if (SessionExtension->IsSpawnerSession) {
+            static char const* AINamesByDifficultyArray[] = {
+                "Hard AI",
+                "Medium AI",
+                "Easy AI"
+            };
+
+            const auto& slot_info = SessionExtension->SlotInfo[i];
+
+            /**
+             *  Set the difficulty and name for the AI (for AIs, player index == house index)
+             */
+            if (slot_info.Difficulty >= 0 && slot_info.Difficulty < std::size(AINamesByDifficultyArray)) {
+                housep->Assign_Handicap(static_cast<DiffType>(slot_info.Difficulty));
+                if (SessionExtension->ExtOptions.IsAINamesByDifficulty && !housep->IsHuman) {
+                    housep->IniName = AINamesByDifficultyArray[slot_info.Difficulty];
+                }
+            }
+
+            if (slot_info.IsObserver) {
+                Extension::Fetch(housep)->IsObserver = true;
+            }
+        }
+
+        DEBUG_INFO("    Assigned computer house \"%s\" (ID: %d, Color: \"%s\") to slot %d.\n", housep->Class->Name(), housep->HeapID, ColorSchemes[housep->Scheme]->Name, i);
     }
 
     /**
      *  Create Neutral and Special houses as they must exist!
-     * 
+     *
      *  #BUGFIX:
      *  Added checks to make sure the houses exist before blindly
      *  attempting to create a instance of them.
      */
-    ColorSchemeType remap_color = Fetch_Scheme_Index_By_Name("LightGrey");
-    ColorSchemeType grey_color = Fetch_Scheme_Index_By_Name("Grey");
+    ColorSchemeType scheme_lgrey = Fetch_Scheme_Index_By_Name("LightGrey");
+    ColorSchemeType scheme_grey = Fetch_Scheme_Index_By_Name("Grey");
 
-    house = HouseTypeClass::From_Name("Neutral");
+    HousesType house = HouseTypeClass::From_Name("Neutral");
     if (house != HOUSE_NONE) {
         DEBUG_INFO("  Creating Neutral house...\n");
 
-        housetype = HouseTypes[house];
-        housep = new HouseClass(housetype);
+        HouseTypeClass* housetype = HouseTypes[house];
+        HouseClass* housep = new HouseClass(housetype);
 
         /**
          *  #issue-773
-         * 
+         *
          *  Allow the remap colour of Neutral to be overriden. Due to the difference
          *  in the colours used between RULES.INI and scenarios for official maps, we
          *  need to check for both LightGrey and Grey, and only allow overrides
          *  if it does not match these colors.
-         * 
+         *
          *  @author: CCHyper
          */
-        if (housetype->Scheme != remap_color && housetype->Scheme != grey_color) {
-            remap_color = housetype->Scheme;
+        if (housetype->Scheme != scheme_lgrey && housetype->Scheme != scheme_grey) {
+            housep->Scheme = housetype->Scheme;
+        } else {
+            housep->Scheme = scheme_lgrey;
         }
-        housep->Scheme = remap_color;
 
         housep->Initialize_Radar_Color();
     }
@@ -1143,25 +2435,48 @@ void ScenarioClassExtension::Assign_Houses()
     if (house != HOUSE_NONE) {
         DEBUG_INFO("  Creating Special house...\n");
 
-        housetype = HouseTypes[house];
-        housep = new HouseClass(housetype);
+        HouseTypeClass* housetype = HouseTypes[house];
+        HouseClass* housep = new HouseClass(housetype);
 
         /**
          *  #issue-773
-         * 
+         *
          *  Allow the remap colour of Special to be overriden. Due to the difference
          *  in the colours used between RULES.INI and scenarios for official maps, we
          *  need to check for both LightGrey and Grey, and only allow overrides
          *  if it does not match these colors.
-         * 
+         *
          *  @author: CCHyper
          */
-        if (housetype->Scheme != remap_color && housetype->Scheme != grey_color) {
-            remap_color = housetype->Scheme;
+        if (housetype->Scheme != scheme_lgrey && housetype->Scheme != scheme_grey) {
+            housep->Scheme = housetype->Scheme;
+        } else {
+            housep->Scheme = scheme_lgrey;
         }
-        housep->Scheme = remap_color;
 
         housep->Initialize_Radar_Color();
+    }
+
+    /**
+     *  Process the spawner's forced alliances.
+     */
+    if (SessionExtension->IsSpawnerSession) {
+        for (int i = 0; i < Session.Players.Count() + Session.Options.AIPlayers; i++) {
+            HouseClass* housep = Houses[i];
+
+            /**
+             *  Multiplay passive houses don't get allies.
+             */
+            if (housep->Class->IsMultiplayPassive) continue;
+
+            const auto& slot_info = SessionExtension->SlotInfo[i];
+            for (int j = 0; j < std::size(slot_info.Alliances); ++j) {
+                const int ally_index = slot_info.Alliances[j];
+                if (ally_index != -1) {
+                    housep->Allies |= 1 << ally_index;
+                }
+            }
+        }
     }
 
     DEBUG_INFO("Assign_Houses(exit)\n");
@@ -1196,14 +2511,10 @@ static Cell Clip_Scatter(Cell cell, int maxdist)
     int xdist = Random_Pick(0, maxdist);
     if (Percent_Chance(50)) {
         x += xdist;
-        if (x > xmax) {
-            x = xmax;
-        }
+        x = std::min(x, xmax);
     } else {
         x -= xdist;
-        if (x < xmin) {
-            x = xmin;
-        }
+        x = std::max(x, xmin);
     }
 
     /**
@@ -1212,14 +2523,10 @@ static Cell Clip_Scatter(Cell cell, int maxdist)
     int ydist = Random_Pick(0, maxdist);
     if (Percent_Chance(50)) {
         y += ydist;
-        if (y > ymax) {
-            y = ymax;
-        }
+        y = std::min(y, ymax);
     } else {
         y -= ydist;
-        if (y < ymin) {
-            y = ymin;
-        }
+        y = std::max(y, ymin);
     }
 
     return Cell(x, y);
@@ -1292,11 +2599,11 @@ static Cell Clip_Move(Cell cell, FacingType facing, int dist)
     /**
      *  Clip to the map
      */
-    if (x > xmax) x = xmax;
-    if (x < xmin) x = xmin;
+    x = std::min(x, xmax);
+    x = std::max(x, xmin);
 
-    if (y > ymax) y = ymax;
-    if (y < ymin) y = ymin;
+    y = std::min(y, ymax);
+    y = std::max(y, ymin);
 
     return Cell(x, y);
 }
@@ -1310,7 +2617,7 @@ static Cell Clip_Move(Cell cell, FacingType facing, int dist)
  * 
  *  #issue-338 - Adds "min_dist" argument.
  */
-int Vinifera_Scan_Place_Object(ObjectClass *obj, Cell cell, int min_dist = 1, int max_dist = 31, bool no_scatter = false)
+static int _Scan_Place_Object(ObjectClass *obj, Cell cell, int min_dist = 1, int max_dist = 31, bool no_scatter = false)
 {
     int dist;               // for object placement
     FacingType rot;         // for object placement
@@ -1448,209 +2755,89 @@ static bool Is_Adjacent_Cell_Empty(Cell cell, FacingType facing, int dist)
 }
 
 
-static bool Are_Starting_Cells_Full(Cell cell, int dist)
-{
-    static bool empty_flag[FACING_COUNT];
-    std::memset(empty_flag, false, FACING_COUNT);
-
-    for (FacingType facing = FACING_FIRST; facing < FACING_COUNT; ++facing) {
-        if (Is_Adjacent_Cell_Empty(cell, facing, dist)) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-
-/**
- *  Places an object >at< the given cell.
- * 
- *  @author: CCHyper
- * 
- *  #issue-338 - Adds "min_dist" argument.
- */
-static bool Place_Object(ObjectClass *obj, Cell cell, FacingType facing, int dist)
-{
-    Cell newcell;
-    TechnoClass *techno;
-
-    /**
-     *  Pick a coordinate along this directional axis
-     */
-    newcell = Clip_Move(cell, facing, dist);
-
-    /**
-     *  Try to unlimbo the object in the given cell.
-     */
-    if (Map.In_Radar(newcell)) {
-        techno = Map[newcell].Cell_Techno();
-        if (!techno) {
-            Coord coord = newcell.As_Coord();
-            coord.Z = Map.Get_Height_GL(coord);
-            if (obj->Unlimbo(coord, DIR_N)) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-
-/**
- *  Build a list of valid multiplayer starting waypoints.
- * 
- *  @author: CCHyper
- */
-static DynamicVectorClass<Cell> Build_Starting_Waypoint_List(bool official)
-{
-    DynamicVectorClass<Cell> waypts;
-
-    /**
-     *  Find first valid player spawn waypoint.
-     */
-    int min_waypts = 0;
-    for (int i = 0; i < 8; i++) {
-        if (!Scen->Is_Waypoint_Valid(i)) {
-            break;
-        }
-        min_waypts++;
-    }
-
-    /**
-     *  Calculate the number of waypoints (as a minimum) that will be lifted from the
-     *  mission file. Bias this number so that only the first 4 waypoints are used
-     *  if there are 4 or fewer players. Unofficial maps will pick from all the
-     *  available waypoints.
-     */
-    int look_for = std::max(min_waypts, Session.Players.Count()+Session.Options.AIPlayers);
-    if (!official) {
-        look_for = MAX_PLAYERS;
-    }
-
-    for (int waycount = 0; waycount < look_for; ++waycount) {
-        if (Scen->Is_Waypoint_Valid(waycount)) {
-            Cell waycell = Scen->Waypoint_Cell(waycount);
-            waypts.Add(waycell);
-            DEBUG_INFO("Multiplayer start waypoint found at cell %d,%d.\n", waycell.X, waycell.Y);
-        }
-    }
-
-    /**
-     *  If there are insufficient waypoints to account for all players, then randomly
-     *  assign starting points until there is enough.
-     */
-    int deficiency = look_for - waypts.Count();
-    if (deficiency > 0) {
-        DEBUG_WARNING("Multiplayer start waypoint deficiency - looking for more start positions.\n");
-        for (int index = 0; index < deficiency; ++index) {
-
-            Cell trycell = Cell(Map.MapRect.X + Random_Pick(10, Map.MapRect.Width-10),
-                                   Map.MapRect.Y + Random_Pick(0, Map.MapRect.Height-10) + 10);
-
-            trycell = Map.Nearby_Location(trycell, SPEED_TRACK, -1, MZONE_NORMAL, false, Point2D(8, 8));
-            if (trycell != CELL_NONE) {
-                waypts.Add(trycell);
-                DEBUG_INFO("Random multiplayer start waypoint added at cell %d,%d.\n", trycell.X, trycell.Y);
-            }
-        }
-    }
-
-    return waypts;
-}
-
-
 /**
  *  New implementation of Create_Units()
- * 
+ *
  *  @author: CCHyper (assistance from tomsons26).
  */
 void ScenarioClassExtension::Create_Units(bool official)
 {
     /**
      *  #issue-338
-     * 
+     *
      *  Change the starting unit formation to be like Red Alert 2.
-     * 
+     *
      *  This sets the desired placement distance from the base center cell.
-     * 
+     *
      *  @author: CCHyper
      */
     const unsigned int MIN_PLACEMENT_DISTANCE = 3;
     const unsigned int MAX_PLACEMENT_DISTANCE = 32;
 
-    int tot_units = Session.Options.UnitCount;
+    Cell centroid; // centroid of this house's stuff
+    DynamicVectorClass<TechnoClass*> just_deployed;
+    int unit_count = Session.Options.UnitCount;
+
     if (Session.Options.Bases) {
-        --tot_units;
+        unit_count--;
     }
 
     DEBUG_INFO("NumPlayers = %d\n", Session.NumPlayers);
     DEBUG_INFO("AIPlayers = %d\n", Session.Options.AIPlayers);
-    DEBUG_INFO("Creating %d starting units per house - Random seed is %08x\n", tot_units, Scen->RandomNumber);
+    DEBUG_INFO("Creating %d starting units per house - Random seed is %08x\n", unit_count, static_cast<int>(Scen->RandomNumber));
     DEBUG_INFO("UniqueID is %08x\n", Scen->UniqueID);
-
-    Cell centroid;          // centroid of this house's stuff.
-    TechnoClass *obj;       // newly-created object.
 
     /**
      *  Generate lists of all the available starting units (regardless of owner).
      */
-    int tot_inf_count = 0;
-    int tot_unit_count = 0;
+    int total_cost = 0;
+    int total_objs = 0;
 
     for (int i = 0; i < UnitTypes.Count(); ++i) {
-        UnitTypeClass *unittype = UnitTypes[i];
-        if (unittype && unittype->IsAllowedToStartInMultiplayer) {
-            if (Rule->BaseUnit->Fetch_ID() != unittype->Fetch_ID()) {
-                ++tot_unit_count;
+        UnitTypeClass* utype = UnitTypes[i];
+        if (utype && utype->IsAllowedToStartInMultiplayer) {
+            if (!RuleExtension->BaseUnit.Is_Present(utype)) {
+                total_cost += utype->Raw_Cost();
+                total_objs++;
             }
         }
     }
 
     for (int i = 0; i < InfantryTypes.Count(); ++i) {
-        InfantryTypeClass *infantrytype = InfantryTypes[i];
-        if (infantrytype && infantrytype->IsAllowedToStartInMultiplayer) {
-            ++tot_inf_count;
+        InfantryTypeClass* itype = InfantryTypes[i];
+        if (itype && itype->IsAllowedToStartInMultiplayer) {
+            total_cost += itype->Raw_Cost();
+            total_objs++;
         }
     }
 
-    if (!(tot_inf_count + tot_unit_count)) {
+    if (total_objs == 0) {
         DEBUG_WARNING("No starting units available!");
     }
 
-    /**
-     *  Build a list of the valid waypoints. This normally shouldn't be
-     *  necessary because the scenario level designer should have assigned
-     *  valid locations to the first N waypoints, but just in case, this
-     *  loop verifies that.
-     */
-    const unsigned int MAX_STORED_WAYPOINTS = 26;
-
-    bool taken[MAX_STORED_WAYPOINTS];
-    std::memset(taken, '\0', sizeof(taken));
-
-    DynamicVectorClass<Cell> waypts;
-    waypts = Build_Starting_Waypoint_List(official);
+    int average_cost = total_objs ? (total_cost / total_objs) : 0;
+    int allowed_unit_cost = unit_count * average_cost;
 
     /**
      *  Loop through all houses.  Computer-controlled houses, with Session.Options.Bases
      *  ON, are treated as though bases are OFF (since we have no base-building AI logic.)
      */
-    int numtaken = 0;
     for (HousesType house = HOUSE_FIRST; house < Houses.Count(); ++house) {
 
         /**
          *  Get a pointer to this house; if there is none, go to the next house.
          */
-        HouseClass *hptr = Houses[house];
+        HouseClass* hptr = Houses[house];
         if (hptr == nullptr) {
             DEV_DEBUG_INFO("Invalid house %d!\n", house);
             continue;
         }
 
-        DynamicVectorClass<InfantryTypeClass *> available_infantry;
-        DynamicVectorClass<UnitTypeClass *> available_units;
+        HouseClassExtension* houseext = Extension::Fetch(hptr);
+        if (houseext->IsObserver) {
+            DEV_DEBUG_INFO("House %d is an Observer, skipping.\n", house);
+            continue;
+        }
 
         /**
          *  Skip passive houses.
@@ -1660,35 +2847,38 @@ void ScenarioClassExtension::Create_Units(bool official)
             continue;
         }
 
-        int owner_id = 1 << hptr->Class->HeapID;
+        /**
+         *  Fetch the center cell for this house that we assigned earlier in Assign_Starting_Positions().
+         */
+        centroid = Scen->Waypoint_Cell(houseext->SpawnWaypoint);
 
-        DEBUG_INFO("Generating units for house %d (Name: %s - \"%s\", Color: %s)...\n",
-            house, hptr->Class->Name(), hptr->IniName.c_str(), ColorSchemes[hptr->Scheme]->Name);
+        DEBUG_INFO("Generating units for house %d (Name: %s - \"%s\", Color: %s)...\n", house, hptr->Class->Name(), hptr->IniName.c_str(), ColorSchemes[hptr->Scheme]->Name);
+
+        DynamicVectorClass<InfantryTypeClass*> infantry;
+        DynamicVectorClass<UnitTypeClass*> units;
+        unsigned long mask = 1 << hptr->Class->HeapID;
 
         /**
          *  Generate list of starting units for this house.
          */
         DEBUG_INFO("  Creating list of available UnitTypes...\n");
         for (int i = 0; i < UnitTypes.Count(); ++i) {
-            UnitTypeClass *unittype = UnitTypes[i];
-            if (unittype) {
+            UnitTypeClass* unittype = UnitTypes[i];
 
-                /**
-                 *  Is this unit allowed to be placed in multiplayer?
-                 */
-                if (!unittype->IsAllowedToStartInMultiplayer) {
-                    continue;
-                }
+            /**
+             *  Is this unit allowed to be placed in multiplayer?
+             */
+            if (!unittype->IsAllowedToStartInMultiplayer) {
+                continue;
+            }
 
-                /**
-                 *  Check tech level and ownership.
-                 */
-                if (unittype->Level <= hptr->Control.TechLevel && (owner_id & unittype->Ownable) != 0) {
-
-                    if (Rule->BaseUnit->Fetch_ID() != unittype->Fetch_ID()) {
-                        DEBUG_INFO("    Added %s\n", unittype->Name());
-                        available_units.Add(unittype);
-                    }
+            /**
+             *  Check tech level and ownership.
+             */
+            if (unittype->Level <= hptr->Control.TechLevel && (unittype->Ownable & mask) != 0 && Extension::Fetch(hptr)->Required_Forbidden_Houses_Check(unittype)) {
+                if (!RuleExtension->BaseUnit.Is_Present(unittype)) {
+                    DEBUG_INFO("    Added %s\n", unittype->Name());
+                    units.Add(unittype);
                 }
             }
         }
@@ -1698,93 +2888,28 @@ void ScenarioClassExtension::Create_Units(bool official)
          */
         DEBUG_INFO("  Creating list of available InfantryTypes...\n");
         for (int i = 0; i < InfantryTypes.Count(); ++i) {
-            InfantryTypeClass *infantrytype = InfantryTypes[i];
-            if (infantrytype) {
-
-                /**
-                 *  Is this unit allowed to be placed in multiplayer?
-                 */
-                if (!infantrytype->IsAllowedToStartInMultiplayer) {
-                    continue;
-                }
-
-                /**
-                 *  Check tech level and ownership.
-                 */
-                if (infantrytype->Level <= hptr->Control.TechLevel && (owner_id & infantrytype->Ownable) != 0) {
-                    available_infantry.Add(infantrytype);
-                    DEBUG_INFO("    Added %s\n", infantrytype->Name());
-                }
-            }
-        }
-
-        /**
-         *  Pick the starting location for this house. The first house just picks
-         *  one of the valid locations at random. The other houses pick the furthest
-         *  waypoint from the existing houses.
-         */        
-        if (numtaken == 0) {
-            int pick = Random_Pick(0, waypts.Count()-1);
-            centroid = waypts[pick];
-            taken[pick] = true;
-            numtaken++;
-
-        } else {
+            InfantryTypeClass* infantrytype = InfantryTypes[i];
 
             /**
-             *  Set all waypoints to have a score of zero in preparation for giving
-             *  a distance score to all waypoints.
+             *  Is this unit allowed to be placed in multiplayer?
              */
-            int score[MAX_STORED_WAYPOINTS];
-            std::memset(score, '\0', sizeof(score));
-
-            /**
-             *  Scan through all waypoints and give a score as a value of the sum
-             *  of the distances from this waypoint to all taken waypoints.
-             */
-            for (int index = 0; index < waypts.Count(); index++) {
-
-                /**
-                 *  If this waypoint has not already been taken, then accumulate the
-                 *  sum of the distance between this waypoint and all other taken
-                 *  waypoints.
-                 */
-                if (!taken[index]) {
-                    for (int trypoint = 0; trypoint < waypts.Count(); trypoint++) {
-
-                        if (taken[trypoint]) {
-                            score[index] += Distance(waypts[index], waypts[trypoint]);
-                        }
-                    }
-                }
+            if (!infantrytype->IsAllowedToStartInMultiplayer) {
+                continue;
             }
 
             /**
-             *  Now find the waypoint with the largest score. This waypoint is the one
-             *  that is furthest from all other taken waypoints.
+             *  Check tech level and ownership.
              */
-            int best = 0;
-            int bestvalue = 0;
-            for (int searchindex = 0; searchindex < waypts.Count(); searchindex++) {
-                if (score[searchindex] > bestvalue || bestvalue == 0) {
-                    bestvalue = score[searchindex];
-                    best = searchindex;
-                }
+            if (infantrytype->Level <= hptr->Control.TechLevel && (infantrytype->Ownable & mask) != 0 && Extension::Fetch(hptr)->Required_Forbidden_Houses_Check(infantrytype)) {
+                infantry.Add(infantrytype);
+                DEBUG_INFO("    Added %s\n", infantrytype->Name());
             }
-
-            /**
-             *  Assign this best position to the house.
-             */
-            centroid = waypts[best];
-            taken[best] = true;
-            numtaken++;
         }
 
         /**
          *  Assign the center of this house to the waypoint location.
          */
         hptr->Center = centroid.As_Coord();
-        Extension::Fetch(hptr)->Set_Spawn_Point(centroid);
         DEBUG_INFO("  Setting house center to %d,%d\n", centroid.X, centroid.Y);
 
         /**
@@ -1794,10 +2919,10 @@ void ScenarioClassExtension::Create_Units(bool official)
 
             /**
              *  #issue-206
-             * 
+             *
              *  Adds game option to allow construction yards to be placed on the
              *  map at game start instead of an MCV.
-             * 
+             *
              *  @author: CCHyper
              */
             if (SessionExtension && SessionExtension->ExtOptions.IsPrePlacedConYards) {
@@ -1805,19 +2930,16 @@ void ScenarioClassExtension::Create_Units(bool official)
                 /**
                  *  Create a construction yard (decided from the base unit).
                  */
-                obj = new BuildingClass(Rule->BaseUnit->DeploysInto, hptr);
-                if (obj->Unlimbo(centroid.As_Coord(), DIR_N) || Vinifera_Scan_Place_Object(obj, centroid)) {
-                    if (obj != nullptr) {
-                        DEBUG_INFO("  Construction yard %s placed at %d,%d.\n",
-                            obj->Class_Of()->Name(), obj->Get_Cell().X, obj->Get_Cell().Y);
-
-                        BuildingClass *building = reinterpret_cast<BuildingClass *>(obj);
+                BuildingClass* building = new BuildingClass(hptr->Get_First_Ownable(RuleExtension->BaseUnit)->DeploysInto, hptr);
+                if (building->Unlimbo(centroid.As_Coord(), DIR_N) || _Scan_Place_Object(building, centroid)) {
+                    if (building != nullptr) {
+                        DEBUG_INFO("  Construction yard %s placed at %d,%d.\n", building->Class_Of()->Name(), building->Get_Cell().X, building->Get_Cell().Y);
 
                         /**
                          *  Always reveal the construction yard to the player
                          *  that owns it.
                          */
-                        building->Revealed(obj->House);
+                        building->Revealed(building->House);
                         building->IsReadyToCommence = true;
 
                         /**
@@ -1849,7 +2971,7 @@ void ScenarioClassExtension::Create_Units(bool official)
                             }
                         }
                     }
-                    hptr->FlagHome = Cell(0,0);
+                    hptr->FlagHome = Cell(0, 0);
                     hptr->FlagLocation = nullptr;
                 }
 
@@ -1860,38 +2982,36 @@ void ScenarioClassExtension::Create_Units(bool official)
                  *    - Create an MCV
                  *    - Attach a flag to it for capture-the-flag mode.
                  */
-                obj = new UnitClass(Rule->BaseUnit, hptr);
-                if (obj->Unlimbo(centroid.As_Coord(), DIR_N) || Vinifera_Scan_Place_Object(obj, centroid)) {
-                    if (obj != nullptr) {
-                        DEBUG_INFO("  Base unit %s placed at %d,%d.\n",
-                            obj->Class_Of()->Name(), obj->Get_Cell().X, obj->Get_Cell().Y);
-                        hptr->FlagHome = Cell(0,0);
+                UnitClass* unit = new UnitClass(hptr->Get_First_Ownable(RuleExtension->BaseUnit), hptr);
+                if (unit->Unlimbo(centroid.As_Coord(), DIR_N) || _Scan_Place_Object(unit, centroid)) {
+                    if (unit != nullptr) {
+                        DEBUG_INFO("  Base unit %s placed at %d,%d.\n", unit->Class_Of()->Name(), unit->Get_Cell().X, unit->Get_Cell().Y);
+                        hptr->FlagHome = Cell(0, 0);
                         hptr->FlagLocation = nullptr;
                         if (Special.IsCaptureTheFlag) {
-                            hptr->Flag_Attach((UnitClass *)obj, true);
+                            hptr->Flag_Attach(unit, true);
                         }
 
                         /**
                          *  #issue-206
-                         * 
+                         *
                          *  Adds game option to allow MCV's to auto-deploy on game start.
-                         * 
+                         *
                          *  @author: CCHyper
                          */
                         if (Session.Options.UnitCount == 1) {
                             if (SessionExtension && SessionExtension->ExtOptions.IsAutoDeployMCV) {
                                 if (hptr->Is_Human_Player()) {
-                                    obj->Set_Mission(MISSION_UNLOAD);
+                                    unit->Set_Mission(MISSION_UNLOAD);
                                 }
                             }
                         }
                     }
 
-                } else if (obj) {
-                    delete obj;
-                    obj = nullptr;
+                } else if (unit) {
+                    delete unit;
+                    unit = nullptr;
                 }
-
             }
         }
 
@@ -1899,215 +3019,59 @@ void ScenarioClassExtension::Create_Units(bool official)
          *  #BUGFIX:
          *  Make sure there are units available to place before entering the loop.
          */
-        bool units_available = (tot_inf_count + tot_unit_count) > 0;
+        if (total_objs) {
 
-        if (units_available) {
+            TechnoTypeClass* technotype = nullptr;
+            int deployed_so_far = 0;
 
-            TechnoTypeClass *technotype = nullptr;
+            just_deployed.Clear();
 
-            int inf_percent = 50;
-            int unit_percent = 100 - inf_percent;
+            while (deployed_so_far < allowed_unit_cost) {
 
-            int inf_count = (tot_units * inf_percent) / 100;
-            int unit_count = (tot_units * unit_percent) / 100;
+                technotype = nullptr;
 
-            /**
-             *  Ensure that rounding errors don't result in the player getting fewer units than promised.
-             */
-            if (inf_count + unit_count < tot_units) {
-                if (Percent_Chance(inf_percent)) {
-                    inf_count += tot_units - (inf_count + unit_count);
+                if (deployed_so_far < (allowed_unit_cost * 2) / 3 && units.Count() > 0) {
+                    technotype = units[Random_Pick(0, units.Count() - 1)];
+                } else if (infantry.Count() > 0) {
+                    technotype = infantry[Random_Pick(0, infantry.Count() - 1)];
+                }
+
+                /**
+                 *  Create units (Note: Unlimbo calls Enter_Idle_Mode(), which
+                 *  assigns the unit to HUNT; we must use Set_Mission() to override
+                 *  this state.)
+                 */
+                ObjectClass* obj = technotype->Create_One_Of(hptr);
+                TechnoClass* tobj = As_Techno(obj);
+
+                if (!_Scan_Place_Object(obj, centroid, MIN_PLACEMENT_DISTANCE, MAX_PLACEMENT_DISTANCE)) {
+                    delete obj;
                 } else {
-                    unit_count += tot_units - (inf_count + unit_count);
+                    DEBUG_INFO("House %s deployed object %s\n", hptr->Class->IniName.c_str(), technotype->IniName.c_str());
+
+                    deployed_so_far += technotype->Raw_Cost();
+                    just_deployed.Add(tobj);
+
+                    if (Scen->Special.IsInitialVeteran) {
+                        tobj->Crew.Set_Elite(true);
+                    }
+
+                    if (!hptr->Is_Human_Player()) {
+                        tobj->Set_Mission(MISSION_GUARD_AREA);
+                    } else {
+                        tobj->Set_Mission(MISSION_GUARD);
+                    }
                 }
             }
 
-            /**
-             *  Make sure we place 3 infantry per cell.
-             */
-            inf_count *= 3;
-
-            /**
-             *  Place starting units for this house.
-             */
-            if (available_units.Count() > 0) {
-                for (int i = 0; i < unit_count; ++i) {
-
-                    /**
-                     *  #BUGFIX:
-                     *  If all cells are full, we can stop placing units. This
-                     *  stops any run away cases with Scan_Place_Object.
-                     */
-                    //if (Are_Starting_Cells_Full(centroid, PLACEMENT_DISTANCE)) { // disabled because we wanna keep placing units outwards
-                    //    break;
-                    //}
-
-                    technotype = available_units[Random_Pick(0, available_units.Count()-1)];
-                    if (!technotype) {
-                        DEBUG_WARNING("  Invalid unit pointer!\n");
-                        continue;
-                    }
-
-                    /**
-                     *  Create an instance of the unit.
-                     */
-                    obj = reinterpret_cast<TechnoClass *>(technotype->Create_One_Of(hptr));
-                    if (obj) {
-
-                        if (Vinifera_Scan_Place_Object(obj, centroid, MIN_PLACEMENT_DISTANCE, MAX_PLACEMENT_DISTANCE, true)) {
-
-                            DEBUG_INFO("  House %s deployed object %s at %d,%d\n",
-                                hptr->Class->Name(), obj->Name(), obj->Get_Cell().X, obj->Get_Cell().Y);
-
-                            if (Scen->Special.IsInitialVeteran) {
-                                obj->Crew.Set_Elite(true);
-                            }
-
-                            if (hptr->Is_Human_Player()) {
-                                obj->Set_Mission(MISSION_GUARD);
-                            } else {
-                                obj->Set_Mission(MISSION_GUARD_AREA);
-                            }
-
-                        } else if (obj) {
-                            delete obj;
-                        }
-
-                    }
-
-                }
-
-            }
-
-            /**
-             *  Place starting infantry for this house.
-             */
-            if (available_infantry.Count() > 0) {
-                for (int i = 0; i < inf_count; ++i) {
-
-                    /**
-                     *  #BUGFIX:
-                     *  If all cells are full, we can stop placing units. This
-                     *  stops any run away cases with Scan_Place_Object.
-                     */
-                    //if (Are_Starting_Cells_Full(centroid, PLACEMENT_DISTANCE)) {
-                    //    break;
-                    //}
-
-                    technotype = available_infantry[Random_Pick(0, available_infantry.Count()-1)];
-                    if (!technotype) {
-                        DEBUG_WARNING("  Invalid infantry pointer!\n");
-                        continue;
-                    }
-
-                    /**
-                     *  Create an instance of the unit.
-                     */
-                    obj = reinterpret_cast<TechnoClass *>(technotype->Create_One_Of(hptr));
-                    if (obj) {
-
-                        if (Vinifera_Scan_Place_Object(obj, centroid, MIN_PLACEMENT_DISTANCE, MAX_PLACEMENT_DISTANCE, true)) {
-
-                            DEBUG_INFO("  House %s deployed object %s at %d,%d\n",
-                                hptr->Class->Name(), obj->Name(), obj->Get_Cell().X, obj->Get_Cell().Y);
-
-                            if (Scen->Special.IsInitialVeteran) {
-                                obj->Crew.Set_Elite(true);
-                            }
-
-                            if (hptr->Is_Human_Player()) {
-                                obj->Set_Mission(MISSION_GUARD);
-                            } else {
-                                obj->Set_Mission(MISSION_GUARD_AREA);
-                            }
-
-                        } else if (obj) {
-                            delete obj;
-                        }
-
-                    }
-
-                }
-
-            }
-
-            /**
-             *  #issue-338
-             * 
-             *  Change the starting unit formation to be like Red Alert 2.
-             *  As a result, this is no longer required as the units are
-             *  now placed neatly around the base unit.
-             * 
-             *  @author: CCHyper
-             */
-#if 0
-            /**
-             *  Scatter all the human placed objects to create
-             *  some space around the base unit.
-             */
+#if 0 // don't scatter anymore, we're deploying in a RA2-like formation
             if (hptr->Is_Human_Player()) {
-                for (int i = 0; i < deployed_objects.Count(); ++i) {
-                    TechnoClass *techno = deployed_objects[i];
-                    if (techno) {
-                        techno->Scatter();
-                    }
+                for (int t = 0; t < just_deployed.Count(); t++) {
+                    just_deployed[t]->Scatter(COORD_NONE);
                 }
             }
 #endif
-
-#if 0
-            /**
-             *  #BUGFIX:
-             * 
-             *  Due to the costings of the starting units in Tiberian Sun, sometimes
-             *  there was a deficiency in the equal placement of units in the radius
-             *  around the starting unit. This code makes sure there are no blank
-             *  spaces around the base unit and that all players get 9 units.
-             */
-            if (Session.Options.UnitCount) {
-                for (FacingType facing = FACING_FIRST; facing < FACING_COUNT; ++facing) {
-                    if (Is_Adjacent_Cell_Empty(centroid, facing, PLACEMENT_DISTANCE)) {
-
-                        TechnoTypeClass *technotype = nullptr;
-
-                        /**
-                         *  Very rarely should another unit be placed, the algorithm
-                         *  above places a fair amount already...
-                         */
-                        if (Percent_Chance(25)) {
-                            technotype = available_units[Random_Pick(0, available_units.Count()-1)];
-                        } else if (available_infantry.Count() > 0) {
-                            technotype = available_infantry[Random_Pick(0, available_infantry.Count()-1)];
-                        }
-
-                        /**
-                         *  Create an instance of the unit.
-                         */
-                        obj = reinterpret_cast<TechnoClass *>(technotype->Create_One_Of(hptr));
-                        if (obj) {
-                            if (Place_Object(obj, centroid, facing, PLACEMENT_DISTANCE)) {
-                                DEBUG_WARNING("  House %s deployed deficiency object %s at %d,%d\n",
-                                    hptr->Class->Name(), obj->Name(), obj->Get_Cell().X, obj->Get_Cell().Y);
-
-                                if (Scen->Special.InitialVeteran) {
-                                    obj->Crew.Set_Elite(true);
-                                }
-
-                                if (hptr->Is_Human_Player()) {
-                                    obj->Set_Mission(MISSION_GUARD);
-                                } else {
-                                    obj->Set_Mission(MISSION_GUARD_AREA);
-                                }
-
-                            } else if (obj) {
-                                delete obj;
-                            }
-                        }
-                    }
-                }
-            }
-#endif
-
+            just_deployed.Clear();
         }
     }
 

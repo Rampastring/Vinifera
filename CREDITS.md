@@ -9,6 +9,7 @@ This page lists all the individual contributions to the project by their author.
   - Check for Changelog/Documentation/Credits in Pull Requests.
   - Docs dark theme switcher.
   - Fix the map glitching around when scrolling if the map is not large enough to fill the entire screen.
+  - Porting the YR MP spawner from C to C++ and YR++, used as a base for the Vinifera spawner.
 - **CCHyper/tomsons26**:
   - Vinifera foundations: TS++, game.exe hooker, extension system and other core features.
   - Implement `CurleyShuffle` for AircraftTypes.
@@ -141,6 +142,7 @@ This page lists all the individual contributions to the project by their author.
   - Implement 'OmniFire' for WeaponTypes.
   - Implement MeteorShowerCommandClass and MeteorImpactCommandClass.
   - Add the "Underground" layer to the tactical display Next and Prev search.
+  - Extend `BaseUnit` to accept a list of vehicles.
   - Fix a bug where the game could freeze in the score screen in `Clip_Line` when running on Windows 11 24H2.
   - Add customizable wake animations.
   - Replace DirectDraw with SDL.
@@ -151,6 +153,8 @@ This page lists all the individual contributions to the project by their author.
   - Reimplement the sound-effect (`VocType`) system from `SOUND.INI` with configurable type, control, priority, limit, range, delay, volume and pitch shift.
   - Reimplement the EVA/VOX speech system from `EVA.INI` with category, priority, control, and per-side speech file support.
   - Groundwork for implementing modern movie playback.
+- **CnCNet Contributors**:
+  - Tiberian Sun TS-patches spawner, Yuri's Revenge CnCNet spawner that served as a base for Vinifera spawner.
 - **CrimRecya**:
   - Fix several bugs where pathfinding could overflow buffers and corrupt memory on large and open maps.
 - **Crimsonum**:
@@ -222,6 +226,7 @@ This page lists all the individual contributions to the project by their author.
   - Fix a buffer overflow crash in `MapClass::Place_Down`.
   - Allow pre-placed units to have missions in multiplayer.
   - Original implementations of actions in ts-patches.
+  - Add support for more than 2 sides' loading screens, sidebars and speeches.
   - Fix a bug where the game could freeze in the score screen in `Clip_Line` when running on Windows 11 24H2.
   - Fix an edge case crash when AI raises money.
   - Make it possible to prevent buildings from repeatedly catching fire when rapidly switching between damage stages.
@@ -343,6 +348,19 @@ This page lists all the individual contributions to the project by their author.
   - Add unit promotion sounds, EVA and flashing.
   - Fix a bug where `OpportunityFire=true` would make technos abandon targets assigned by the player.
   - Fix a bug where `OpportunityFire=true` units could drive to crush their opportunity fire targets.
+  - Implement the multiplayer spawner.
+  - Extend `BaseUnit` to accept a list of vehicles.
+  - Allow `BuildConst`, `BuildRefinery`, `BuildWeapons` and `HarvesterUnit` to properly have multiple entries.
+  - Port Rampastring's trigger actions from TS-Patches.
+  - Allow manually aiming AA buildings.
+  - Add support for more than 2 sides' loading screens, sidebars and speeches.
+  - Disallow loading campaign saves from other playthoughs, as well as from skirmish.
+  - Allow customizing the options color per side.
+  - Fix a bug where units could gain veterancy by killing allies.
+  - Fix a bug where a trigger could delete itself, leading to a crash.
+  - Fix a bug where AI Triggers' `MultiSide` wouldn't correctly consider all houses.
+  - Fix a bug where newly created objects wouldn't reveal shroud for allies with `AllyReveal=yes`.
+  - Fix a bug where mission `Ambush` wouldn't work correctly.
   - Fix a bug where per-type modifiers on warheads wouldn't impact weapon selection.
   - Fix a bug where `Totable=no` did not work.
   - Fix a bug where the "Building exists" event would fire when you queued a building on the sidebar.

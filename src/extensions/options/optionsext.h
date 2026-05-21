@@ -134,6 +134,16 @@ public:
     bool IsPauseRepairs;
 
     /**
+     *  Number of autosaves to make in skirmish.
+     */
+    int AutoSaveCount;
+
+    /**
+     *  The delay between autosaves in skirmish in frames.
+     */
+    int AutoSaveInterval;
+
+    /**
      *  Are messages drawn top-left rather than bottom-left?
      */
     bool IsClassicMessagePosition;

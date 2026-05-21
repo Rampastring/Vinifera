@@ -31,12 +31,15 @@
 #include "prerequisitegroup.h"
 #include "advaitactictype.h"
 #include "rockettype.h"
+#include "spawner.h"
 #include "spawnmanager.h"
 #include "syringe.h"
 #include "theme.h"
 #include "tibsun_functions.h"
 #include "tibsun_globals.h"
 #include "tracker.h"
+#include "scenarioext.h"
+#include "sessionext.h"
 #include "vinifera_functions.h"
 #include "vinifera_globals.h"
 #include "vinifera_saveload.h"
@@ -397,6 +400,9 @@ DEFINE_HOOK(0x004E1F24, _Select_Game_Clear_Globals_Patch, 0)
      */
     Vinifera_ShowSuperWeaponTimers = true;
     Vinifera_TotalPlayTime = 0;
+    if (SessionExtension) {
+        SessionExtension->Init_Clear();
+    }
 
     /**
      *  Stolen bytes/code.
@@ -618,20 +624,6 @@ void Vinifera_Hooks()
     unsigned char num = (std::rand() % 10)+48;
     Patch_Byte(0x0070EEAB, num);
     Patch_Byte(0x0070EF0F, num);
-
-#if defined(TS_CLIENT)
-    /**
-     *  Remove calls to SessionClass::Read_Scenario_Descriptions() in TS Client
-     *  compatable builds. This will speed up the initialisation and loading
-     *  process, as the reason of PKT and MPR files are not required when using
-     *  the Client.
-     */
-    Patch_Byte_Range(0x004E8901, 0x90, 5); // NewMenu::Process
-    Patch_Byte_Range(0x004E8910, 0x90, 5); // ^
-    Patch_Byte_Range(0x00564BA9, 0x90, 10); // Select_MPlayer_Game
-    Patch_Byte_Range(0x0057FE2A, 0x90, 10); // NewMenuClass::Process_Game_Select
-    Patch_Byte_Range(0x00580377, 0x90, 10); // NewMenuClass::Process_Game_Select
-#endif
 
     /**
      *  Various patches to intercept the games object tracking and heap processing.

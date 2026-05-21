@@ -30,6 +30,10 @@
 #include "target.h"
 #include "technotype.h"
 #include "technotypeext.h"
+#include "house.h"
+#include "warheadtype.h"
+#include "weapontype.h"
+#include "weapontypeext.h"
 #include "tibsun_functions.h"
 #include "tibsun_globals.h"
 #include "tibsun_inline.h"
@@ -63,6 +67,7 @@ DECLARE_EXTENDING_CLASS_AND_PAIR(UnitClass)
 public:
     void _Firing_AI();
     void _Draw_Voxel(unsigned int frame, int key, Rect& rect, Point2D& point, const Matrix3D& other_matrix, int color, int flags);
+    int _Do_MISSION_HUNT();
     void _Rotation_AI();
     void _Approach_Target();
     bool _Limbo(void);
@@ -372,6 +377,53 @@ void UnitClassExt::_Approach_Target()
      *  algorithm.
      */
     FootClass::Approach_Target();
+}
+
+
+/**
+ *  #issue-177
+ *
+ *  Reaplces UnitClass::Do_MISSION_HUNT to consider the entire BuildConst vector.
+ *
+ *  @author: ZivDero
+ */
+int UnitClassExt::_Do_MISSION_HUNT()
+{
+    if (Class->DeploysInto && (Rule->BuildConst.Is_Present(Class->DeploysInto) || TarCom != nullptr || House->Is_Human_Player())) {
+        enum {
+            FIND_SPOT,
+            WAITING
+        };
+
+        switch (Status) {
+
+        /**
+         *  This stage handles locating a convenient spot, rotating to face the correct
+         *  direction and then commencing the deployment operation.
+         */
+        case FIND_SPOT:
+            if (Goto_Clear_Spot()) {
+                if (Try_To_Deploy()) {
+                    Status = WAITING;
+                }
+            }
+            break;
+
+        /**
+         *  This stage watchdogs the deployment operation and if for some reason, the deployment
+         *  is aborted (the IsDeploying flag becomes false), then it reverts back to hunting for
+         *  a convenient spot to deploy.
+         */
+        case WAITING:
+            if (!IsDeploying) {
+                Status = FIND_SPOT;
+            }
+            break;
+        }
+    } else {
+        return FootClass::Mission_Hunt();
+    }
+    return Current_Mission_Control().Normal_Delay() + Random_Pick(0, 2);
 }
 
 
@@ -1281,6 +1333,62 @@ bool UnitClassExt::_Limbo(void)
 
 
 /**
+ *  #issue-177
+ *
+ *  Patches the AI to correctly consider all Construction Yards from the list.
+ *
+ *  @author: ZivDero
+ */
+DEFINE_HOOK(0x0064E0D7, _UnitClass_AI_BuildConst_Patch, 0)
+{
+    GET(UnitTypeClass*, unittype, EDX);
+
+    if (Rule->BuildConst.Is_Present(unittype->DeploysInto)) {
+        return 0x0064E0EC;
+    }
+
+    return 0x0064E134;
+}
+
+
+/**
+ *  #issue-177
+ *
+ *  Patches the AI to correctly consider all Construction Yards from the list.
+ *
+ *  @author: ZivDero
+ */
+DEFINE_HOOK(0x00656074, _UnitClass_What_Action_BuildConst, 0)
+{
+    GET(BuildingTypeClass*, buildingtype, EBP);
+
+    if (Rule->BuildConst.Is_Present(buildingtype)) {
+        return 0x00656084;
+    }
+
+    return 0x006560A3;
+}
+
+
+/**
+ *  #issue-177
+ *
+ *  Patches the AI to correctly consider all Construction Yards from the list.
+ *
+ *  @author: ZivDero
+ */
+DEFINE_HOOK(0x00656751, _UnitClass_Mission_Guard_BuildConst, 0)
+{
+    GET(UnitClass*, unit, ESI);
+
+    if (Rule->BuildConst.Is_Present(unit->Class->DeploysInto)) {
+        return 0x00656770;
+    }
+
+    return 0x006567FD;
+}
+
+/**
  *  Prevents deploying hijacked units that have a build limit.
  *
  *  Author: Rampastring
@@ -1679,6 +1787,7 @@ void UnitClassExtension_Hooks()
      */
     UnitClassExtension_Init();
     Patch_Jump(0x0064E920, &UnitClassExt::_Firing_AI);
+    Patch_Jump(0x00655270, &UnitClassExt::_Do_MISSION_HUNT);
     Patch_Jump(0x0064E560, &UnitClassExt::_Rotation_AI);
     Patch_Jump(0x006571E0, &UnitClassExt::_Approach_Target);
     Patch_Jump(0x00659270, &UnitClassExt::_Limbo);

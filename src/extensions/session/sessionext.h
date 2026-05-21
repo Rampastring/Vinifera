@@ -11,6 +11,7 @@
 
 #include "extension.h"
 #include "session.h"
+#include "wolapi.h"
 
 
 class SessionClassExtension final : public GlobalExtensionClass<SessionClass>
@@ -21,47 +22,153 @@ class SessionClassExtension final : public GlobalExtensionClass<SessionClass>
 
     public:
         SessionClassExtension(const SessionClass *this_ptr);
-        SessionClassExtension(const NoInitClass &noinit);
-        virtual ~SessionClassExtension();
+        ~SessionClassExtension() override;
 
         virtual int Get_Object_Size() const override;
         virtual void Object_CRC(CRCEngine &crc) const override;
 
-        virtual const char *Name() const override { return "Session"; }
-        virtual const char *Full_Name() const override { return "Session"; }
+        void Init_Clear();
 
-        void Read_MultiPlayer_Settings();
-        void Write_MultiPlayer_Settings();
+        int Get_Autosave_Interval() const;
+        void Schedule_Next_Autosave();
+        void Flag_To_Save();
+        void Disable_Multiplayer_Autosaves();
+        void Set_Next_Campaign_Autosave_Slot(int slot);
+        void Restore_Autosave_After_Load();
+        void Service_Autosave_After_Main_Loop();
+
+    private:
+        std::string Autosave_File_Name() const;
+        std::string Autosave_Description() const;
 
     public:
-        typedef struct ExtGameOptionsType
-        {
+
+        const char *Name() const override { return "Session"; }
+        const char *Full_Name() const override { return "Session"; }
+
+    public:
+        struct ExtGameOptionsType {
+
             /**
              *  Should the MCV unit auto deploy on game start?
              */
-            bool IsAutoDeployMCV;
+            bool IsAutoDeployMCV = false;
 
             /**
              *  Are construction yards pre-placed on the map rather than a MCV given to the player?
              */
-            bool IsPrePlacedConYards;
+            bool IsPrePlacedConYards = false;
 
             /**
              *  Can players build their own structures adjacent to structures owned by their allies?
              */
-            bool IsBuildOffAlly;
+            bool IsBuildOffAlly = true;
 
-        } ExtGameOptionsType;
+            /**
+             *  Autosave interval for multiplayer spawner sessions.
+             */
+            int MultiplayerAutoSaveInterval = 0;
+
+            /**
+             *  Should player identity be hidden for quick match?
+             */
+            bool IsQuickMatch = false;
+
+            /**
+             *  Should statistics be written for the current match?
+             */
+            bool IsWriteStatistics = false;
+
+            /**
+             *  Should disconnected players be eliminated instead of handed to the AI?
+             */
+            bool IsAutoSurrender = false;
+
+            /**
+             *  Can armed units attack multiplayer neutral houses?
+             */
+            bool IsAttackNeutralUnits = false;
+
+            /**
+             *  Should defeated players be denied observer vision?
+             */
+            bool IsCoachMode = false;
+
+            /**
+             *  Should the game continue when no human players remain?
+             */
+            bool IsContinueWithoutHumans = false;
+
+            /**
+             *  Should destroyed technos use scrap explosions?
+             */
+            bool IsScrapMetal = false;
+
+            /**
+             *  Should AI players be renamed according to their selected difficulty?
+             */
+            bool IsAINamesByDifficulty = false;
+
+        };
 
         ExtGameOptionsType ExtOptions;
+
+        struct AutoSaveStateType {
+
+            /**
+             *  Has an autosave been queued to run from the main-loop safe point?
+             */
+            bool IsToSave = false;
+
+            /**
+             *  Frame on which the next periodic autosave should trigger.
+             */
+            int NextAutoSaveFrame = -1;
+
+            /**
+             *  Next rotating campaign autosave slot, stored as a 0-based index.
+             */
+            int NextSPAutoSaveSlot = 0;
+
+            /**
+             *  Have multiplayer autosaves been suppressed for the current session?
+             */
+            bool IsMultiplayerAutoSaveSuppressed = false;
+        };
+
+        AutoSaveStateType AutoSave;
+        bool IsSpawnerSession = false;
+
+        struct SpawnerSlotInfoType {
+            bool IsConfigured = false;
+            bool IsHuman = false;
+            int Color = -1;
+            int House = -1;
+            int Difficulty = -1;
+            bool IsObserver = false;
+            int SpawnLocation = -1;
+            int Alliances[MAX_PLAYERS] = {-1, -1, -1, -1, -1, -1, -1, -1};
+        };
+
+        bool ProtocolZeroEnabled = false;
+        unsigned char ProtocolZeroMaxLatencyLevel = 0xFF;
+        int ConnTimeout = 0;
+        SpawnerSlotInfoType SlotInfo[MAX_PLAYERS];
 
         /**
          *  Is the message we're currently writing meant to be sent to allies only?
          */
-        bool IsChatToAllies;
+        bool IsChatToAllies = false;
 
         /**
          *  If we're writing a private message, this is the name of its recipient.
          */
-        char MessageRecipientName[32];
+        char MessageRecipientName[32] = "";
+
+        /**
+         *  Convenient property to access IsGDI as a HousesType.
+         */
+        HousesType Get_House() const { return static_cast<HousesType>(reinterpret_cast<unsigned char&>(This()->IsGDI)); }
+        void Set_House(HousesType house) { reinterpret_cast<unsigned char&>(This()->IsGDI) = house; }
+        __declspec(property(get = Get_House, put = Set_House)) HousesType House;
 };

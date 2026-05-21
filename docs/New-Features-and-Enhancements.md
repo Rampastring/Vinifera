@@ -230,6 +230,31 @@ In `RULES.INI`:
 MaxFreeRefineryDistanceBias=16
 ```
 
+## Houses
+
+- Loading screens can now be customized per house.
+
+In `RULES.INI`:
+```ini
+[SOMEHOUSE]         ; HouseType
+LoadingScreens400=  ; list of strings, loading screens to be used by this house with a screen resolution of at least 400x600.
+LoadingScreens480=  ; list of strings, loading screens to be used by this house with a screen resolution of at least 480x600.
+LoadingScreens600=  ; list of strings, loading screens to be used by this house with a screen resolution of at least 600x800.
+```
+
+- The defaults for loading screens are as follows:
+```ini
+LoadingScreens000=LOAD000C,LOAD000D ; House 0 - GDI
+LoadingScreens000=LOAD000A,LOAD000B ; House 1 - Nod
+LoadingScreens000=LOAD000E,LOAD000F ; House 2
+```
+
+- `000` is replaced with the loading screen's height, starting from house 2 letters are incremented (so house 2 uses `E` and `F`, house 3 uses letters `G` and `H`, etc.). After house 12 the letters loop around to `A` and `B`.
+
+```{note}
+Loading screen names should not contain the `.PCX` extension.
+```
+
 ## Ice
 
 - Ice strength can now be customized.
@@ -370,9 +395,10 @@ SurvivorDivisor=  ; integer, this side's survivor divisor. Defaults to [General]
 
 In `RULES.INI`:
 ```ini
-[SOMESIDE]          ; Side
-UIColor=LightGold   ; ColorScheme, the color to be used when drawing UI elements.
-ToolTipColor=Green  ; ColorScheme, the color to be used when drawing tooltips.
+[SOMESIDE]              ; Side
+UIColor=LightGold       ; ColorScheme, the color to be used when drawing UI elements.
+ToolTipColor=Green      ; ColorScheme, the color to be used when drawing tooltips.
+OptionsColor=112,255,0  ; RGB Color, the color to be used by the options menu.
 ```
 
 ![image](https://github.com/user-attachments/assets/f4219655-2d28-49d2-9537-25f2fe4ae102)
@@ -1655,6 +1681,20 @@ Some speeches are played by engine code in response to game events (mission acco
     | 312 | 00-I020 | EVA_IncomingTransmission |
 :::
 
+### Object Ambient Sounds
+
+- Any object can be given a looping ambient sound that starts when the object enters the world and follows it as it moves.
+
+In `RULES.INI`:
+```ini
+[SOMEOBJECT]    ; ObjectType
+AmbientSound=   ; VocType, the ambient sound that plays on this object while it is active. Defaults to none.
+```
+
+```{note}
+The `VocType` should have `Control=LOOP` in `SOUND.INI`. Non-looping sounds play through once and then go silent — they are not automatically restarted.
+```
+
 ### Trigger Audio Actions
 
 Vinifera changes the mapper-facing sound trigger actions so sounds started at waypoints can be stopped reliably, and adds new actions for attaching ambient loops to trigger-bound objects.
@@ -1668,7 +1708,7 @@ Vinifera changes the mapper-facing sound trigger actions so sounds started at wa
 - `Detach Sound` is Vinifera trigger action `139`. It removes any previously-attached ambient sound from the trigger's bound objects.
 
 ```{note}
-The `VocType` passed to `Attach Sound` should have `Control=LOOP`. Non-looping vocs play through once and then go silent for the rest of the attachment — they are not automatically restarted. This matches the rules-defined `AmbientSound=` field on ObjectTypes.
+The `VocType` passed to `Attach Sound` should have `Control=LOOP`. Non-looping vocs play through once and then go silent for the rest of the attachment — they are not automatically restarted.
 ```
 
 ## Tiberiums

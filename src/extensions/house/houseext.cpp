@@ -59,6 +59,7 @@ HouseClassExtension::HouseClassExtension(const HouseClass* this_ptr) :
     SpawnWaypoint(WAYPOINT_NONE),
     IronCurtainAvailabilityTimer(),
     IsPauseRepairs(false),
+	IsObserver(false),
     StrengthenDestroyedCost(0),
     NextExpansionPointLocation(0, 0),
     ArchivedExpansionPointLocation(0, 0),
@@ -110,6 +111,17 @@ HouseClassExtension::HouseClassExtension(const HouseClass* this_ptr) :
     {
         new ((StorageClassExt*)&this_ptr->Tiberium) StorageClassExt(&TiberiumStorage);
         new ((StorageClassExt*)&this_ptr->Weed) StorageClassExt(&WeedStorage);
+
+        /**
+         *  Vanilla hardcoded the ActLike default, unhardcode that.
+         *  Uuuhh... the fact that this is const is annoying, but for now while
+         *  this is not a massive issue, just const_cast it.
+         */
+        if (this_ptr->IniName != "Neutral" && this_ptr->IniName != "Special") {
+            const_cast<HouseClass*>(this_ptr)->ActLike = this_ptr->Class->House;
+        } else {
+            const_cast<HouseClass*>(this_ptr)->ActLike = HOUSE_NONE;
+        }
     }
 
     EnemyAntiGroundStrength.Clear();
@@ -1770,14 +1782,20 @@ HouseClass* HouseClassExtension::House_From_HousesType(HousesType house)
      */
     if (Session.Type != GAME_NORMAL) {
         if (house >= 50 && house <= 57) {
-            return House_At_Spawn_Point(static_cast<WAYPOINT>(house - 50));
+            return House_At_Spawn_Point(house - 50);
         }
     }
 
     /**
      *  Otherwise, just perform the normal logic to fetch the house.
      */
-    return ::House_From_HousesType(house);
+    for (int index = 0; index < Houses.Count(); index++) {
+        HouseClass* housep = Houses[index];
+        if (housep->Class->House == house) {
+            return housep;
+        }
+    }
+    return nullptr;
 }
 
 /**
@@ -1814,6 +1832,29 @@ void HouseClassExtension::Expend_Iron_Curtain()
 {
     IronCurtainAvailabilityTimer = RuleExtension->IronCurtainRechargeTime;
 }
+
+
+/**
+ *  Checks if this house can build this object based on RequiredHouses
+ *  and ForbiddenHouses.
+ *
+ *  @author: ZivDero
+ */
+bool HouseClassExtension::Required_Forbidden_Houses_Check(TechnoTypeClass const* ttype)
+{
+    const auto technotypeext = Extension::Fetch(ttype);
+
+    if (technotypeext->RequiredHouses != -1 && (technotypeext->RequiredHouses & 1 << This()->ActLike) == 0) {
+        return false;
+    }
+
+    if (technotypeext->ForbiddenHouses != -1 && (technotypeext->ForbiddenHouses & 1 << This()->ActLike) != 0) {
+        return false;
+    }
+
+    return true;
+}
+
 
 bool HouseClassExtension::AdvAI_Is_Outnumbered() const
 {

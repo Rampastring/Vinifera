@@ -156,6 +156,8 @@ OptionsClassExtension::OptionsClassExtension(const OptionsClass *this_ptr) :
     RendererDriver(RENDERER_DRIVER_AUTO),
     SubtitleMode(SUBTITLE_MODE_NONE),
     IsPauseRepairs(true),
+    AutoSaveCount(5),
+    AutoSaveInterval(7200),
     IsClassicMessagePosition(false)
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::OptionsClassExtension - 0x%08X\n", (uintptr_t)(This()));
@@ -279,8 +281,10 @@ void OptionsClassExtension::Load_Settings()
         SubtitleMode = Parse_Subtitle_Mode(subtitle_mode_buf);
     }
 
+    AutoSaveCount = ConfigINI.Get_Int("Options", "AutoSaveCount", AutoSaveCount);
+    AutoSaveInterval = ConfigINI.Get_Int("Options", "AutoSaveInterval", AutoSaveInterval);
     IsClassicMessagePosition = ConfigINI.Get_Bool("Options", "ClassicMessageListPosition", IsClassicMessagePosition);
-
+    
     /**
      *  Read keys from Keyboard.ini.
      *

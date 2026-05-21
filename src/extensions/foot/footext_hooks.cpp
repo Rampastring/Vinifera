@@ -25,6 +25,7 @@
 #include "ionstorm.h"
 #include "levitatelocomotion.h"
 #include "radarevent.h"
+#include "rules.h"
 #include "rulesext.h"
 #include "script.h"
 #include "scripttype.h"
@@ -1291,6 +1292,24 @@ DEFINE_HOOK(0x004A49A3, _FootClass_Mission_Enter_Seek_New_Refinery_After_Dropped
      *  Commences the given mission and exits the function afterwards.
      */
     return 0x004A49B1;
+}
+
+
+/**
+ *  #issue-177
+ *
+ *  Patches the harvester counting to count all units listed under HarvesterUnit.
+ *
+ *  @author: ZivDero
+ */
+DEFINE_HOOK(0x004A7A3F, _FootClass_Search_For_Tiberium_Weighted_HarvesterUnit_Patch, 0)
+{
+    GET(FootClass *, this_ptr, EDI);
+
+    int count = this_ptr->House->Count_Owned(Rule->HarvesterUnit);
+    R->EAX(count);
+
+    return 0x004A7A65;
 }
 
 

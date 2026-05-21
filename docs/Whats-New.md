@@ -104,6 +104,11 @@ New:
 - Removed incremental revealing logic when setting `RevealByHeight=no` (by JoyfulShush)
 - Allow building repairs to be paused rather than stopped when a house has insufficient funds (by JoyfulShush, Rampastring)
 - Allows aircraft to use Q-Move (by JoyfulShush)
+- Implemented the multiplayer spawner (by ZivDero)
+- Extend `BaseUnit` to accept a list of vehicles (by ZivDero/CCHyper)
+- Allow `BuildConst`, `BuildRefinery`, `BuildWeapons` and `HarvesterUnit` to properly have multiple entries (by ZivDero)
+- Add support for more than 2 sides' loading screens, sidebars and speeches (by CCHyper/tomsons26, ZivDero)
+- Disallow loading campaign saves from other playthoughs, as well as from skirmish (by ZivDero)
 
 Vinifera fixes:
 - Fix unit placement in non-TS Client builds of Vinifera (by ZivDero)
@@ -329,6 +334,7 @@ New:
 - Allow customizing which Smudges can appear on a tile (by ZivDero)
 - Allow customizing if Veins can grow on a tile (by ZivDero)
 
+
 Vanilla fixes:
 - Fix HouseType `Nod` having the `Prefix=B` and `Side=GDI` in vanilla `rules.ini` by setting them to `N` and `Nod`, respectively (by CCHyper/tomsons26)
 - Fix a bug where VQA files could not be loaded from the root directory or local search paths (by CCHyper/tomsons26)
@@ -412,5 +418,8 @@ Vanilla fixes:
 - Fix a bug where units that have DeathFrames (such as Reapers) could be issued move orders by players while playing their death animations.
 - Fix a bug where capturing buildings with sensor capabilities (`SensorArray=yes`) would not update to the owners of the sensors (by JoyfulShush)
 - Allow helipads and service depots to accept additional units to add to the queue or re-assign to a different helipad when clicking on one that is currently in use (by JoyfulShush)
+- Fix a bug where AI Triggers' `MultiSide` wouldn't correctly consider all houses (by ZivDero)
+- Fix a bug where newly created objects wouldn't reveal shroud for allies with `AllyReveal=yes` (by ZivDero)
+- Fix a bug where mission `Ambush` wouldn't work correctly (by ZivDero)
 
 :::

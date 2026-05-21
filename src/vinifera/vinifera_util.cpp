@@ -12,7 +12,6 @@
 #include "vinifera_util.h"
 
 #include "bsurface.h"
-#include "cncnet4_globals.h"
 #include "colorscheme.h"
 #include "debughandler.h"
 #include "dsurface.h"
@@ -52,26 +51,16 @@ const char *Vinifera_Name_String()
 #if 0
     if (_buffer[0] == '\0') {
 
-        /**
-         *  Append the CnCNet version if enabled.
-         */
-        char const* cncnet_mode = nullptr;
-        if (CnCNet4::IsEnabled) {
-            cncnet_mode = " (CnCNet4)";
-        }
-
         char const* dev_mode = nullptr;
         if (Vinifera_DeveloperMode) {
             dev_mode = " (Dev)";
         }
 
-        if (!dev_mode && !cncnet_mode) {
+        if (!dev_mode) {
             std::snprintf(_buffer, sizeof(_buffer), "Vinifera");
 
         } else {
-            std::snprintf(_buffer, sizeof(_buffer), "Vinifera:%s%s",
-                cncnet_mode != nullptr ? cncnet_mode : "",
-                dev_mode != nullptr ? dev_mode : "");
+            std::snprintf(_buffer, sizeof(_buffer), "Vinifera:%s", dev_mode != nullptr ? dev_mode : "");
         }
 
 #if defined(TS_CLIENT)
@@ -157,23 +146,13 @@ const char *Vinifera_Version_String()
 
     if (_buffer[0] == '\0') {
 
-        /**
-         *  Append the CnCNet version if enabled.
-         */
-        char const* cncnet_mode = nullptr;
-        if (CnCNet4::IsEnabled) {
-            cncnet_mode = " (CnCNet4)";
-        }
-        
 #ifndef RELEASE
-        std::snprintf(_buffer, sizeof(_buffer), "Vinifera:%s%s - %s %s %s%s %s",
-            cncnet_mode != nullptr ? cncnet_mode : "",
+        std::snprintf(_buffer, sizeof(_buffer), "Vinifera:%s - %s %s %s%s %s",
             Vinifera_DeveloperMode ? " (Dev)" : "",
             Vinifera_Git_Branch(), Vinifera_Git_Author(),
             Vinifera_Git_Uncommitted_Changes() ? "~" : "", Vinifera_Git_Hash_Short(), Vinifera_Git_DateTime());
 #else
-        std::snprintf(_buffer, sizeof(_buffer), "Vinifera:%s%s - %s%s %s",
-            cncnet_mode != nullptr ? cncnet_mode : "",
+        std::snprintf(_buffer, sizeof(_buffer), "Vinifera:%s - %s%s %s",
             Vinifera_DeveloperMode ? " (Dev)" : "",
             Vinifera_Git_Uncommitted_Changes() ? "~" : "", Vinifera_Git_Hash_Short(), Vinifera_Git_DateTime());
 #endif

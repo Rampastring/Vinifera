@@ -407,6 +407,11 @@ public:
     bool IronCurtainPriorityTarget;
 
     /**
+     *  List of animations to be used as the explosion when scrap explosions are turned on.
+     */
+    TypeList<AnimTypeClass*> ScrapExplosion;
+
+    /**
      *  Specifies whether this object is available to be built by all players, only AI players, or only human players.
      */
     TechnoTypeBuildability Buildability;

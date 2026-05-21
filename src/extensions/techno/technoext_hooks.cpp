@@ -40,6 +40,7 @@
 #include "rules.h"
 #include "rulesext.h"
 #include "session.h"
+#include "sessionext.h"
 #include "sideext.h"
 #include "spawnmanager.h"
 #include "syringe.h"
@@ -69,6 +70,8 @@
 #include "weapontype.h"
 #include "weapontypeext.h"
 #include "wwkeyboard.h"
+#include "spawner.h"
+#include "vox.h"
 
 #include <vector>
 
@@ -115,6 +118,7 @@ public:
     int _Apparent_Brightness(int brightness) const;
     void _Flashing_AI();
     int _Anti_Air() const;
+    bool _Revealed(HouseClass* house);
 };
 
 /**
@@ -369,7 +373,7 @@ void TechnoClassExt::_Draw_Pips(Point2D& bottomleft, Point2D& center, Rect& rect
         if (Crew.IsElite)
             veterancy_shape = 8;
 
-        if (Crew.Is_Dumbass())
+        if (Crew.IsDumbass)
             veterancy_shape = 12;
 
         if (veterancy_shape != -1)
@@ -1423,8 +1427,8 @@ void TechnoClassExt::_Record_The_Kill(TechnoClass* source)
                 House->BuildingsLost++;
             }
 
-            if (source != NULL) {
-                if ((Session.Type == GAME_INTERNET || Session.Type == GAME_IPX) && !typeext->IsDontScore) {
+            if (source != nullptr) {
+                if (!typeext->IsDontScore) {
                     source->House->DestroyedBuildings->Increment_Unit_Total(reinterpret_cast<BuildingClass*>(this)->Class->HeapID);
                 }
                 source->House->BuildingsKilled[Owner()]++;
@@ -1443,19 +1447,19 @@ void TechnoClassExt::_Record_The_Kill(TechnoClass* source)
     break;
 
     case RTTI_AIRCRAFT:
-        if (source && (Session.Type == GAME_INTERNET || Session.Type == GAME_IPX) && !typeext->IsDontScore) {
+        if (source && !typeext->IsDontScore) {
             source->House->DestroyedAircraft->Increment_Unit_Total(reinterpret_cast<AircraftClass*>(this)->Class->HeapID);
             total_recorded++;
         }
         // Fall through.....
     case RTTI_INFANTRY:
-        if (source && !total_recorded && (Session.Type == GAME_INTERNET || Session.Type == GAME_IPX) && !typeext->IsDontScore) {
+        if (source && !total_recorded && !typeext->IsDontScore) {
             source->House->DestroyedInfantry->Increment_Unit_Total(reinterpret_cast<InfantryClass*>(this)->Class->HeapID);
             total_recorded++;
         }
         // Fall through.....
     case RTTI_UNIT:
-        if (source && !total_recorded && (Session.Type == GAME_INTERNET || Session.Type == GAME_IPX) && !typeext->IsDontScore) {
+        if (source && !total_recorded && !typeext->IsDontScore) {
             source->House->DestroyedUnits->Increment_Unit_Total(reinterpret_cast<UnitClass*>(this)->Class->HeapID);
         }
 
@@ -1485,6 +1489,81 @@ void TechnoClassExt::_Record_The_Kill(TechnoClass* source)
 int TechnoClassExt::_Time_To_Build() const
 {
     return Extension::Fetch(this)->Time_To_Build();
+}
+
+
+/**
+ *  Handles revealing an object to the house specified.
+ *
+ *  @author:  06/02/1994 JLB - Created.
+ *            ZivDero - Adjustments for Tiberian Sun.
+ */
+bool TechnoClassExt::_Revealed(HouseClass* house)
+{
+    if (house == PlayerPtr && IsDiscoveredByPlayer) {
+        return false;
+    }
+
+    if (house != PlayerPtr) {
+        if (IsDiscoveredByComputer) return false;
+        IsDiscoveredByComputer = true;
+    }
+
+    if (house == nullptr) {
+        return false;
+    }
+
+    if (RadioClass::Revealed(house)) {
+
+        /*
+         *  An enemy object that is discovered will go into hunt mode if
+         *  its current mission is to ambush.
+         */
+        if (!House->Is_Human_Player() && Mission == MISSION_AMBUSH) {
+            Assign_Mission(MISSION_HUNT);
+        }
+
+        if (house == PlayerPtr) {
+            IsDiscoveredByPlayer = true;
+            House->RecalcPower = true;
+            House->RecalcRadar = true;
+
+            if (!IsOwnedByPlayer) {
+
+                /**
+                 *  If there is a trigger event associated with this object, then process
+                 *  it for discovery purposes.
+                 */
+                if (!ScenarioInit && Tag != nullptr) {
+                    Tag->Spring(TEVENT_DISCOVERED, this);
+                }
+
+                /**
+                 *  Alert the enemy house to presence of the friendly side.
+                 */
+                House->IsDiscovered = true;
+            } else {
+
+                /**
+                 *  A newly revealed object will always perform a look operation.
+                 */
+                Look();
+            }
+
+            /**
+             *  Outside of campaign, reveal newly built allied objects with AllyReveal on.
+             */
+            if (Session.Type != GAME_NORMAL && Rule->IsAllyReveal && House->Is_Ally(house)) {
+                Look();
+            }
+        } else {
+            IsDiscoveredByComputer = true;
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
 
@@ -1966,6 +2045,42 @@ continue_checks:
 
 return_false:
     return 0x0062D8C0;
+}
+
+
+/**
+ *  Wrapper for the patch below because doing this messes with the stack.
+ */
+static bool Can_Attack_Neutrals(TechnoClass* target)
+{
+    bool attack_neutrals = SessionExtension->ExtOptions.IsAttackNeutralUnits;
+    bool unarmed_building = target->RTTI == RTTI_BUILDING && (!target->Is_Weapon_Equipped() || target->Get_Weapon()->Weapon->Range == 0);
+
+    return attack_neutrals && !unarmed_building;
+};
+
+
+/**
+ *  Patch to allow units to target neutral units if the spawner requests it.
+ *
+ *  @author: ZivDero
+ */
+DEFINE_HOOK(0x0062D49A, _TechnoClass_Evaluate_Object_AttackNeutralUnits_Patch, 0)
+{
+    GET(TechnoClass*, target, ESI);
+
+    if (Session.Type != GAME_NORMAL && target->Owner_HouseClass()->Class->IsMultiplayPassive) {
+
+        /**
+         *  Allow attacking neutrals, but if it's a building, it must be armed.
+         */
+        if (!Can_Attack_Neutrals(target)) {
+            return 0x0062D8C0;
+        }
+    }
+
+    // Continue normally.
+    return 0x0062D4BA;
 }
 
 
@@ -3534,4 +3649,5 @@ void TechnoClassExtension_Hooks()
     Patch_Jump(0x00638CA0, &TechnoClassExt::_Should_Self_Heal_Now);
     Patch_Jump(0x00639C70, &TechnoClassExt::_Apparent_Brightness);
     Patch_Jump(0x006380F0, &TechnoClassExt::_Anti_Air);
+    Patch_Jump(0x0062AAD0, &TechnoClassExt::_Revealed);
 }
