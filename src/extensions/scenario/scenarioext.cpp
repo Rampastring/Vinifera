@@ -1156,6 +1156,8 @@ bool ScenarioClassExtension::Start_Scenario(char* name, bool briefing, CampaignT
         std::snprintf(buffer, std::size(buffer), "%s.VQA", Movies[Scen->BriefMovie]);
     }
 
+    bool transit_theme_played = false;
+
     if (Session.Type == GAME_NORMAL && (Scen->BriefMovie == VQ_NONE || !CCFileClass(buffer).Is_Available())) {
 
         /**
@@ -1166,7 +1168,16 @@ bool ScenarioClassExtension::Start_Scenario(char* name, bool briefing, CampaignT
 
         OwnerDraw::Cache_Images();
 
+        if (Scen->TransitTheme != THEME_NONE) {
+            transit_theme_played = true;
+            Theme.Play_Song(Scen->TransitTheme);
+        }
+
         Restate_Mission(Scen);
+
+        if (Theme.Still_Playing()) {
+            Theme.Stop(true); // Smoothly fade out the track.
+        }
 
         MouseCursor->Hide_Mouse();
         MouseCursor->Capture_Mouse();
@@ -1215,7 +1226,7 @@ bool ScenarioClassExtension::Start_Scenario(char* name, bool briefing, CampaignT
         Play_Movie(Scen->ActionMovie, Scen->TransitTheme);
     }
 
-    if (Scen->ActionMovie != VQ_NONE || Scen->TransitTheme == THEME_NONE) {
+    if (transit_theme_played || (Scen->ActionMovie != VQ_NONE || Scen->TransitTheme == THEME_NONE)) {
         Theme.Queue_Song(THEME_PICK_ANOTHER);
     } else {
         Theme.Queue_Song(Scen->TransitTheme);
@@ -1245,15 +1256,20 @@ bool ScenarioClassExtension::Start_Scenario(char* name, bool briefing, CampaignT
         /**
          *  Print a message stating the current difficulty level.
          */
+
+        char diff_message[50];
+
         static const char* difficulty_names[] = {
-            "Difficulty: Hard",
-            "Difficulty: Medium",
-            "Difficulty: Easy",
+            "Hard",
+            "Medium",
+            "Easy",
         };
 
         const char* diff_name = ScenExtension->DifficultyName[0] == '\0' ? difficulty_names[Scen->CDifficulty] : ScenExtension->DifficultyName;
 
-        Session.Messages.Add_Message(nullptr, 0, diff_name, Fetch_Scheme_Index_By_Name("DarkGold"), TPF_6PT_GRAD | TPF_USE_GRAD_PAL | TPF_FULLSHADOW, Rule->MessageDelay * TICKS_PER_MINUTE);
+        sprintf_s(diff_message, std::size(diff_message), "Difficulty: %s", diff_name);
+
+        Session.Messages.Add_Message(nullptr, 0, diff_message, Fetch_Scheme_Index_By_Name("DarkGold"), TPF_6PT_GRAD | TPF_USE_GRAD_PAL | TPF_FULLSHADOW, Rule->MessageDelay * TICKS_PER_MINUTE);
     }
 
     /**
