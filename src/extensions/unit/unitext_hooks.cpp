@@ -1442,12 +1442,12 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
 {
     assert(IsActive);
 
-    int shapenum;                // Working shape number.
-    ShapeSet const* shapefile;  // Working shape file pointer.
-    //int			facing = Dir_To_32(PrimaryFacing);
-    //int			tfacing = Dir_To_32(SecondaryFacing);
-    //DirType		rotation = DIR_N;
-    //int			scale = 0x0100;
+    int shapenum;              // Working shape number.
+    ShapeSet const* shapefile; // Working shape file pointer.
+    // int			facing = Dir_To_32(PrimaryFacing);
+    // int			tfacing = Dir_To_32(SecondaryFacing);
+    // DirType		rotation = DIR_N;
+    // int			scale = 0x0100;
 
     /*
     **	Verify the legality of the unit class.
@@ -1486,11 +1486,11 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         //     shapenum = (((Frame + (Fetch_ID() >> 1)) & 1) + shapenum);
         // }
         // else {
-            shapenum = Fetch_Stage();
-            if (shapenum >= 90) {
-                shapenum -= 90;
-                shapefile = (ShapeSet const*)Class->AltImage;
-            }
+        shapenum = Fetch_Stage();
+        if (shapenum >= 90) {
+            shapenum -= 90;
+            shapefile = (ShapeSet const*)Class->AltImage;
+        }
         // }
         Draw_Object(shapefile, shapenum, xdrawpoint, xcliprect, DIR_N, 256, 0, ZGRAD_90DEG, false, brightness);
         return;
@@ -1512,12 +1512,10 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
 
     if (Locomotion->Is_Moving()) {
         shapenum = Class->StartWalkFrame + shapenum * Class->WalkFrames + TotalFramesWalked % Class->WalkFrames;
-    }
-    else {
+    } else {
         if (FiringSyncDelay >= 0) {
             shapenum = Class->StartFiringFrame + FiringSyncDelay / 2 + shapenum * Class->FiringFrames;
-        }
-        else {
+        } else {
             if (DeathCounter >= 0) {
                 int v14 = DeathCounter / Class->DeathFrameRate;
                 int StartDeathFrame = Class->StartDeathFrame;
@@ -1526,8 +1524,7 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
                     v14 = v16;
                 }
                 shapenum = v14 + StartDeathFrame;
-            }
-            else if (unittypeext->IdleRate > 0) {
+            } else if (unittypeext->IdleRate > 0) {
 
                 /**
                  *  #issue-421
@@ -1536,16 +1533,12 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
                  *
                  *  @author: CCHyper
                  */
-                shapenum = unittypeext->StartIdleFrame
-                    + (TotalFramesWalked % unittypeext->IdleFrames)
-                    + (unittypeext->IdleFrames * shapenum);
+                shapenum = unittypeext->StartIdleFrame + (TotalFramesWalked % unittypeext->IdleFrames) + (unittypeext->IdleFrames * shapenum);
 
-            }
-            else if (field_34D) {
+            } else if (field_34D) {
                 if (Class->StandingFrames == 0) {
                     shapenum = Class->StartWalkFrame + shapenum * Class->WalkFrames;
-                }
-                else {
+                } else {
                     shapenum = Class->StartStandFrame + shapenum * Class->StandingFrames;
                 }
             }
@@ -1563,7 +1556,7 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
     //         return;
     //     }
     // }
-    
+
     /*
     **	If there is a turret, then it must be rendered as well. This may include
     **	firing animation if required.
@@ -1618,8 +1611,7 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
                 Dir256 dir256 = static_cast<Dir256>(face.Current().Get_Facing<256>());
                 if (dir256 > 64 && dir256 <= 128) {
                     dir256 = (Dir256)((dir256 - 64) / 3 + 64);
-                }
-                else {
+                } else {
                     dir256 = (Dir256)((64 - dir256) / 3 + 64);
                 }
                 face.Set(DirType(dir256));
@@ -1632,12 +1624,10 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
                 barrel_above_turret = true;
                 if (SecondaryFacing.Current().Get_Facing<4>() >= 3) {
                     barrel_above_turret = true;
-                }
-                else {
+                } else {
                     barrel_above_turret = false;
                 }
-            }
-            else {
+            } else {
                 barrel_above_turret = false;
             }
         }
@@ -1653,12 +1643,12 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         // Draw the turret shape
 
         /**
-        *  #issue-393
-        *
-        *  Allow the custom turret facings.
-        *
-        *  @author: CCHyper
-        */
+         *  #issue-393
+         *
+         *  Allow the custom turret facings.
+         *
+         *  @author: CCHyper
+         */
         UnitTypeClassExtension* unittypeext = Extension::Fetch(Class);
         int turret_facings = unittypeext->TurretFacings;
 
@@ -1678,8 +1668,7 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         int frame_number;
         if (unittypeext && unittypeext->StartTurretFrame != -1) {
             frame_number = unittypeext->StartTurretFrame + (turret_shape_number % turret_facings);
-        }
-        else {
+        } else {
             frame_number = start_turret_frame + (turret_shape_number % turret_facings);
         }
 
@@ -1695,9 +1684,7 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         LogicalSurface = old_surface;
         field_36F = false;
 
-    }
-    else if (Class->IsTurretEquipped)
-    {
+    } else if (Class->IsTurretEquipped) {
         // For SHP turrets with recoil
 
         // Draw main shape
@@ -1722,18 +1709,15 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
         int frame_number;
         if (unittypeext && unittypeext->StartTurretFrame != -1) {
             frame_number = unittypeext->StartTurretFrame + (turret_shape_number % turret_facings);
-        }
-        else {
+        } else {
             frame_number = start_turret_frame + (turret_shape_number % turret_facings);
         }
 
         // If we are in recoil state, adjust turret position based on turret recoil.
         FacingType facing8 = Dir_To_8(static_cast<Dir256>(SecondaryFacing.Current().Get_Facing<256>()));
         Point2D turretpt = xdrawpoint;
-        if (IsInRecoilState)
-        {
-            switch (facing8)
-            {
+        if (IsInRecoilState) {
+            switch (facing8) {
             case FACING_N:
                 turretpt += Point2D(-1, 1);
                 break;
@@ -1763,8 +1747,7 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
 
         // Draw turret
         Draw_Object(shapefile, frame_number, turretpt, xcliprect, DIR_N, 256, -1, ZGRAD_GROUND, false, brightness, NULL, 0, Point2D(0, 0), ShapeFlags_Type(SHAPE_NORMAL));
-    }
-    else {
+    } else {
         // Non-turreted unit - only draw main shape
         static int _zadj = 0;
         Draw_Object(shapefile, shapenum, xdrawpoint, xcliprect, DIR_N, 256, _zadj, Get_Z_Gradient(), 0, brightness, NULL, 0, Point2D(0, 0), SHAPE_NORMAL);
@@ -1774,6 +1757,27 @@ void UnitClassExt::_Draw_Shape(Point2D xdrawpoint, Rect xcliprect, int brightnes
     // {
     //     House->Scheme = oldscheme;
     // }
+}
+
+/**
+ *  Patches UnitClass::Take_Damage right before iterating on the cargo.
+ *  Fixes an issue where units that have cargo (such as APCs) do not spawn their cargo if they are destroyed
+ *  while moving from one cell to another, resulting in the cargo getting erased instead.
+ * 
+ *  @author: JoyfulShush
+ */
+DEFINE_HOOK(0x0064FDB4, _Unit_Class_Take_Damage_Cargo_Hold_Patch, 6)
+{
+    GET(UnitClass*, this_ptr, ESI);
+
+    if (this_ptr->Cargo.Is_Something_Attached()) {
+        this_ptr->Stop_Driver();
+        if (this_ptr->Locomotion) {
+            this_ptr->Locomotion->Mark_All_Occupation_Bits(MARK_UP);
+        }
+    }
+    
+    return 0;
 }
 
 
