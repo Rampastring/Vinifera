@@ -51,6 +51,7 @@ public:
     bool Rockets(CCINIClass& ini);
     bool Tiberiums(CCINIClass& ini);
     bool PrerequisiteGroups(CCINIClass& ini);
+    bool Difficulty(CCINIClass& ini);
     bool AdvancedAIGroundTactics(CCINIClass& ini);
     bool AdvancedAIAirTactics(CCINIClass& ini);
     bool AdvancedAINavalTactics(CCINIClass& ini);
@@ -268,6 +269,23 @@ public:
      *  List of units to consider "home".
      */
     TypeList<UnitTypeClass *> BaseUnit;
+
+    /*
+    **	This array controls the difficulty effects on the game. There is one
+    **	difficulty class object for each difficulty level.
+    */
+    DifficultyClass Diff[EXT_DIFF_COUNT];
+
+    /*
+    **  Controls the difficulty effects of the "Normal" difficulty on human players.
+    **  Allows splitting the Normal difficulty effects for human players and AI players.
+    */
+    DifficultyClass PlayerNormal;
+
+    /*
+    **	Is the "PlayerNormal" difficulty level available?
+    */
+    bool IsHasPlayerNormal;
 
     /**
      *  How much value (in credits) a house needs to destroy to strengthen their objects by one percentage.

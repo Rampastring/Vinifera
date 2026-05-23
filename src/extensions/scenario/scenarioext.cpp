@@ -2403,10 +2403,15 @@ void ScenarioClassExtension::Assign_Houses()
          *  Process spawner overrides.
          */
         if (SessionExtension->IsSpawnerSession) {
-            static char const* AINamesByDifficultyArray[] = {
+            static char const* AINamesByDifficultyArray[] = 
+            {
                 "Hard AI",
                 "Medium AI",
-                "Easy AI"
+                "Easy AI",
+                "Very Hard AI",
+                "Brutal AI",
+                "Extreme AI",
+                "Ultimate AI"
             };
 
             const auto& slot_info = SessionExtension->SlotInfo[i];

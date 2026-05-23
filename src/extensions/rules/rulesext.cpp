@@ -103,7 +103,10 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     IsAIDetectDisguise(true),
     IsAIOneHarvesterInSingleplayer(true),
     PausedRepairsFrame(6),
-	BaseUnit(),
+    BaseUnit(),
+    Diff(),
+    PlayerNormal(),
+    IsHasPlayerNormal(false),
     StrengthenDestroyedValueThreshold(0),
     StrengthenBuildingValueMultiplier(3),
     IsStrengtheningEnabled(false),
@@ -460,7 +463,6 @@ void RulesClassExtension::Process(CCINIClass &ini)
      */
     Objects(ini);
 
-    This()->Difficulty(ini);
     This()->CrateRules(ini);
     This()->CombatDamage(ini);
     This()->AudioVisual(ini);
@@ -487,6 +489,7 @@ void RulesClassExtension::Process(CCINIClass &ini)
      *  #NOTE: These must be performed last!
      */
     General(ini);
+    Difficulty(ini);
     MPlayer(ini);
     AudioVisual(ini);
     CombatDamage(ini);
@@ -823,6 +826,8 @@ bool RulesClassExtension::General(CCINIClass &ini)
      *  the original behaviour of BaseUnit.
      */
     BaseUnit = TGet_TypeList(ini, GENERAL, "BaseUnit", BaseUnit);
+
+    IsHasPlayerNormal = ini.Get_Bool(GENERAL, "HasPlayerNormal", IsHasPlayerNormal);
 
     AIKiteChance = ini.Get_IntList(GENERAL, "AIKiteChance", AIKiteChance);
 
@@ -1294,6 +1299,26 @@ bool RulesClassExtension::PrerequisiteGroups(CCINIClass& ini)
     }
 
     return counter > 0;
+}
+
+
+/**
+ *  Fetch the various difficulty group settings.
+ *
+ *  @author: Rampastring
+ */
+bool RulesClassExtension::Difficulty(CCINIClass& ini)
+{
+    Difficulty_Get(ini, Diff[DIFF_EASY], "Easy");
+    Difficulty_Get(ini, Diff[DIFF_NORMAL], "Normal");
+    Difficulty_Get(ini, PlayerNormal, "PlayerNormal");
+    Difficulty_Get(ini, Diff[DIFF_HARD], "Difficult");
+    Difficulty_Get(ini, Diff[EXT_DIFF_VERY_HARD], "VeryEasy");
+    Difficulty_Get(ini, Diff[EXT_DIFF_BRUTAL], "BrutallyEasy");
+    Difficulty_Get(ini, Diff[EXT_DIFF_EXTREME], "ExtremelyEasy");
+    Difficulty_Get(ini, Diff[EXT_DIFF_ULTIMATE], "UltimatelyEasy");
+
+    return true;
 }
 
 
