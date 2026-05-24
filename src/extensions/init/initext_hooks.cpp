@@ -365,6 +365,7 @@ bool Vinifera_Prep_For_Side(SideType side)
     }
 
     Map.Init_For_House();
+    AudioTheme.Scan();
 
     return true;
 }
