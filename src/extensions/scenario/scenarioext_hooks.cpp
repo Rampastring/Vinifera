@@ -20,6 +20,8 @@
 #include "ccfile.h"
 #include "ccini.h"
 #include "debughandler.h"
+#include "environment.h"
+#include "environmentext.h"
 #include "fatal.h"
 #include "hooker.h"
 #include "houseext.h"
@@ -434,6 +436,19 @@ DEFINE_HOOK(0x005DCB59, _ScenarioClass_Do_Win_GlobalFlags_Patch, 0)
 
 
 /**
+ *  Patch to dump global state to game logfile after a mission has been completed.
+ *
+ *  @author: Rampastring
+ */
+DEFINE_HOOK(0x005DC964, _ScenarioClass_Do_Win_Dump_Globals_Patch, 7)
+{
+    ScenExtension->Dump_Globals();
+
+    return 0;
+}
+
+
+/**
  *  Replace a loop resetting all globals in Clear_Scenario.
  *
  *  @author: ZivDero
@@ -444,28 +459,6 @@ DEFINE_HOOK(0x005DC64D, _Clear_Scenario_Clear_Globals_Patch, 0)
         ScenExtension->Set_Global_To(i, 0);
     }
     return 0x005DC688;
-}
-
-
-/**
- *  Special unit version of House_Or_Spawn_House_From_Name that adds a
- *  null pointer to the unit vector if the house is not found.
- *
- *  @author: ZivDero
- */
-HousesType House_From_Name_Unit(const char* name)
-{
-    /**
-     *  If we couldn't find the spawn house, add a null pointer to the unit vector
-     *  so that the "LinkedTo" numbers don't break. We'll remove these null pointers
-     *  at the end.
-     */
-    HousesType house = HouseTypeClass::From_Name(name);
-    if (house == HOUSE_NONE) {
-        Units.Add(nullptr);
-    }
-
-    return house;
 }
 
 
@@ -493,45 +486,6 @@ DEFINE_HOOK(0x004D7B98, _InfantryClass_Read_INI_SpawnHouses_Patch, 0)
     }
 
     return 0x004D7F30;
-}
-
-
-/**
- *  Link units to their followers.
- *
- *  @author: ZivDero
- */
-DEFINE_HOOK(0x006589C8, _UnitClass_Read_INI_Link_Units, 0)
-{
-    REF_STACK(DynamicVectorClass<int>, followers, 0xC);
-
-    /**
-     *  Links the followed and followed units, checking to make sure both actually exist.
-     */
-    for (int i = 0; i < Units.Count(); ++i) {
-        UnitClass* unit = Units[i];
-        if (unit != nullptr) {
-            int follower_id = followers[i];
-            if (follower_id != -1 && follower_id < Units.Count() && Units[follower_id]) {
-                UnitClass* follower = Units[follower_id];
-                unit->FollowingMe = follower;
-                follower->IsFollowing = true;
-            } else {
-                unit->FollowingMe = nullptr;
-            }
-        }
-    }
-
-    /**
-     *  We need to remove the null pointers we added from the unit vector.
-     */
-    for (int i = 0; i < Units.Count(); i++) {
-        if (!Units[i]) {
-            Units.Delete(i--);
-        }
-    }
-
-    return 0x00658A10;
 }
 
 
@@ -670,7 +624,6 @@ void ScenarioClassExtension_Hooks()
      *  Patch Unit, Building, Aircraft, Infatry and Team creation from the map to
      *  fetch Spawn houses by names correctly.
      */
-    Patch_Call(0x00658658, &House_From_Name_Unit);       // UnitClass
     Patch_Call(0x00434843, &HouseTypeClassExtension::House_From_Name);            // BuildingClass
     Patch_Call(0x0040E806, &HouseTypeClassExtension::House_From_Name);  // AircraftClass
     // InfantryClass doesn't use House_From_HousesType

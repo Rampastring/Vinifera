@@ -33,6 +33,7 @@
 #include "ccini.h"
 #include "cncnet5_wspudp.h"
 #include "debughandler.h"
+#include "environmentext.h"
 #include "extension_globals.h"
 #include "gscreen.h"
 #include "house.h"
@@ -115,8 +116,14 @@ bool Spawner::Start_Game()
     Init_UI();
     Prepare_Screen();
 
+    DEBUG_INFO("[Spawner] Start_Game: Starting scenario %s\n", Config->ScenarioName.c_str());
     const bool result = Start_Scenario(Config->ScenarioName.data());
     HasSpawned = true;
+
+    if (!result) {
+        DEBUG_ERROR("[Spawner] Start_Game: Start_Scenario returned false!\n");
+    }
+
     return result;
 }
 
@@ -197,7 +204,8 @@ bool Spawner::Init_Session(char* scenario_name)
     BuildLevel = Config->TechLevel;
     Options.GameSpeed = Config->GameSpeed;
 
-    SessionExtension->Set_Next_Campaign_Autosave_Slot(Config->NextAutoSaveNumber);
+    SessionExtension->Set_Next_Campaign_Autosave_Slot(Config->NextCampaignAutoSaveNumber);
+    SessionExtension->Set_Next_Skirmish_Autosave_Slot(Config->NextSkirmishAutoSaveNumber);
 
     const auto nodename = new NodeNameType;
     Session.Players.Add(nodename);
@@ -226,10 +234,69 @@ bool Spawner::Init_Session(char* scenario_name)
     SessionExtension->ExtOptions.IsScrapMetal = Config->ScrapMetal;
     SessionExtension->ExtOptions.IsAINamesByDifficulty = Config->AINamesByDifficulty;
 
-    ScenExtension->HasSpawnerScenarioOverrides = true;
-    ScenExtension->CampaignDifficultyOverride = Config->CampaignDifficulty;
-    ScenExtension->CampaignCDifficultyOverride = Config->CampaignCDifficulty;
-    ScenExtension->SkipScoreScreenOverride = Config->SkipScoreScreen;
+    /**
+     *  NOTE: Scenario data gets cleared between this point and the scenario start, because the first step
+     *  in reading a scenario is calling Clear_Scenario. Assume any scenario variables set here to get cleared.
+     *  Only set up some fields that we need for initialization (like difficulty, which is read by the environment).
+     */
+    Apply_Scenario_Values();
+
+    const int total_slots = std::min(Config->HumanPlayers + Config->AIPlayers, MAX_PLAYERS);
+
+    for (int slot_index = 0; slot_index < total_slots; ++slot_index) {
+        const auto& player_config = Config->Players[slot_index];
+        auto& slot_info = SessionExtension->SlotInfo[slot_index];
+
+        slot_info.IsConfigured = true;
+        slot_info.IsHuman = player_config.IsHuman;
+        slot_info.Color = player_config.Color;
+        slot_info.House = player_config.House;
+
+        if (!slot_info.IsHuman) {
+            slot_info.Difficulty = Spawner_Config_AI_Difficulty_To_Game_AI_Difficulty(player_config.Difficulty);
+
+            if (slot_info.Difficulty < 0) {
+                return false;
+            }
+        }
+
+        slot_info.IsObserver = player_config.IsObserver;
+        slot_info.SpawnLocation = player_config.SpawnLocation;
+
+        for (int ally_index = 0; ally_index < std::size(slot_info.Alliances); ++ally_index) {
+            slot_info.Alliances[ally_index] = player_config.Alliances[ally_index];
+        }
+    }
+
+    /**
+     *  (Re)initialize the environment so it can read our scenario difficulty options.
+     */
+    new (reinterpret_cast<ExtEnvironmentClass*>(&Environment)) ExtEnvironmentClass;
+
+    /**
+     *  Set the spawner's environment flags.
+     */
+    for (int i = 0; i < std::size(EnvironmentGlobals); i++) {
+        EnvironmentGlobals[i] = Config->GlobalFlags[i];
+        if (Config->GlobalFlags[i] > 0) {
+            DEBUG_INFO("[Spawner] Init_Session: Applied GlobalFlag %d as %d\n", i, EnvironmentGlobals[i]);
+        }
+    }
+
+    return true;
+}
+
+
+/**
+ *  Writes spawner-related values to the scenario.
+ *
+ *  @author: Rampastring
+ */
+void Spawner::Apply_Scenario_Values()
+{
+    // TODO maybe the stats, difficulty name, etc. should belong to SessionExtension instead?
+    Scen->Difficulty = Config->CampaignDifficulty;
+    Scen->CDifficulty = Config->CampaignCDifficulty;
     std::snprintf(ScenExtension->StatsMapName, sizeof(ScenExtension->StatsMapName), "%s", Config->MapName.c_str());
     std::snprintf(ScenExtension->StatsMapHash, sizeof(ScenExtension->StatsMapHash), "%s", Config->MapHash.c_str());
     std::snprintf(ScenExtension->DifficultyName, sizeof(ScenExtension->DifficultyName), "%s", Config->DifficultyName.c_str());
@@ -243,31 +310,6 @@ bool Spawner::Init_Session(char* scenario_name)
         ScenExtension->HasCustomLoadScreenPos = true;
         ScenExtension->CustomLoadScreenPos = Config->CustomLoadScreenPos;
     }
-
-    const int total_slots = std::min(Config->HumanPlayers + Config->AIPlayers, MAX_PLAYERS);
-
-    for (int slot_index = 0; slot_index < total_slots; ++slot_index) {
-        const auto& player_config = Config->Players[slot_index];
-        auto& slot_info = SessionExtension->SlotInfo[slot_index];
-
-        slot_info.IsConfigured = true;
-        slot_info.IsHuman = player_config.IsHuman;
-        slot_info.Color = player_config.Color;
-        slot_info.House = player_config.House;
-        slot_info.Difficulty = Spawner_Config_AI_Difficulty_To_Game_AI_Difficulty(player_config.Difficulty);
-
-        if (slot_info.Difficulty < 0) {
-            return false;
-        }
-
-        slot_info.IsObserver = player_config.IsObserver;
-        slot_info.SpawnLocation = player_config.SpawnLocation;
-
-        for (int ally_index = 0; ally_index < std::size(slot_info.Alliances); ++ally_index) {
-            slot_info.Alliances[ally_index] = player_config.Alliances[ally_index];
-        }
-    }
-
 }
 
 
@@ -298,6 +340,7 @@ bool Spawner::Start_Scenario(char* scenario_name)
     }
 
     if (!Init_Session(scenario_name)) {
+        DEBUG_ERROR("[Spawner] Init_Session returned false!\n");
         return false;
     }
 

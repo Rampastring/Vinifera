@@ -25,6 +25,7 @@
 #include "cd.h"
 #include "commandext.h"
 #include "debughandler.h"
+#include "environmentext.h"
 #include "house.h"
 #include "houseext.h"
 #include "housetype.h"
@@ -49,6 +50,7 @@
 #include "sessionext.h"
 #include "sideext.h"
 #include "smudge.h"
+#include "spawner.h"
 #include "swizzle.h"
 #include "tactical.h"
 #include "tacticalext.h"
@@ -88,10 +90,6 @@ ScenarioClassExtension::ScenarioClassExtension(const ScenarioClass *this_ptr) :
     IsIceDestruction(true),
     SidebarSide(SIDE_NONE),
     IsUseMPAIBaseNodes(false),
-    HasSpawnerScenarioOverrides(false),
-    CampaignDifficultyOverride(DIFF_NORMAL),
-    CampaignCDifficultyOverride(DIFF_NORMAL),
-    SkipScoreScreenOverride(false),
     CustomLoadScreenPos(0, 0),
     HasCustomLoadScreen(false),
     HasCustomLoadScreenPos(false),
@@ -193,10 +191,6 @@ void ScenarioClassExtension::Object_CRC(CRCEngine &crc) const
     //EXT_DEBUG_TRACE("ScenarioClassExtension::Object_CRC - 0x%08X\n", (uintptr_t)(This()));
 
     crc(IsIceDestruction);
-    crc(HasSpawnerScenarioOverrides);
-    crc(static_cast<int>(CampaignDifficultyOverride));
-    crc(static_cast<int>(CampaignCDifficultyOverride));
-    crc(SkipScoreScreenOverride);
     crc(StatsMapName);
     crc(StatsMapHash);
     crc(CustomLoadScreen);
@@ -217,12 +211,12 @@ void ScenarioClassExtension::Init_Clear()
     IsIceDestruction = true;
     ScorePlayerColor = RGBStruct{ 253, 181, 28 }; // Default to TS GDI score color
     ScoreEnemyColor = RGBStruct{ 250, 28, 28 };   // Default to TS Nod score color
-    HasSpawnerScenarioOverrides = false;
-    CampaignDifficultyOverride = DIFF_NORMAL;
-    CampaignCDifficultyOverride = DIFF_NORMAL;
-    SkipScoreScreenOverride = false;
+
+    // Do not clear spawner data. Maybe these should be moved to SessionExtension instead, since by definition,
+    // in the spawner's context these are session rather than scenario based?
     StatsMapName[0] = '\0';
     StatsMapHash[0] = '\0';
+    DifficultyName[0] = '\0';
     CustomLoadScreen[0] = '\0';
     CustomLoadScreenPos = Point2D(0, 0);
     HasCustomLoadScreen = false;
@@ -926,6 +920,36 @@ int ScenarioClassExtension::Num_Locals() const
 
 
 /**
+ *  Dumps global variables to the game log file.
+ *
+ *  @author: Rampastring
+ */
+void ScenarioClassExtension::Dump_Globals() const
+{
+    char buffer[4096];
+    int bufferindex = 0;
+
+    for (int i = 0; i < std::size(GlobalFlags); i++)
+    {
+        char* ptr = &buffer[bufferindex];
+        int numchars = sprintf_s(ptr, std::size(buffer) - bufferindex, "%d,", GlobalFlags[i].Value);
+
+        if (numchars < 1) {
+            DEBUG_ERROR("Dump_Globals: Failed to print globals! (sprintf returned -1)");
+            return;
+        }
+
+        bufferindex += numchars;
+    }
+
+    // Erase last comma for cleanness
+    buffer[bufferindex] = '\0';
+
+    DEBUG_INFO("Global variables: %s\n", buffer);
+}
+
+
+/**
  *  Gets the value of a global as a string.
  *
  *  @author: ZivDero
@@ -1236,11 +1260,15 @@ bool ScenarioClassExtension::Start_Scenario(char* name, bool briefing, CampaignT
         Play_Movie(Scen->ActionMovie, Scen->TransitTheme);
     }
 
-    if (transit_theme_played || (Scen->ActionMovie != VQ_NONE || Scen->TransitTheme == THEME_NONE)) {
+    if (Scen->ActionMovie != VQ_NONE || Scen->TransitTheme == THEME_NONE) {
         Theme.Queue_Song(THEME_PICK_ANOTHER);
-    } else {
-        Theme.Queue_Song(Scen->TransitTheme);
     }
+    
+    // This seems to get played before the first game frame, making players hear a split second of the transit theme
+    // even if a trigger starts playing another theme immediately on game start.
+    /* else { 
+        Theme.Queue_Song(Scen->TransitTheme);
+    }*/
 
     /**
      *  Set the options values, since the palette has been initialized by Read_Scenario.
@@ -1324,6 +1352,7 @@ static bool Rule_Addition(const char* fname, bool with_digest = false)
  *
  *  @author: 10/07/1992 JLB - Red Alert source code.
  *           ZivDero - Adjustments for Tiberian Sun.
+ *           Rampastring - Adjustments for spawner logic.
  */
 bool ScenarioClassExtension::Read_Scenario_INI(CCINIClass& ini, bool random)
 {
@@ -1337,16 +1366,18 @@ bool ScenarioClassExtension::Read_Scenario_INI(CCINIClass& ini, bool random)
     Clear_Scenario();
 
     /**
+     *  If using the spawner, its scenario data has been cleared by Clear_Scenario.
+     *  Re-apply it here.
+     */
+    if (SessionExtension->IsSpawnerSession) {
+        Spawner::Apply_Scenario_Values();
+    }
+
+    /**
      *  Set up difficulty and fog of war settings.
      */
     if (Session.Type == GAME_NORMAL) {
-        if (ScenExtension->HasSpawnerScenarioOverrides) {
-            Scen->Difficulty = ScenExtension->CampaignDifficultyOverride;
-            Scen->CDifficulty = ScenExtension->CampaignCDifficultyOverride;
-        } else {
-            Scen->Difficulty = static_cast<DiffType>(Options.Difficulty);
-            Scen->CDifficulty = static_cast<DiffType>(2 - Options.Difficulty);
-        }
+        reinterpret_cast<ExtEnvironmentClass&>(Environment).Apply_Difficulty();
         Scen->Special.IsFogOfWar = false;
         Special.IsFogOfWar = false;
     } else {
@@ -1354,6 +1385,16 @@ bool ScenarioClassExtension::Read_Scenario_INI(CCINIClass& ini, bool random)
         Scen->CDifficulty = static_cast<DiffType>(2 - Scen->Difficulty);
         Scen->Special.IsFogOfWar = Session.Options.FogOfWar;
         Special.IsFogOfWar = Session.Options.FogOfWar;
+    }
+
+    /**
+     *  If using the spawner, set up global variables provided by the client.
+     *  This is only necessary in the first scenario, because for the rest,
+     *  when using the original game's mission progression logic,
+     *  the environment is already applied by Do_Win, Do_Lose and Do_Restart.
+     */
+    if (SessionExtension->IsSpawnerSession && Scen->Scenario == 1) {
+        reinterpret_cast<ExtEnvironmentClass&>(Environment).Apply_Globals();
     }
 
     Scen->InitTime = ini.Get_Int(BASIC, "InitTime", 10000);
@@ -1869,13 +1910,6 @@ bool ScenarioClassExtension::Read_Scenario_INI(CCINIClass& ini, bool random)
      *  Schedule the next autosave.
      */
     SessionExtension->Schedule_Next_Autosave();
-
-    /**
-     *  Set the skip score bool.
-     */
-    if (ScenExtension->HasSpawnerScenarioOverrides) {
-        Scen->IsSkipScore = ScenExtension->SkipScoreScreenOverride;
-    }
 
     /**
      *  Return with flag saying that the scenario file was read.

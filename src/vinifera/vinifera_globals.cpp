@@ -14,7 +14,6 @@
 #include "aircrafttracker.h"
 #include "prerequisitegroup.h"
 
-
 bool Vinifera_DeveloperMode = false;
 
 bool Vinifera_AudioDebug = false;
@@ -34,6 +33,8 @@ char Vinifera_ProjectName[64] = { '\0' };
 char Vinifera_ProjectVersion[64] = { '\0' };
 char Vinifera_IconName[64] = { '\0' };
 char Vinifera_CursorName[64] = { '\0' };
+
+DWORD Vinifera_MainThreadId = 0;
 
 bool Vinifera_Developer_InstantBuild = false;
 bool Vinifera_Developer_AIInstantBuild = false;
@@ -80,7 +81,7 @@ DynamicVectorClass<AdvancedAITacticTypeClass*> AdvancedAITacticTypes;
 KamikazeTrackerClass* KamikazeTracker = nullptr;
 AircraftTrackerClass* AircraftTracker = nullptr;
 
-int EnvironmentGlobals[/*std::size(ScenExtension->GlobalFlags)*/500];
+int EnvironmentGlobals[/*std::size(ScenExtension->GlobalFlags)*/MAX_ENVIRONMENT_GLOBALS];
 
 bool Vinifera_PlayerOptionsSent = false;
 

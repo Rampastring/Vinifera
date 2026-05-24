@@ -62,11 +62,6 @@ public:
     void Set();
     SidebarViewType Get_Sidebar_View_Type() const;
 
-private:
-    void Apply_Volumes();
-
-public:
-
     static RendererDriverType Parse_Renderer_Driver(const char* name);
     static const char* Get_Renderer_Driver_Config_Name(RendererDriverType driver);
     static const char* Get_Renderer_Driver_SDL_Name(RendererDriverType driver);
@@ -134,14 +129,19 @@ public:
     bool IsPauseRepairs;
 
     /**
-     *  Number of autosaves to make in skirmish.
+     *  Number of autosaves to make in singleplayer.
      */
     int AutoSaveCount;
 
     /**
-     *  The delay between autosaves in skirmish in frames.
+     *  The delay between autosaves in singleplayer in frames.
      */
     int AutoSaveInterval;
+
+    /**
+     *  Should skirmish games be auto-saved?
+     */
+    bool IsAutoSaveInSkirmish;
 
     /**
      *  Are messages drawn top-left rather than bottom-left?

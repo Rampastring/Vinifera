@@ -11,7 +11,6 @@
 
 #include "optionsext.h"
 
-#include "audio_manager.h"
 #include "ccini.h"
 #include "debughandler.h"
 #include "noinit.h"
@@ -158,6 +157,7 @@ OptionsClassExtension::OptionsClassExtension(const OptionsClass *this_ptr) :
     IsPauseRepairs(true),
     AutoSaveCount(5),
     AutoSaveInterval(7200),
+    IsAutoSaveInSkirmish(false),
     IsClassicMessagePosition(false)
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::OptionsClassExtension - 0x%08X\n", (uintptr_t)(This()));
@@ -259,7 +259,6 @@ void OptionsClassExtension::Object_CRC(CRCEngine &crc) const
 void OptionsClassExtension::Load_Settings()
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::Load_Settings - 0x%08X\n", (uintptr_t)(This()));
-    Apply_Volumes();
 
     SortDefensesAsLast = ConfigINI.Get_Bool("Options", "SortDefensesAsLast", SortDefensesAsLast);
     FilterBandBoxSelection = ConfigINI.Get_Bool("Options", "FilterBandBoxSelection", FilterBandBoxSelection);
@@ -283,6 +282,7 @@ void OptionsClassExtension::Load_Settings()
 
     AutoSaveCount = ConfigINI.Get_Int("Options", "AutoSaveCount", AutoSaveCount);
     AutoSaveInterval = ConfigINI.Get_Int("Options", "AutoSaveInterval", AutoSaveInterval);
+    IsAutoSaveInSkirmish = ConfigINI.Get_Bool("Options", "AutoSaveInSkirmish", IsAutoSaveInSkirmish);
     IsClassicMessagePosition = ConfigINI.Get_Bool("Options", "ClassicMessageListPosition", IsClassicMessagePosition);
     
     /**
@@ -389,32 +389,12 @@ void OptionsClassExtension::Save_Settings()
 
 /**
  *  Sets any options based on current settings.
- *  
+ *
  *  @author: CCHyper
  */
 void OptionsClassExtension::Set()
 {
     //EXT_DEBUG_TRACE("OptionsClassExtension::Set - 0x%08X\n", (uintptr_t)(This()));
-
-    Apply_Volumes();
-}
-
-
-/**
- *  Pushes the current ScoreVolume/VoiceVolume/SoundVolume settings to the
- *  corresponding AudioManager groups.
- *
- *  @author: ZivDero
- */
-void OptionsClassExtension::Apply_Volumes()
-{
-    AudioManager.Set_Group_Volume(AUDIO_GROUP_MUSIC, This()->ScoreVolume);
-    AudioManager.Set_Group_Volume(AUDIO_GROUP_AMBIENT, This()->ScoreVolume);
-    AudioManager.Set_Group_Volume(AUDIO_GROUP_SPEECH, This()->VoiceVolume);
-    AudioManager.Set_Group_Volume(AUDIO_GROUP_SFX, This()->SoundVolume);
-    AudioManager.Set_Group_Volume(AUDIO_GROUP_UI, This()->SoundVolume);
-    AudioManager.Set_Group_Volume(AUDIO_GROUP_EVENT, This()->SoundVolume);
-    AudioManager.Set_Group_Volume(AUDIO_GROUP_STREAMING, This()->SoundVolume);
 }
 
 
