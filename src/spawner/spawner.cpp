@@ -84,6 +84,8 @@ std::unique_ptr<SpawnerConfig> Spawner::Config;
  */
 bool Spawner::Init()
 {
+    Enabled = true;
+
     Config = std::make_unique<SpawnerConfig>();
 
     CCFileClass spawn_file("SPAWN.INI");

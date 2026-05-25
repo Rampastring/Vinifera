@@ -40,6 +40,7 @@ class Spawner
 public:
     Spawner() = delete;
 
+    static bool Enabled;
     static bool Init();
     static bool Start_Game();
     static void Apply_Scenario_Values();

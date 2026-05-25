@@ -478,6 +478,11 @@ bool Vinifera_Parse_Command_Line(int argc, char *argv[])
         Vinifera_SkipStartupMovies = true;
     }
 
+    if (!Spawner::Enabled) {
+        MessageBoxA(nullptr, "This version of Dawn of the Tiberium Age's Vinifera can only be run in spawner mode (with the -SPAWN argument).", "Vinifera", MB_ICONERROR | MB_OK);
+        return false;
+    }
+
     return true;
 }
 
