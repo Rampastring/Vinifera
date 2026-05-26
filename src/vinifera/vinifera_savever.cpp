@@ -13,6 +13,7 @@
 
 #include "debughandler.h"
 #include "savever.h"
+#include "spawner.h"
 #include "tibsun_defines.h"
 
 #include <comdef.h>
@@ -39,7 +40,13 @@ ViniferaSaveVersionInfo::ViniferaSaveVersionInfo() :
     PlaythroughID(0),
     ViniferaCommitHash {""},
     Difficulty(DIFF_NORMAL),
-    TotalPlayTime(0)
+    TotalPlayTime(0),
+    MissionInternalName {""},
+    PlayerSide(0),
+    ClientDifficulty(0),
+    SpawnerGlobalFlagValues(),
+    IsCheatSession(false),
+    BonusName {""}
 {
     StartTime.dwLowDateTime = 0;
     StartTime.dwHighDateTime = 0;
@@ -101,7 +108,7 @@ int ViniferaSaveVersionInfo::Get_Internal_Version() const
  *
  *  @author: tomsons26
  */
-void ViniferaSaveVersionInfo::Set_Scenario_Description(const char * desc)
+void ViniferaSaveVersionInfo::Set_Scenario_Description(const char* desc)
 {
     ScenarioDescription[sizeof(ScenarioDescription) - 1] = 0;
     strncpy(ScenarioDescription, desc, sizeof(ScenarioDescription) - 1);
@@ -113,7 +120,7 @@ void ViniferaSaveVersionInfo::Set_Scenario_Description(const char * desc)
  *
  *  @author: tomsons26
  */
-const char * ViniferaSaveVersionInfo::Get_Scenario_Description() const
+const char* ViniferaSaveVersionInfo::Get_Scenario_Description() const
 {
     return ScenarioDescription;
 }
@@ -124,7 +131,7 @@ const char * ViniferaSaveVersionInfo::Get_Scenario_Description() const
  *
  *  @author: tomsons26
  */
-void ViniferaSaveVersionInfo::Set_Player_House(const char * name)
+void ViniferaSaveVersionInfo::Set_Player_House(const char* name)
 {
     PlayerHouse[sizeof(PlayerHouse) - 1] = 0;
     strncpy(PlayerHouse, name, sizeof(PlayerHouse) - 1);
@@ -136,7 +143,7 @@ void ViniferaSaveVersionInfo::Set_Player_House(const char * name)
  *
  *  @author: tomsons26
  */
-const char * ViniferaSaveVersionInfo::Get_Player_House() const
+const char* ViniferaSaveVersionInfo::Get_Player_House() const
 {
     return PlayerHouse;
 }
@@ -191,7 +198,7 @@ int ViniferaSaveVersionInfo::Get_Scenario_Number() const
  *
  *  @author: tomsons26
  */
-void ViniferaSaveVersionInfo::Set_Unknown_String(const char * str)
+void ViniferaSaveVersionInfo::Set_Unknown_String(const char* str)
 {
     UnknownString[sizeof(UnknownString) - 1] = 0;
     strncpy(UnknownString, str, sizeof(UnknownString) - 1);
@@ -203,7 +210,7 @@ void ViniferaSaveVersionInfo::Set_Unknown_String(const char * str)
  *
  *  @author: tomsons26
  */
-const char * ViniferaSaveVersionInfo::Get_Unknown_String() const
+const char* ViniferaSaveVersionInfo::Get_Unknown_String() const
 {
     return UnknownString;
 }
@@ -214,7 +221,7 @@ const char * ViniferaSaveVersionInfo::Get_Unknown_String() const
  *
  *  @author: tomsons26
  */
-void ViniferaSaveVersionInfo::Set_Player_Name(const char * name)
+void ViniferaSaveVersionInfo::Set_Player_Name(const char* name)
 {
     PlayerName[sizeof(PlayerName) - 1] = 0;
     strncpy(PlayerName, name, sizeof(PlayerName) - 1);
@@ -226,7 +233,7 @@ void ViniferaSaveVersionInfo::Set_Player_Name(const char * name)
  *
  *  @author: tomsons26
  */
-const char * ViniferaSaveVersionInfo::Get_Player_Name() const
+const char* ViniferaSaveVersionInfo::Get_Player_Name() const
 {
     return PlayerName;
 }
@@ -237,7 +244,7 @@ const char * ViniferaSaveVersionInfo::Get_Player_Name() const
  *
  *  @author: tomsons26
  */
-void ViniferaSaveVersionInfo::Set_Executable_Name(const char * name)
+void ViniferaSaveVersionInfo::Set_Executable_Name(const char* name)
 {
     ExecutableName[sizeof(ExecutableName) - 1] = 0;
     strncpy(ExecutableName, name, sizeof(ExecutableName) - 1);
@@ -249,7 +256,7 @@ void ViniferaSaveVersionInfo::Set_Executable_Name(const char * name)
  *
  *  @author: tomsons26
  */
-const char * ViniferaSaveVersionInfo::Get_Executable_Name() const
+const char* ViniferaSaveVersionInfo::Get_Executable_Name() const
 {
     return ExecutableName;
 }
@@ -260,7 +267,7 @@ const char * ViniferaSaveVersionInfo::Get_Executable_Name() const
  *
  *  @author: tomsons26
  */
-void ViniferaSaveVersionInfo::Set_Start_Time(FILETIME &time)
+void ViniferaSaveVersionInfo::Set_Start_Time(FILETIME& time)
 {
     StartTime = time;
 }
@@ -282,7 +289,7 @@ FILETIME ViniferaSaveVersionInfo::Get_Start_Time() const
  *
  *  @author: tomsons26
  */
-void ViniferaSaveVersionInfo::Set_Play_Time(FILETIME &time)
+void ViniferaSaveVersionInfo::Set_Play_Time(FILETIME& time)
 {
     PlayTime = time;
 }
@@ -304,7 +311,7 @@ FILETIME ViniferaSaveVersionInfo::Get_Play_Time() const
  *
  *  @author: tomsons26
  */
-void ViniferaSaveVersionInfo::Set_Last_Time(FILETIME &time)
+void ViniferaSaveVersionInfo::Set_Last_Time(FILETIME& time)
 {
     LastSaveTime = time;
 }
@@ -454,12 +461,96 @@ int ViniferaSaveVersionInfo::Get_Total_Play_Time() const
 }
 
 
+void ViniferaSaveVersionInfo::Set_Mission_Internal_Name(const char* name)
+{
+    MissionInternalName[sizeof(MissionInternalName) - 1] = 0;
+    strncpy(MissionInternalName, name, sizeof(MissionInternalName) - 1);
+}
+
+
+const char* ViniferaSaveVersionInfo::Get_Mission_Internal_Name() const
+{
+    return MissionInternalName;
+}
+
+
+void ViniferaSaveVersionInfo::Set_Player_Side(int side)
+{
+    PlayerSide = side;
+}
+
+
+int ViniferaSaveVersionInfo::Get_Player_Side() const
+{
+    return PlayerSide;
+}
+
+
+void ViniferaSaveVersionInfo::Set_Client_Difficulty(int clientdifficulty)
+{
+    ClientDifficulty = clientdifficulty;
+}
+
+
+int ViniferaSaveVersionInfo::Get_Client_Difficulty() const
+{
+    return ClientDifficulty;
+}
+
+
+void ViniferaSaveVersionInfo::Set_Spawner_Global_Flag_Values(std::vector<int>& values)
+{
+    memset(SpawnerGlobalFlagValues, 0, sizeof(SpawnerGlobalFlagValues));
+
+    for (int i = 0; i < values.size(); i++) 
+    {
+        SpawnerGlobalFlagValues[i] = values[i];
+    }
+}
+
+
+void ViniferaSaveVersionInfo::Get_Spawner_Global_Flag_Values(std::vector<int>& values) const
+{
+    values.clear();
+
+    for (int i = 0; i < std::size(SpawnerGlobalFlagValues); i++)
+    {
+        values.push_back(SpawnerGlobalFlagValues[i]);
+    }
+}
+
+
+void ViniferaSaveVersionInfo::Set_Is_Cheat_Session(bool value)
+{
+    IsCheatSession = value;
+}
+
+
+bool ViniferaSaveVersionInfo::Get_Is_Cheat_Session() const
+{
+    return IsCheatSession;
+}
+
+
+void ViniferaSaveVersionInfo::Set_Bonus_Name(const char* name)
+{
+    BonusName[sizeof(BonusName) - 1] = 0;
+    strncpy(BonusName, name, sizeof(BonusName) - 1);
+}
+
+
+const char* ViniferaSaveVersionInfo::Get_Bonus_Name() const
+{
+    return BonusName;
+}
+
+
 /**
  *  Saves the version information to the storage.
  *
  *  @author: tomsons26, ZivDero
  */
-HRESULT ViniferaSaveVersionInfo::Save(IStorage *storage)
+HRESULT ViniferaSaveVersionInfo::Save(IStorage* storage)
 {
     if (storage == nullptr) {
         return E_POINTER;
@@ -468,10 +559,10 @@ HRESULT ViniferaSaveVersionInfo::Save(IStorage *storage)
     DEBUG_INFO("Attempting to obtain PropertySetStorage interface\n");
 
     IPropertySetStoragePtr storageset;
-    HRESULT res = storage->QueryInterface(IID_IPropertySetStorage, (void **)&storageset);
+    HRESULT res = storage->QueryInterface(IID_IPropertySetStorage, (void**)&storageset);
 
     if (SUCCEEDED(res)) {
-    
+
         DEBUG_INFO("Saving version information the new way.\n");
 
         res = Save_String_Set(storageset, ID_SCENARIO_DESCRIPTION, ScenarioDescription);
@@ -567,9 +658,41 @@ HRESULT ViniferaSaveVersionInfo::Save(IStorage *storage)
             return res;
         }
 
-        //return S_OK;
-    }
-    else {
+        /**
+         *  New DTA fields.
+         */
+        res = Save_String_Set(storageset, ID_MISSION_INTERNAL_NAME, MissionInternalName);
+        if (FAILED(res)) {
+            return res;
+        }
+
+        res = Save_Int_Set(storageset, ID_PLAYER_SIDE, PlayerSide);
+        if (FAILED(res)) {
+            return res;
+        }
+
+        res = Save_Int_Set(storageset, ID_CLIENT_DIFFICULTY, ClientDifficulty);
+        if (FAILED(res)) {
+            return res;
+        }
+
+        res = Save_Int_Array_Set(storageset, ID_SPAWNER_GLOBAL_FLAG_VALUES, SpawnerGlobalFlagValues, std::size(SpawnerGlobalFlagValues));
+        if (FAILED(res)) {
+            return res;
+        }
+
+        res = Save_Bool_Set(storageset, ID_IS_CHEAT_SESSION, IsCheatSession);
+        if (FAILED(res)) {
+            return res;
+        }
+
+        res = Save_String_Set(storageset, ID_BONUS_NAME, BonusName);
+        if (FAILED(res)) {
+            return res;
+        }
+
+        // return S_OK;
+    } else {
         DEBUG_INFO("Failed to save the new way!\n");
     }
 
@@ -668,6 +791,39 @@ HRESULT ViniferaSaveVersionInfo::Save(IStorage *storage)
         return res;
     }
 
+    /**
+     *  New DTA fields.
+     */
+    res = Save_String(storage, ID_MISSION_INTERNAL_NAME, MissionInternalName);
+    if (FAILED(res)) {
+        return res;
+    }
+
+    res = Save_Int(storage, ID_PLAYER_SIDE, PlayerSide);
+    if (FAILED(res)) {
+        return res;
+    }
+
+    res = Save_Int(storage, ID_CLIENT_DIFFICULTY, ClientDifficulty);
+    if (FAILED(res)) {
+        return res;
+    }
+
+    res = Save_Int_Array(storage, ID_SPAWNER_GLOBAL_FLAG_VALUES, SpawnerGlobalFlagValues, std::size(SpawnerGlobalFlagValues));
+    if (FAILED(res)) {
+        return res;
+    }
+
+    res = Save_Bool(storage, ID_IS_CHEAT_SESSION, IsCheatSession);
+    if (FAILED(res)) {
+        return res;
+    }
+
+    res = Save_String(storage, ID_BONUS_NAME, BonusName);
+    if (FAILED(res)) {
+        return res;
+    }
+
     return S_OK;
 }
 
@@ -677,7 +833,7 @@ HRESULT ViniferaSaveVersionInfo::Save(IStorage *storage)
  *
  *  @author: tomsons26, ZivDero
  */
-HRESULT ViniferaSaveVersionInfo::Load(IStorage *storage)
+HRESULT ViniferaSaveVersionInfo::Load(IStorage* storage)
 {
     char buffer[512];
 
@@ -691,7 +847,7 @@ HRESULT ViniferaSaveVersionInfo::Load(IStorage *storage)
     HRESULT res = storage->QueryInterface(IID_IPropertySetStorage, (void**)&storageset);
 
     if (SUCCEEDED(res)) {
-    
+
         DEBUG_INFO("Loading version information.\n");
 
         res = Load_String_Set(storageset, ID_SCENARIO_DESCRIPTION, buffer);
@@ -744,7 +900,7 @@ HRESULT ViniferaSaveVersionInfo::Load(IStorage *storage)
         if (FAILED(res)) {
             return res;
         }
-    
+
         strcpy(PlayerName, buffer);
 
         res = Load_Int_Set(storageset, ID_SCENARIO_NUMBER, &ScenarioNumber);
@@ -792,9 +948,45 @@ HRESULT ViniferaSaveVersionInfo::Load(IStorage *storage)
             return res;
         }
 
-        //return S_OK;
-    }
-    else {
+        /**
+         *  New DTA fields.
+         */
+        res = Load_String_Set(storageset, ID_MISSION_INTERNAL_NAME, buffer);
+        if (FAILED(res)) {
+            return res;
+        }
+
+        strcpy(MissionInternalName, buffer);
+
+        res = Load_Int_Set(storageset, ID_PLAYER_SIDE, &PlayerSide);
+        if (FAILED(res)) {
+            return res;
+        }
+
+        res = Load_Int_Set(storageset, ID_CLIENT_DIFFICULTY, &ClientDifficulty);
+        if (FAILED(res)) {
+            return res;
+        }
+
+        res = Load_Int_Array_Set(storageset, ID_SPAWNER_GLOBAL_FLAG_VALUES, SpawnerGlobalFlagValues, std::size(SpawnerGlobalFlagValues));
+        if (FAILED(res)) {
+            return res;
+        }
+
+        res = Load_Bool_Set(storageset, ID_IS_CHEAT_SESSION, &IsCheatSession);
+        if (FAILED(res)) {
+            return res;
+        }
+
+        res = Load_String_Set(storageset, ID_BONUS_NAME, buffer);
+        if (FAILED(res)) {
+            return res;
+        }
+
+        strcpy(BonusName, buffer);
+
+        // return S_OK;
+    } else {
         DEBUG_INFO("Failed to load the new way!\n");
     }
 
@@ -898,6 +1090,43 @@ HRESULT ViniferaSaveVersionInfo::Load(IStorage *storage)
         return res;
     }
 
+    /**
+     *  New DTA fields.
+     */
+    res = Load_String(storage, ID_MISSION_INTERNAL_NAME, buffer);
+    if (FAILED(res)) {
+        return res;
+    }
+
+    strcpy(MissionInternalName, buffer);
+
+    res = Load_Int(storage, ID_PLAYER_SIDE, &PlayerSide);
+    if (FAILED(res)) {
+        return res;
+    }
+
+    res = Load_Int(storage, ID_CLIENT_DIFFICULTY, &ClientDifficulty);
+    if (FAILED(res)) {
+        return res;
+    }
+
+    res = Load_Int_Array(storage, ID_SPAWNER_GLOBAL_FLAG_VALUES, SpawnerGlobalFlagValues, std::size(SpawnerGlobalFlagValues));
+    if (FAILED(res)) {
+        return res;
+    }
+
+    res = Load_Bool(storage, ID_IS_CHEAT_SESSION, &IsCheatSession);
+    if (FAILED(res)) {
+        return res;
+    }
+
+    res = Load_String(storage, ID_BONUS_NAME, BonusName);
+    if (FAILED(res)) {
+        return res;
+    }
+
+    strcpy(BonusName, buffer);
+
     return S_OK;
 }
 
@@ -907,7 +1136,7 @@ HRESULT ViniferaSaveVersionInfo::Load(IStorage *storage)
  *
  *  @author: tomsons26, ZivDero
  */
-HRESULT ViniferaSaveVersionInfo::Load_String(IStorage *storage, int id, char *string)
+HRESULT ViniferaSaveVersionInfo::Load_String(IStorage* storage, int id, char* string)
 {
     HRESULT res;
     IStreamPtr stm;
@@ -938,16 +1167,16 @@ HRESULT ViniferaSaveVersionInfo::Load_String(IStorage *storage, int id, char *st
 /**
  *  Loads a string from the storage set.
  *
- *  @author: tomsons26
+ *  @author: tomsons26, Rampastring
  */
-HRESULT ViniferaSaveVersionInfo::Load_String_Set(IPropertySetStorage *storageset, int id, char *string)
+HRESULT ViniferaSaveVersionInfo::Load_String_Set(IPropertySetStorage* storageset, int id, char* string)
 {
     HRESULT res;
     IPropertyStoragePtr storage;
 
     *string = '\x0';
 
-    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE|STGM_READWRITE, &storage);
+    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE | STGM_READWRITE, &storage);
     if (FAILED(res)) {
         return res;
     }
@@ -962,7 +1191,7 @@ HRESULT ViniferaSaveVersionInfo::Load_String_Set(IPropertySetStorage *storageset
         return res;
     }
 
-    if (propvar.vt == VT_LPWSTR) { 
+    if (propvar.vt == VT_LPWSTR) {
         WideCharToMultiByte(CP_ACP, 0, propvar.pwszVal, -1, string, 64, nullptr, nullptr);
     }
 
@@ -975,7 +1204,7 @@ HRESULT ViniferaSaveVersionInfo::Load_String_Set(IPropertySetStorage *storageset
  *
  *  @author: tomsons26
  */
-HRESULT ViniferaSaveVersionInfo::Load_Int(IStorage *storage, int id, int *integer)
+HRESULT ViniferaSaveVersionInfo::Load_Int(IStorage* storage, int id, int* integer)
 {
     HRESULT res;
     IStreamPtr stm;
@@ -999,16 +1228,16 @@ HRESULT ViniferaSaveVersionInfo::Load_Int(IStorage *storage, int id, int *intege
 /**
  *  Loads an integer from the storage set.
  *
- *  @author: tomsons26
+ *  @author: tomsons26, Rampastring
  */
-HRESULT ViniferaSaveVersionInfo::Load_Int_Set(IPropertySetStorage *storageset, int id, int *integer)
+HRESULT ViniferaSaveVersionInfo::Load_Int_Set(IPropertySetStorage* storageset, int id, int* integer)
 {
     HRESULT res;
     IPropertyStoragePtr storage;
 
     *integer = 0;
 
-    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE|STGM_READWRITE, &storage);
+    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE | STGM_READWRITE, &storage);
     if (FAILED(res)) {
         return res;
     }
@@ -1096,11 +1325,144 @@ HRESULT ViniferaSaveVersionInfo::Load_Bool_Set(IPropertySetStorage* storageset, 
 
 
 /**
+ *  Loads a vector of integers from the storage.
+ *
+ *  @author: Rampastring
+ */
+HRESULT ViniferaSaveVersionInfo::Load_Int_Vector(IStorage* storage, int id, std::vector<int>& values)
+{
+    IStreamPtr stm;
+
+    HRESULT res = storage->OpenStream(Vinifera_Stream_Name_From_ID(id), nullptr, STGM_SHARE_EXCLUSIVE, 0, &stm);
+
+    if (FAILED(res)) return res;
+
+    int count = 0;
+    ULONG read = 0;
+
+    res = stm->Read(&count, sizeof(count), &read);
+    if (FAILED(res) || read != sizeof(count)) return E_FAIL;
+
+    values.resize(count);
+
+    res = stm->Read(values.data(), sizeof(int) * count, &read);
+    if (FAILED(res)) return res;
+
+    return res;
+}
+
+
+/**
+ *  Loads a vector of integers from the storage set.
+ *
+ *  @author: Rampastring
+ */
+HRESULT ViniferaSaveVersionInfo::Load_Int_Vector_Set(IPropertySetStorage* storageset, int id, std::vector<int>& values)
+{
+    HRESULT res;
+    IPropertyStoragePtr storage;
+
+    values.clear();
+
+    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE | STGM_READWRITE, &storage);
+
+    if (FAILED(res)) {
+        return res;
+    }
+
+    PROPSPEC propsec;
+    propsec.ulKind = PRSPEC_PROPID;
+    propsec.propid = id;
+
+    PROPVARIANT propvar;
+    PropVariantInit(&propvar);
+
+    res = storage->ReadMultiple(1, &propsec, &propvar);
+    if (FAILED(res)) {
+        return res;
+    }
+
+    if (propvar.vt == VT_BLOB && propvar.blob.cbSize >= sizeof(int)) {
+        const uint8_t* data = propvar.blob.pBlobData;
+
+        int count = *reinterpret_cast<const int*>(data);
+        data += sizeof(int);
+
+        size_t expectedSize = sizeof(int) + count * sizeof(int);
+
+        if (propvar.blob.cbSize >= expectedSize) {
+            values.resize(count);
+
+            if (count > 0) {
+                memcpy(values.data(), data, count * sizeof(int));
+            }
+        }
+    }
+
+    PropVariantClear(&propvar);
+
+    return res;
+}
+
+
+/**
+ *  Loads an array of integers from the storage.
+ *
+ *  @author: Rampastring
+ */
+HRESULT ViniferaSaveVersionInfo::Load_Int_Array(IStorage* storage, int id, int* array, size_t size)
+{
+    std::vector<int> vec;
+
+    HRESULT res = Load_Int_Vector(storage, id, vec);
+    if (FAILED(res)) {
+        return res;
+    }
+
+    size_t count = std::min(size, vec.size());
+
+    std::copy_n(vec.data(), count, array);
+
+    if (count < size) {
+        std::fill(array + count, array + size, 0);
+    }
+
+    return res;
+}
+
+
+/**
+ *  Loads an array of integers from the storage set.
+ *
+ *  @author: Rampastring
+ */
+HRESULT ViniferaSaveVersionInfo::Load_Int_Array_Set(IPropertySetStorage* storageset, int id, int* array, size_t size)
+{
+    std::vector<int> vec;
+
+    HRESULT res = Load_Int_Vector_Set(storageset, id, vec);
+    if (FAILED(res)) {
+        return res;
+    }
+
+    size_t count = std::min(size, vec.size());
+
+    std::copy_n(vec.data(), count, array);
+
+    if (count < size) {
+        std::fill(array + count, array + size, 0);
+    }
+
+    return res;
+}
+
+
+/**
  *  Saves a string to the storage.
  *
  *  @author: tomsons26
  */
-HRESULT ViniferaSaveVersionInfo::Save_String(IStorage *storage, int id, char *string)
+HRESULT ViniferaSaveVersionInfo::Save_String(IStorage* storage, int id, char* string)
 {
     WCHAR buffer[128];
 
@@ -1108,7 +1470,7 @@ HRESULT ViniferaSaveVersionInfo::Save_String(IStorage *storage, int id, char *st
 
     IStreamPtr stm(nullptr);
 
-    HRESULT res = storage->CreateStream(Vinifera_Stream_Name_From_ID(id), STGM_SHARE_EXCLUSIVE|STGM_READWRITE, 0, 0, &stm);
+    HRESULT res = storage->CreateStream(Vinifera_Stream_Name_From_ID(id), STGM_SHARE_EXCLUSIVE | STGM_READWRITE, 0, 0, &stm);
     if (FAILED(res)) {
         return res;
     }
@@ -1129,9 +1491,9 @@ HRESULT ViniferaSaveVersionInfo::Save_String(IStorage *storage, int id, char *st
 /**
  *  Saves a string to the storage set.
  *
- *  @author: tomsons26
+ *  @author: tomsons26, Rampastring
  */
-HRESULT ViniferaSaveVersionInfo::Save_String_Set(IPropertySetStorage *storageset, int id, const char *string)
+HRESULT ViniferaSaveVersionInfo::Save_String_Set(IPropertySetStorage* storageset, int id, const char* string)
 {
     WCHAR buffer[128];
 
@@ -1140,9 +1502,9 @@ HRESULT ViniferaSaveVersionInfo::Save_String_Set(IPropertySetStorage *storageset
     HRESULT res;
     IPropertyStoragePtr storage;
 
-    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE|STGM_READWRITE, &storage);
+    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE | STGM_READWRITE, &storage);
     if (FAILED(res)) {
-        res = storageset->Create(FMTID_SummaryInformation, nullptr, PROPSETFLAG_DEFAULT, STGM_SHARE_EXCLUSIVE|STGM_READWRITE|STGM_CREATE, &storage);
+        res = storageset->Create(FMTID_SummaryInformation, nullptr, PROPSETFLAG_DEFAULT, STGM_SHARE_EXCLUSIVE | STGM_READWRITE | STGM_CREATE, &storage);
         if (FAILED(res)) {
             return res;
         }
@@ -1171,11 +1533,11 @@ HRESULT ViniferaSaveVersionInfo::Save_String_Set(IPropertySetStorage *storageset
  *
  *  @author: tomsons26
  */
-HRESULT ViniferaSaveVersionInfo::Save_Int(IStorage *storage, int id, int integer)
+HRESULT ViniferaSaveVersionInfo::Save_Int(IStorage* storage, int id, int integer)
 {
     IStreamPtr stm(nullptr);
 
-    HRESULT res = storage->CreateStream(Vinifera_Stream_Name_From_ID(id), STGM_SHARE_EXCLUSIVE|STGM_READWRITE, 0, 0, &stm);
+    HRESULT res = storage->CreateStream(Vinifera_Stream_Name_From_ID(id), STGM_SHARE_EXCLUSIVE | STGM_READWRITE, 0, 0, &stm);
     if (FAILED(res)) {
         return res;
     }
@@ -1196,16 +1558,16 @@ HRESULT ViniferaSaveVersionInfo::Save_Int(IStorage *storage, int id, int integer
 /**
  *  Saves an integer to the storage set.
  *
- *  @author: tomsons26
+ *  @author: tomsons26, Rampastring
  */
-HRESULT ViniferaSaveVersionInfo::Save_Int_Set(IPropertySetStorage *storageset, int id, int integer)
+HRESULT ViniferaSaveVersionInfo::Save_Int_Set(IPropertySetStorage* storageset, int id, int integer)
 {
     HRESULT res;
     IPropertyStoragePtr storage;
 
-    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE|STGM_READWRITE, &storage);
+    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE | STGM_READWRITE, &storage);
     if (FAILED(res)) {
-        res = storageset->Create(FMTID_SummaryInformation, nullptr, PROPSETFLAG_DEFAULT, STGM_SHARE_EXCLUSIVE|STGM_READWRITE|STGM_CREATE, &storage);
+        res = storageset->Create(FMTID_SummaryInformation, nullptr, PROPSETFLAG_DEFAULT, STGM_SHARE_EXCLUSIVE | STGM_READWRITE | STGM_CREATE, &storage);
         if (FAILED(res)) {
             return res;
         }
@@ -1297,11 +1659,121 @@ HRESULT ViniferaSaveVersionInfo::Save_Bool_Set(IPropertySetStorage* storageset, 
 
 
 /**
+ *  Saves a vector of integers to the storage.
+ *
+ *  @author: Rampastring
+ */
+HRESULT ViniferaSaveVersionInfo::Save_Int_Vector(IStorage* storage, int id, const std::vector<int>& values)
+{
+    IStreamPtr stm;
+
+    HRESULT res = storage->CreateStream(Vinifera_Stream_Name_From_ID(id), STGM_SHARE_EXCLUSIVE | STGM_READWRITE, 0, 0, &stm);
+
+    if (FAILED(res)) {
+        return res;
+    }
+
+    ULONG written = 0;
+
+    int count = static_cast<int>(values.size());
+
+    res = stm->Write(&count, sizeof(count), &written);
+    if (FAILED(res)) return res;
+
+    res = stm->Write(values.data(), sizeof(int) * count, &written);
+    if (FAILED(res)) return res;
+
+    return stm->Commit(STGC_DEFAULT);
+}
+
+
+/**
+ *  Saves a vector of integers to the storage set.
+ *
+ *  @author: Rampastring
+ */
+HRESULT ViniferaSaveVersionInfo::Save_Int_Vector_Set(IPropertySetStorage* storageset, int id, const std::vector<int>& values)
+{
+    HRESULT res;
+    IPropertyStoragePtr storage;
+
+    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE | STGM_READWRITE, &storage);
+
+    if (FAILED(res)) {
+        res = storageset->Create(FMTID_SummaryInformation, nullptr, PROPSETFLAG_DEFAULT, STGM_SHARE_EXCLUSIVE | STGM_READWRITE | STGM_CREATE, &storage);
+
+        if (FAILED(res)) {
+            return res;
+        }
+    }
+
+    PROPSPEC propsec;
+    propsec.ulKind = PRSPEC_PROPID;
+    propsec.propid = id;
+
+    // Build blob = [count][data...]
+    struct BlobData {
+        int count;
+        int data[1]; // flexible tail pattern
+    };
+
+    size_t blobSize = sizeof(int) + values.size() * sizeof(int);
+
+    std::vector<uint8_t> buffer(blobSize);
+
+    BlobData* blob = reinterpret_cast<BlobData*>(buffer.data());
+    blob->count = static_cast<int>(values.size());
+
+    if (!values.empty()) {
+        memcpy(blob->data, values.data(), values.size() * sizeof(int));
+    }
+
+    PROPVARIANT propvar;
+    PropVariantInit(&propvar);
+
+    propvar.vt = VT_BLOB;
+    propvar.blob.cbSize = static_cast<ULONG>(blobSize);
+    propvar.blob.pBlobData = buffer.data();
+
+    res = storage->WriteMultiple(1, &propsec, &propvar, 2);
+
+    // no heap ownership in VT_BLOB, but still good hygiene
+    PropVariantClear(&propvar);
+
+    return res;
+}
+
+
+/**
+ *  Saves an array of integers to the storage.
+ *
+ *  @author: Rampastring
+ */
+HRESULT ViniferaSaveVersionInfo::Save_Int_Array(IStorage* storage, int id, const int* array, size_t size)
+{
+    std::vector<int> vec(array, array + size);
+    return Save_Int_Vector(storage, id, vec);
+}
+
+
+/**
+ *  Saves an array of integers to the storage set.
+ *
+ *  @author: Rampastring
+ */
+HRESULT ViniferaSaveVersionInfo::Save_Int_Array_Set(IPropertySetStorage* storageset, int id, const int* array, size_t size)
+{
+    std::vector<int> vec(array, array + size);
+    return Save_Int_Vector_Set(storageset, id, vec);
+}
+
+
+/**
  *  Load a FILETIME from the storage.
  *
  *  @author: tomsons26
  */
-HRESULT ViniferaSaveVersionInfo::Load_Time(IStorage *storage, int id, FILETIME *time)
+HRESULT ViniferaSaveVersionInfo::Load_Time(IStorage* storage, int id, FILETIME* time)
 {
     HRESULT res;
     IStreamPtr stm;
@@ -1328,7 +1800,7 @@ HRESULT ViniferaSaveVersionInfo::Load_Time(IStorage *storage, int id, FILETIME *
  *
  *  @author: tomsons26
  */
-HRESULT ViniferaSaveVersionInfo::Load_Time_Set(IPropertySetStorage *storageset, int id, FILETIME *time)
+HRESULT ViniferaSaveVersionInfo::Load_Time_Set(IPropertySetStorage* storageset, int id, FILETIME* time)
 {
     HRESULT res;
     IPropertyStoragePtr storage;
@@ -1337,7 +1809,7 @@ HRESULT ViniferaSaveVersionInfo::Load_Time_Set(IPropertySetStorage *storageset, 
     time->dwHighDateTime = 0;
 
 
-    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE|STGM_READWRITE, &storage);
+    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE | STGM_READWRITE, &storage);
     if (FAILED(res)) {
         return res;
     }
@@ -1365,11 +1837,11 @@ HRESULT ViniferaSaveVersionInfo::Load_Time_Set(IPropertySetStorage *storageset, 
  *
  *  @author: tomsons26
  */
-HRESULT ViniferaSaveVersionInfo::Save_Time(IStorage *storage, int id, FILETIME *time)
+HRESULT ViniferaSaveVersionInfo::Save_Time(IStorage* storage, int id, FILETIME* time)
 {
     IStreamPtr stm(nullptr);
 
-    HRESULT res = storage->CreateStream(Vinifera_Stream_Name_From_ID(id), STGM_SHARE_EXCLUSIVE|STGM_READWRITE, 0, 0, &stm);
+    HRESULT res = storage->CreateStream(Vinifera_Stream_Name_From_ID(id), STGM_SHARE_EXCLUSIVE | STGM_READWRITE, 0, 0, &stm);
     if (FAILED(res)) {
         return res;
     }
@@ -1392,14 +1864,14 @@ HRESULT ViniferaSaveVersionInfo::Save_Time(IStorage *storage, int id, FILETIME *
  *
  *  @author: tomsons26
  */
-HRESULT ViniferaSaveVersionInfo::Save_Time_Set(IPropertySetStorage *storageset, int id, FILETIME *time)
+HRESULT ViniferaSaveVersionInfo::Save_Time_Set(IPropertySetStorage* storageset, int id, FILETIME* time)
 {
     HRESULT res;
     IPropertyStoragePtr storage;
 
-    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE|STGM_READWRITE, &storage);
+    res = storageset->Open(FMTID_SummaryInformation, STGM_SHARE_EXCLUSIVE | STGM_READWRITE, &storage);
     if (FAILED(res)) {
-        res = storageset->Create(FMTID_SummaryInformation, nullptr, PROPSETFLAG_DEFAULT, STGM_SHARE_EXCLUSIVE|STGM_READWRITE|STGM_CREATE, &storage);
+        res = storageset->Create(FMTID_SummaryInformation, nullptr, PROPSETFLAG_DEFAULT, STGM_SHARE_EXCLUSIVE | STGM_READWRITE | STGM_CREATE, &storage);
         if (FAILED(res)) {
             return res;
         }
@@ -1427,33 +1899,40 @@ HRESULT ViniferaSaveVersionInfo::Save_Time_Set(IPropertySetStorage *storageset, 
  *
  *  @author: tomsons26, ZivDero
  */
-const WCHAR *Vinifera_Stream_Name_From_ID(int id)
+const WCHAR* Vinifera_Stream_Name_From_ID(int id)
 {
     struct StreamID {
         int ID;
-        WCHAR const *Name;
+        WCHAR const* Name;
     };
 
     static StreamID _ids[] = {
-        { ViniferaSaveVersionInfo::ID_SCENARIO_DESCRIPTION,  L"Scenario Description" },
-        { ViniferaSaveVersionInfo::ID_PLAYER_HOUSE,          L"Player House" },
-        { ViniferaSaveVersionInfo::ID_VERSION,               L"Version" },
-        { ViniferaSaveVersionInfo::ID_INTERNAL_VERSION,      L"Internal Version" },
-        { ViniferaSaveVersionInfo::ID_START_TIME,            L"Start Time" },
-        { ViniferaSaveVersionInfo::ID_LAST_SAVE_TIME,        L"Last Save Time" },
-        { ViniferaSaveVersionInfo::ID_PLAY_TIME,             L"Play Time" },
-        { ViniferaSaveVersionInfo::ID_EXECUTABLE_NAME,       L"Executable Name" },
-        { ViniferaSaveVersionInfo::ID_PLAYER_NAME,           L"Player Name" },
-        { ViniferaSaveVersionInfo::ID_PLAYER_NAME2,          L"Player Name2" },
-        { ViniferaSaveVersionInfo::ID_SCENARIO_NUMBER,       L"Scenario Number" },
-        { ViniferaSaveVersionInfo::ID_CAMPAIGN,              L"Campaign" },
-        { ViniferaSaveVersionInfo::ID_GAMETYPE,              L"GameType" },
+        {ViniferaSaveVersionInfo::ID_SCENARIO_DESCRIPTION, L"Scenario Description"},
+        {ViniferaSaveVersionInfo::ID_PLAYER_HOUSE, L"Player House"},
+        {ViniferaSaveVersionInfo::ID_VERSION, L"Version"},
+        {ViniferaSaveVersionInfo::ID_INTERNAL_VERSION, L"Internal Version"},
+        {ViniferaSaveVersionInfo::ID_START_TIME, L"Start Time"},
+        {ViniferaSaveVersionInfo::ID_LAST_SAVE_TIME, L"Last Save Time"},
+        {ViniferaSaveVersionInfo::ID_PLAY_TIME, L"Play Time"},
+        {ViniferaSaveVersionInfo::ID_EXECUTABLE_NAME, L"Executable Name"},
+        {ViniferaSaveVersionInfo::ID_PLAYER_NAME, L"Player Name"},
+        {ViniferaSaveVersionInfo::ID_PLAYER_NAME2, L"Player Name2"},
+        {ViniferaSaveVersionInfo::ID_SCENARIO_NUMBER, L"Scenario Number"},
+        {ViniferaSaveVersionInfo::ID_CAMPAIGN, L"Campaign"},
+        {ViniferaSaveVersionInfo::ID_GAMETYPE, L"GameType"},
 
-        { ViniferaSaveVersionInfo::ID_VINIFERA_VERSION,      L"Vinifera Version" },
-        { ViniferaSaveVersionInfo::ID_VINIFERA_COMMIT_HASH,  L"Vinifera Commit Hash" },
-        { ViniferaSaveVersionInfo::ID_PLAYTHROUGH_ID,        L"Playthrough ID" },
-        { ViniferaSaveVersionInfo::ID_DIFFICULTY,            L"Difficulty" },
-        { ViniferaSaveVersionInfo::ID_TOTAL_PLAY_TIME,       L"Total Play Time" },
+        {ViniferaSaveVersionInfo::ID_VINIFERA_VERSION, L"Vinifera Version"},
+        {ViniferaSaveVersionInfo::ID_VINIFERA_COMMIT_HASH, L"Vinifera Commit Hash"},
+        {ViniferaSaveVersionInfo::ID_PLAYTHROUGH_ID, L"Playthrough ID"},
+        {ViniferaSaveVersionInfo::ID_DIFFICULTY, L"Difficulty"},
+        {ViniferaSaveVersionInfo::ID_TOTAL_PLAY_TIME, L"Total Play Time"},
+
+        {ViniferaSaveVersionInfo::ID_MISSION_INTERNAL_NAME, L"Mission Internal Name"},
+        {ViniferaSaveVersionInfo::ID_PLAYER_SIDE, L"Player Side"},
+        {ViniferaSaveVersionInfo::ID_CLIENT_DIFFICULTY, L"Client Difficulty"},
+        {ViniferaSaveVersionInfo::ID_SPAWNER_GLOBAL_FLAG_VALUES, L"Global Flags"},
+        {ViniferaSaveVersionInfo::ID_IS_CHEAT_SESSION, L"Cheat Session"},
+        {ViniferaSaveVersionInfo::ID_BONUS_NAME, L"Bonus Name"},
     };
 
     for (int i = 0; i < std::size(_ids); i++) {

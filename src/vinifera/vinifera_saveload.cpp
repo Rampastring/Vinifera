@@ -803,6 +803,9 @@ bool Vinifera_Save_Game(const char* file_name, const char* descr, bool)
     versioninfo.Set_Difficulty(Scen->CDifficulty);
     versioninfo.Set_Total_Play_Time(Vinifera_TotalPlayTime + Scen->ElapsedTimer.Value());
 
+    versioninfo.Set_Player_Side(PlayerPtr->ActLike);
+    Spawner::Write_Data_To_Save_Version_Info(versioninfo);
+
     DEBUG_INFO("Saving version information\n");
     if (FAILED(versioninfo.Save(storage))) {
         DEBUG_FATAL("Failed to write version information.\n");

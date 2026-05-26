@@ -152,5 +152,13 @@ public:
 
     int GlobalFlags[MAX_ENVIRONMENT_GLOBALS];
 
+    /**
+     *  Saved Game Metadata for client
+     */
+    FixedString<40> MissionInternalName {""};
+    int ClientDifficulty = -1;
+    bool IsCheatSession = false;
+    FixedString<40> BonusName {""};
+
     void Read_INI(CCINIClass& spawn_ini);
 };

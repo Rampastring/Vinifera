@@ -9,8 +9,11 @@
 
 #pragma once
 
+#include "vinifera_globals.h"
+
 #include <minwindef.h>
 #include <objidl.h>
+#include <vector>
 
 
 class ViniferaSaveVersionInfo
@@ -36,6 +39,13 @@ public:
         ID_PLAYTHROUGH_ID = 107,
         ID_DIFFICULTY = 108,
         ID_TOTAL_PLAY_TIME = 109,
+
+        ID_MISSION_INTERNAL_NAME = 120,
+        ID_PLAYER_SIDE = 121,
+        ID_CLIENT_DIFFICULTY = 122,
+        ID_SPAWNER_GLOBAL_FLAG_VALUES = 123,
+        ID_IS_CHEAT_SESSION = 124,
+        ID_BONUS_NAME = 125
     };
 
 public:
@@ -47,11 +57,11 @@ public:
     void Set_Internal_Version(int num);
     int Get_Internal_Version() const;
 
-    void Set_Scenario_Description(const char * desc);
-    const char * Get_Scenario_Description() const;
+    void Set_Scenario_Description(const char* desc);
+    const char* Get_Scenario_Description() const;
 
-    void Set_Player_House(const char * name);
-    const char * Get_Player_House() const;
+    void Set_Player_House(const char* name);
+    const char* Get_Player_House() const;
 
     void Set_Campaign_Number(int num);
     int Get_Campaign_Number() const;
@@ -59,22 +69,22 @@ public:
     void Set_Scenario_Number(int num);
     int Get_Scenario_Number() const;
 
-    void Set_Unknown_String(const char * name);
-    const char * Get_Unknown_String() const;
+    void Set_Unknown_String(const char* name);
+    const char* Get_Unknown_String() const;
 
-    void Set_Player_Name(const char * name);
-    const char * Get_Player_Name() const;
+    void Set_Player_Name(const char* name);
+    const char* Get_Player_Name() const;
 
-    void Set_Executable_Name(const char * name);
-    const char * Get_Executable_Name() const;
+    void Set_Executable_Name(const char* name);
+    const char* Get_Executable_Name() const;
 
-    void Set_Start_Time(FILETIME &time);
+    void Set_Start_Time(FILETIME& time);
     FILETIME Get_Start_Time() const;
 
-    void Set_Play_Time(FILETIME &time);
+    void Set_Play_Time(FILETIME& time);
     FILETIME Get_Play_Time() const;
 
-    void Set_Last_Time(FILETIME &time);
+    void Set_Last_Time(FILETIME& time);
     FILETIME Get_Last_Time() const;
 
     void Set_Game_Type(int id);
@@ -95,33 +105,63 @@ public:
     void Set_Total_Play_Time(int num);
     int Get_Total_Play_Time() const;
 
-    HRESULT Save(IStorage *storage);
-    HRESULT Load(IStorage *storage);
+    void Set_Mission_Internal_Name(const char* name);
+    const char* Get_Mission_Internal_Name() const;
+
+    void Set_Player_Side(int side);
+    int Get_Player_Side() const;
+
+    void Set_Client_Difficulty(int clientdifficulty);
+    int Get_Client_Difficulty() const;
+
+    void Set_Spawner_Global_Flag_Values(std::vector<int>& values);
+    void Get_Spawner_Global_Flag_Values(std::vector<int>& values) const;
+
+    void Set_Is_Cheat_Session(bool value);
+    bool Get_Is_Cheat_Session() const;
+
+    void Set_Bonus_Name(const char* name);
+    const char* Get_Bonus_Name() const;
+
+    HRESULT Save(IStorage* storage);
+    HRESULT Load(IStorage* storage);
 
 private:
-    HRESULT Load_String(IStorage *storage, int id, char *string);
-    HRESULT Load_String_Set(IPropertySetStorage *storageset, int id, char *string);
+    HRESULT Load_String(IStorage* storage, int id, char* string);
+    HRESULT Load_String_Set(IPropertySetStorage* storageset, int id, char* string);
 
-    HRESULT Load_Int(IStorage *storage, int id, int *integer);
-    HRESULT Load_Int_Set(IPropertySetStorage *storageset, int id, int *integer);
+    HRESULT Load_Int(IStorage* storage, int id, int* integer);
+    HRESULT Load_Int_Set(IPropertySetStorage* storageset, int id, int* integer);
 
     HRESULT Load_Bool(IStorage* storage, int id, bool* boolean);
     HRESULT Load_Bool_Set(IPropertySetStorage* storageset, int id, bool* boolean);
 
-    HRESULT Save_String(IStorage *storage, int id, char *string);
-    HRESULT Save_String_Set(IPropertySetStorage *storageset, int id, const char *string);
+    HRESULT Load_Int_Vector(IStorage* storage, int id, std::vector<int>& values);
+    HRESULT Load_Int_Vector_Set(IPropertySetStorage* storageset, int id, std::vector<int>& values);
 
-    HRESULT Save_Int(IStorage *storage, int id, int integer);
-    HRESULT Save_Int_Set(IPropertySetStorage *storageset, int id, int integer);
+    HRESULT Load_Int_Array(IStorage* storage, int id, int* array, size_t size);
+    HRESULT Load_Int_Array_Set(IPropertySetStorage* storageset, int id, int* array, size_t size);
+
+    HRESULT Save_String(IStorage* storage, int id, char* string);
+    HRESULT Save_String_Set(IPropertySetStorage* storageset, int id, const char* string);
+
+    HRESULT Save_Int(IStorage* storage, int id, int integer);
+    HRESULT Save_Int_Set(IPropertySetStorage* storageset, int id, int integer);
 
     HRESULT Save_Bool(IStorage* storage, int id, bool boolean);
     HRESULT Save_Bool_Set(IPropertySetStorage* storageset, int id, bool boolean);
 
-    HRESULT Load_Time(IStorage *storage, int id, FILETIME *time);
-    HRESULT Load_Time_Set(IPropertySetStorage *storageset, int id, FILETIME *time);
+    HRESULT Save_Int_Vector(IStorage* storage, int id, const std::vector<int>& values);
+    HRESULT Save_Int_Vector_Set(IPropertySetStorage* storageset, int id, const std::vector<int>& values);
 
-    HRESULT Save_Time(IStorage *storage, int id, FILETIME *time);
-    HRESULT Save_Time_Set(IPropertySetStorage *storageset, int id, FILETIME *time);
+    HRESULT Save_Int_Array(IStorage* storage, int id, const int* array, size_t size);
+    HRESULT Save_Int_Array_Set(IPropertySetStorage* storageset, int id, const int* array, size_t size);
+
+    HRESULT Load_Time(IStorage* storage, int id, FILETIME* time);
+    HRESULT Load_Time_Set(IPropertySetStorage* storageset, int id, FILETIME* time);
+
+    HRESULT Save_Time(IStorage* storage, int id, FILETIME* time);
+    HRESULT Save_Time_Set(IPropertySetStorage* storageset, int id, FILETIME* time);
 
 private:
     int InternalVersion;
@@ -146,6 +186,16 @@ private:
     int PlaythroughID;
     int Difficulty;
     int TotalPlayTime;
+
+    /**
+     *  DTA-specific fields for client mission progression and other features.
+     */
+    char MissionInternalName[40];
+    int PlayerSide;
+    int ClientDifficulty;
+    int SpawnerGlobalFlagValues[MAX_ENVIRONMENT_GLOBALS];
+    bool IsCheatSession;
+    char BonusName[40];
 };
 
 const WCHAR* Vinifera_Stream_Name_From_ID(int id);

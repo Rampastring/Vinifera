@@ -173,6 +173,14 @@ void SpawnerConfig::Read_INI(CCINIClass& spawn_ini)
             DEBUG_INFO("[Spawner] Read global %d as %d from %s\n", i, GlobalFlags[i], buffer);
         }
     }
+
+    /**
+     *  Saved Game Metadata
+     */
+    MissionInternalName = spawn_ini.Get_String(SETTINGS, "MissionInternalName", std::string(MissionInternalName));
+    ClientDifficulty = spawn_ini.Get_Int(SETTINGS, "ClientDifficulty", ClientDifficulty);
+    IsCheatSession = spawn_ini.Get_Bool(SETTINGS, "CheatSession", IsCheatSession);
+    BonusName = spawn_ini.Get_String(SETTINGS, "BonusName", std::string(BonusName));
 }
 
 

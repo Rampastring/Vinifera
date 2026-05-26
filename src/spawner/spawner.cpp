@@ -73,6 +73,7 @@ namespace
     };
 }
 
+bool Spawner::Enabled = false;
 bool Spawner::HasSpawned = false;
 std::unique_ptr<SpawnerConfig> Spawner::Config;
 
@@ -413,6 +414,29 @@ void Spawner::Apply_Scenario_Values()
         ScenExtension->HasCustomLoadScreenPos = true;
         ScenExtension->CustomLoadScreenPos = Config->CustomLoadScreenPos;
     }
+}
+
+
+/**
+ *  Writes spawner-related metadata to a saved game.
+ *
+ *  @author: Rampastring
+ */
+void Spawner::Write_Data_To_Save_Version_Info(ViniferaSaveVersionInfo& saveversioninfo)
+{
+    saveversioninfo.Set_Mission_Internal_Name(Config->MissionInternalName.c_str());
+    saveversioninfo.Set_Client_Difficulty(Config->ClientDifficulty);
+    saveversioninfo.Set_Is_Cheat_Session(Config->IsCheatSession);
+    saveversioninfo.Set_Bonus_Name(Config->BonusName.c_str());
+
+    std::vector<int> gflags_vector;
+
+    for (int i = 0; i < std::size(Config->GlobalFlags); i++)
+    {
+        gflags_vector.push_back(Config->GlobalFlags[i]);
+    }
+
+    saveversioninfo.Set_Spawner_Global_Flag_Values(gflags_vector);
 }
 
 

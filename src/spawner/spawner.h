@@ -30,6 +30,7 @@
 
 #include "spawnerconfig.h"
 #include "vinifera_globals.h"
+#include "vinifera_savever.h"
 
 
 /**
@@ -41,9 +42,11 @@ public:
     Spawner() = delete;
 
     static bool Enabled;
+
     static bool Init();
     static bool Start_Game();
     static void Apply_Scenario_Values();
+    static void Write_Data_To_Save_Version_Info(ViniferaSaveVersionInfo& saveversioninfo);
 
 private:
     static bool Start_Scenario(char* scenario_name);
