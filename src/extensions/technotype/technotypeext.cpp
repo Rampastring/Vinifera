@@ -113,6 +113,8 @@ TechnoTypeClassExtension::TechnoTypeClassExtension(const TechnoTypeClass *this_p
     SelfHealingRate(-1),
     IsDetectDisguise(false),
     IronCurtainPriorityTarget(false),
+    EscortRange(-1),
+    AbandonTargetEscortRange(-1),
     ScrapExplosion(),
     Buildability(TechnoTypeBuildability::BUILDABILITY_NORMAL)
 {
@@ -306,6 +308,8 @@ void TechnoTypeClassExtension::Object_CRC(CRCEngine &crc) const
     crc(SelfHealingRate);
     crc(IsDetectDisguise);
     crc(IronCurtainPriorityTarget);
+    crc(EscortRange);
+    crc(AbandonTargetEscortRange);
 }
 
 
@@ -456,6 +460,9 @@ bool TechnoTypeClassExtension::Read_INI(CCINIClass &ini)
     IsDetectDisguise = ini.Get_Bool(ini_name, "DetectDisguise", IsDetectDisguise);
 
     IronCurtainPriorityTarget = ini.Get_Bool(ini_name, "IronCurtainPriorityTarget", IronCurtainPriorityTarget);
+
+    EscortRange = ini.Get_Lepton(ini_name, "EscortRange", EscortRange);
+    AbandonTargetEscortRange = ini.Get_Lepton(ini_name, "AbandonTargetEscortRange", AbandonTargetEscortRange);
 
     ScrapExplosion = TGet_TypeList(ini, ini_name, "ScrapExplosion", ScrapExplosion);
 

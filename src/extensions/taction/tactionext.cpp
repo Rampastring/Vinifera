@@ -21,6 +21,7 @@
 #include "housetype.h"
 #include "mouse.h"
 #include "object.h"
+#include "reinf.h"
 #include "rules.h"
 #include "scenario.h"
 #include "scenarioext.h"
@@ -30,6 +31,7 @@
 #include "taction.h"
 #include "tag.h"
 #include "tagtype.h"
+#include "teamtype.h"
 #include "techno.h"
 #include "technoext.h"
 #include "terrain.h"
@@ -279,6 +281,7 @@ bool TActionClassExtension::Execute(HouseClass* house, ObjectClass* object, Trig
         DISPATCH(LOSE);
         DISPATCH(BEGIN_PRODUCTION);
         DISPATCH(ALL_HUNT);
+        DISPATCH(REINFORCEMENTS);
         DISPATCH(FIRE_SALE);
         DISPATCH(TEXT_TRIGGER);
         DISPATCH(DESTROY_TRIGGER);
@@ -295,6 +298,7 @@ bool TActionClassExtension::Execute(HouseClass* house, ObjectClass* object, Trig
         DISPATCH(CENTER_VIEWPOINT);
         DISPATCH(REVEAL_SOME);
         DISPATCH(PLAY_SOUND_AT);
+        DISPATCH(REINFORCEMENTS_SPECIAL);
 
         /**
          *  New Vinifera TActions.
@@ -370,6 +374,7 @@ bool TActionClassExtension::Is_Vinifera_TAction(TActionType type)
     case TACTION_LOSE:
     case TACTION_BEGIN_PRODUCTION:
     case TACTION_ALL_HUNT:
+    case TACTION_REINFORCEMENTS:
     case TACTION_FIRE_SALE:
     case TACTION_TEXT_TRIGGER:
     case TACTION_DESTROY_TRIGGER:
@@ -385,6 +390,7 @@ bool TActionClassExtension::Is_Vinifera_TAction(TActionType type)
     case TACTION_PLAY_SOUND_RANDOM:
     case TACTION_CENTER_VIEWPOINT:
     case TACTION_REVEAL_SOME:
+    case TACTION_REINFORCEMENTS_SPECIAL:
         return true;
 
     default:
@@ -547,6 +553,34 @@ bool TActionClassExtension::Do_ALL_HUNT(HouseClass* house, ObjectClass* object, 
         }
     }
     return true;
+}
+
+
+/**
+ *  Replacement of Do_REINFORCEMENTS to handle the case when the team has no owner.
+ *
+ *  @author: Rampastring
+ */
+bool TActionClassExtension::Do_REINFORCEMENTS(HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
+{
+    if (This()->Team != nullptr && This()->Team->House != nullptr) {
+        return Do_Reinforcements(This()->Team);
+    }
+    return false;
+}
+
+
+/**
+ *  Replacement of Do_REINFORCEMENTS_SPECIAL to handle the case when the team has no owner.
+ *
+ *  @author: Rampastring
+ */
+bool TActionClassExtension::Do_REINFORCEMENTS_SPECIAL(HouseClass* house, ObjectClass* object, TriggerClass* trig, const Cell& cell)
+{
+    if (This()->Team != nullptr && This()->Team->House != nullptr && This()->EffectLocation != WAYPOINT_NONE) {
+        return Do_Reinforcements(This()->Team, This()->EffectLocation);
+    }
+    return false;
 }
 
 
