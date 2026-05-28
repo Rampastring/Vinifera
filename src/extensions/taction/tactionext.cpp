@@ -89,8 +89,6 @@ TActionClass::ActionDescriptionStruct TActionClassExtension::ExtActionDescriptio
  */
 TActionClassExtension::TActionClassExtension(const TActionClass* this_ptr) : AbstractClassExtension(this_ptr), Text {""}
 {
-    // if (this_ptr) EXT_DEBUG_TRACE("TActionClassExtension::TActionClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     TActionExtensions.Add(this);
 }
 
@@ -102,7 +100,6 @@ TActionClassExtension::TActionClassExtension(const TActionClass* this_ptr) : Abs
  */
 TActionClassExtension::TActionClassExtension(const NoInitClass& noinit) : AbstractClassExtension(noinit), Text(noinit)
 {
-    // EXT_DEBUG_TRACE("TActionClassExtension::TActionClassExtension(NoInitClass) - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
 
 
@@ -113,8 +110,6 @@ TActionClassExtension::TActionClassExtension(const NoInitClass& noinit) : Abstra
  */
 TActionClassExtension::~TActionClassExtension()
 {
-    // EXT_DEBUG_TRACE("TActionClassExtension::~TActionClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     TActionExtensions.Delete(this);
 }
 
@@ -126,8 +121,6 @@ TActionClassExtension::~TActionClassExtension()
  */
 HRESULT TActionClassExtension::GetClassID(CLSID* lpClassID)
 {
-    // EXT_DEBUG_TRACE("TActionClassExtension::GetClassID - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     if (lpClassID == nullptr) {
         return E_POINTER;
     }
@@ -145,8 +138,6 @@ HRESULT TActionClassExtension::GetClassID(CLSID* lpClassID)
  */
 HRESULT TActionClassExtension::Load(IStream* pStm)
 {
-    // EXT_DEBUG_TRACE("TActionClassExtension::Load - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = AbstractClassExtension::Internal_Load(pStm);
     if (FAILED(hr)) {
         return E_FAIL;
@@ -165,8 +156,6 @@ HRESULT TActionClassExtension::Load(IStream* pStm)
  */
 HRESULT TActionClassExtension::Save(IStream* pStm, BOOL fClearDirty)
 {
-    // EXT_DEBUG_TRACE("TActionClassExtension::Save - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = AbstractClassExtension::Internal_Save(pStm, fClearDirty);
     if (FAILED(hr)) {
         return hr;
@@ -183,8 +172,6 @@ HRESULT TActionClassExtension::Save(IStream* pStm, BOOL fClearDirty)
  */
 int TActionClassExtension::Get_Object_Size() const
 {
-    // EXT_DEBUG_TRACE("TActionClassExtension::Get_Object_Size - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     return sizeof(*this);
 }
 
@@ -198,7 +185,6 @@ int TActionClassExtension::Get_Object_Size() const
  */
 void TActionClassExtension::Object_CRC(CRCEngine& crc) const
 {
-    // EXT_DEBUG_TRACE("TActionClassExtension::Object_CRC - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
 
 
@@ -342,7 +328,7 @@ bool TActionClassExtension::Execute(HouseClass* house, ObjectClass* object, Trig
          *  Unexpected TActionType.
          */
     default:
-        DEV_DEBUG_WARNING("Invalid action type (%d)!\n", This()->Action);
+        DEV_DEBUG_WARNING("Invalid action type ({})!\n", (int)This()->Action);
         break;
     }
 
@@ -505,7 +491,6 @@ bool TActionClassExtension::Do_LOSE(HouseClass* house, ObjectClass* object, Trig
     }
 
     if (Session.Type != GAME_NORMAL) {
-
         /**
          *  Mark all losers as defeated.
          */

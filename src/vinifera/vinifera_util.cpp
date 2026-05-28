@@ -58,15 +58,9 @@ const char *Vinifera_Name_String()
 
         if (!dev_mode) {
             std::snprintf(_buffer, sizeof(_buffer), "Vinifera");
-
         } else {
             std::snprintf(_buffer, sizeof(_buffer), "Vinifera:%s", dev_mode != nullptr ? dev_mode : "");
         }
-
-#if defined(TS_CLIENT)
-        std::strcat(_buffer, " (TS-Client)");
-#endif
-        
     }
 
     return _buffer;
@@ -96,10 +90,6 @@ const char * Vinifera_Build_Type_String()
         const char *build_type = Vinifera_DeveloperMode ? "RELEASE (Dev mode enabled)" : "RELEASE";
     #endif
     #endif
-    #if defined(TS_CLIENT)
-        std::snprintf(_buffer, sizeof(_buffer), "%s [TS-Client]", build_type);
-    #endif
-
     }
 
     return _buffer;
@@ -394,8 +384,9 @@ void Vinifera_Log_And_Show_WWMessageBox(const char* msg, ...)
     int message_length = strlen(buffer);
     memcpy(log_buffer, buffer, message_length);
     log_buffer[message_length] = '\n';
+    log_buffer[message_length + 1] = '\0';
 
-    DEBUG_WARNING(log_buffer);
+    DEBUG_WARNING("{}", log_buffer);
     WWMessageBox().Process(buffer, 0, "OK");
 }
 
@@ -441,7 +432,7 @@ const char *Vinifera_Get_Window_Title(DWORD dwPid)
 
     char title_buff[32];
     if (Vinifera_ProjectName[0] != '\0') {
-        std::strncpy(title_buff, Vinifera_ProjectName, sizeof(title_buff));
+        std::strncpy(title_buff, Vinifera_ProjectName.c_str(), sizeof(title_buff));
     } else {
         std::strncpy(title_buff, Text_String(TXT_SHORT_TITLE), sizeof(title_buff));
     }
@@ -460,11 +451,6 @@ const char *Vinifera_Get_Window_Title(DWORD dwPid)
     if (Vinifera_DeveloperMode) {
         std::snprintf(_window_name, sizeof(_window_name),
             "%s (PID:%d) (Developer Mode)", title_buff, dwPid);
-
-#if defined(TS_CLIENT)
-        std::strcat(_window_name, " (TS-Client)");
-#endif
-
     } else {
         std::snprintf(_window_name, sizeof(_window_name),
             "%s", title_buff);
@@ -494,7 +480,7 @@ bool Vinifera_Create_Zip(const char *filename, DynamicVectorClass<const char *> 
 
     HZIP hZip = CreateZip((void *)buffer, 0, ZIP_FILENAME);
     if (!hZip) {
-        DEBUG_ERROR("Failed to create zip archive \"%s\"!\n", filename);
+        DEBUG_ERROR("Failed to create zip archive \"{}\"!\n", filename);
         return false;
     }
 
@@ -509,12 +495,12 @@ bool Vinifera_Create_Zip(const char *filename, DynamicVectorClass<const char *> 
         }
         ZRESULT zresult = ZipAdd(hZip, filelist[i], buffer, 0, ZIP_FILENAME);
         if (zresult != ZR_OK) {
-            DEBUG_ERROR("Failed to add file \"%s\" to zip archive \"%s\"!\n", buffer, filename);
+            DEBUG_ERROR("Failed to add file \"{}\" to zip archive \"{}\"!\n", buffer, filename);
             return false;
         }
     }
     
-    DEBUG_INFO("Zip archive \"%s\" created sucessfully.\n", filename);
+    DEBUG_INFO("Zip archive \"{}\" created sucessfully.\n", filename);
 
     return CloseZip(hZip) == ZR_OK;
 }
@@ -662,7 +648,7 @@ const char *Vinifera_Fetch_String(HMODULE handle, ULONG id)
     DWORD rc = LoadString(handle, id, free_entry.Buffer, sizeof(free_entry.Buffer));
     //DWORD rc = Load_String_Ex(handle, id, free_entry.Buffer, sizeof(free_entry.Buffer), ResourceLang);
     if (!rc) {
-        DEBUG_ERROR("Fetch_String() - LoadString failed. Error! %s.\n", Last_System_Error_As_String());
+        DEBUG_ERROR("Fetch_String() - LoadString failed. Error! {}.\n", Last_System_Error_As_String());
         return _null;
     }
 
@@ -670,7 +656,7 @@ const char *Vinifera_Fetch_String(HMODULE handle, ULONG id)
     //_buffer[sizeof(_buffer)-1] = '\0';
     free_entry.Buffer[sizeof(free_entry.Buffer)-1] = '\0';
 
-    //DEBUG_INFO("Fetch_String() - Returning '%s'.\n", free_entry.Buffer);
+    //DEBUG_INFO("Fetch_String() - Returning '{}'.\n", free_entry.Buffer);
 
     return free_entry.Buffer;
 }
@@ -690,13 +676,13 @@ HGLOBAL Vinifera_Fetch_Resource(HMODULE handle, const char *id, const char *type
     //HRSRC res = FindResourceEx(handle, id, type, ResourceLang);
     HRSRC res = FindResource(handle, id, type);
     if (res == nullptr) {
-        DEBUG_ERROR("Fetch_Resource() - FindResource failed. Error! %s.\n", Last_System_Error_As_String());
+        DEBUG_ERROR("Fetch_Resource() - FindResource failed. Error! {}.\n", Last_System_Error_As_String());
         return nullptr;
     }
 
     HGLOBAL res_handle = LoadResource(handle, res);
     if (res_handle == nullptr) {
-        DEBUG_ERROR("Fetch_Resource() - LoadResource failed. Error! %s.\n", Last_System_Error_As_String());
+        DEBUG_ERROR("Fetch_Resource() - LoadResource failed. Error! {}.\n", Last_System_Error_As_String());
         return nullptr;
     }
 
@@ -709,7 +695,7 @@ HGLOBAL Vinifera_Fetch_Resource(HMODULE handle, const char *id, const char *type
      */
     void *res_data = LockResource(res_handle);
     if (res_data == nullptr) {
-        DEBUG_ERROR("Fetch_Resource() - LockResource failed. Error! %s.\n", Last_System_Error_As_String());
+        DEBUG_ERROR("Fetch_Resource() - LockResource failed. Error! {}.\n", Last_System_Error_As_String());
         return nullptr;
     }
 

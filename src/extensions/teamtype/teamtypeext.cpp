@@ -26,8 +26,6 @@ TeamTypeClassExtension::TeamTypeClassExtension(const TeamTypeClass *this_ptr) :
     AbstractTypeClassExtension(this_ptr),
     SmartHunt(true)
 {
-    //if (this_ptr) EXT_DEBUG_TRACE("TeamTypeClassExtension::TeamTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     TeamTypeExtensions.Add(this);
 }
 
@@ -40,7 +38,6 @@ TeamTypeClassExtension::TeamTypeClassExtension(const TeamTypeClass *this_ptr) :
 TeamTypeClassExtension::TeamTypeClassExtension(const NoInitClass &noinit) :
     AbstractTypeClassExtension(noinit)
 {
-    //EXT_DEBUG_TRACE("TeamTypeClassExtension::TeamTypeClassExtension(NoInitClass) - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
 
 
@@ -51,8 +48,6 @@ TeamTypeClassExtension::TeamTypeClassExtension(const NoInitClass &noinit) :
  */
 TeamTypeClassExtension::~TeamTypeClassExtension()
 {
-    //EXT_DEBUG_TRACE("TeamTypeClassExtension::~TeamTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     TeamTypeExtensions.Delete(this);
 }
 
@@ -64,8 +59,6 @@ TeamTypeClassExtension::~TeamTypeClassExtension()
  */
 HRESULT TeamTypeClassExtension::GetClassID(CLSID *lpClassID)
 {
-    //EXT_DEBUG_TRACE("TeamTypeClassExtension::GetClassID - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     if (lpClassID == nullptr) {
         return E_POINTER;
     }
@@ -83,8 +76,6 @@ HRESULT TeamTypeClassExtension::GetClassID(CLSID *lpClassID)
  */
 HRESULT TeamTypeClassExtension::Load(IStream *pStm)
 {
-    //EXT_DEBUG_TRACE("TeamTypeClassExtension::Load - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = AbstractTypeClassExtension::Load(pStm);
     if (FAILED(hr)) {
         return E_FAIL;
@@ -103,8 +94,6 @@ HRESULT TeamTypeClassExtension::Load(IStream *pStm)
  */
 HRESULT TeamTypeClassExtension::Save(IStream *pStm, BOOL fClearDirty)
 {
-    //EXT_DEBUG_TRACE("TeamTypeClassExtension::Save - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = AbstractTypeClassExtension::Save(pStm, fClearDirty);
     if (FAILED(hr)) {
         return hr;
@@ -121,8 +110,6 @@ HRESULT TeamTypeClassExtension::Save(IStream *pStm, BOOL fClearDirty)
  */
 int TeamTypeClassExtension::Get_Object_Size() const
 {
-    //EXT_DEBUG_TRACE("TeamTypeClassExtension::Get_Object_Size - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     return sizeof(*this);
 }
 
@@ -136,7 +123,6 @@ int TeamTypeClassExtension::Get_Object_Size() const
  */
 void TeamTypeClassExtension::Object_CRC(CRCEngine &crc) const
 {
-    //EXT_DEBUG_TRACE("TeamTypeClassExtension::Object_CRC - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
     crc(SmartHunt);
 }
 
@@ -148,8 +134,6 @@ void TeamTypeClassExtension::Object_CRC(CRCEngine &crc) const
  */
 bool TeamTypeClassExtension::Read_INI(CCINIClass &ini)
 {
-    //EXT_DEBUG_TRACE("TeamTypeClassExtension::Read_INI - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     const char *ini_name = Name();
 
     SmartHunt = ini.Get_Bool(ini_name, "SmartHunt", SmartHunt);

@@ -2187,7 +2187,7 @@ DEFINE_HOOK(0x0063039B, _TechnoClass_Fire_At_Suicide_Patch, 5)
          *  This is legacy behavior similar to that of Red Alert.
          */
         if (weapontypeext->IsSuicide && weapontypeext->IsDeleteOnSuicide) {
-            DEV_DEBUG_INFO("Deleted: %s\n", this_ptr->Name());
+            DEV_DEBUG_INFO("Deleted: {}\n", this_ptr->Name());
             this_ptr->Delete_Me();
 
         /**

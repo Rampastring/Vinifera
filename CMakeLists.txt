@@ -88,6 +88,12 @@ if (MSVC AND MSVC_VERSION GREATER_EQUAL 1914)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:__cplusplus")
 endif()
 
+# /Zc:preprocessor enables the conformant preprocessor (required for __VA_OPT__
+# used by the std::format-based DEBUG_* logging macros).
+if (MSVC AND MSVC_VERSION GREATER_EQUAL 1924)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:preprocessor")
+endif()
+
 
 ################################################################################
 # Set custom module path.
@@ -126,7 +132,6 @@ endif()
 
 # Option for producing Release builds.
 # DO NOT USE: This is for the CI build system only.
-option(OPTION_TS_CLIENT_BUILD "Produce configurations for building a TS Client compatibility build." OFF)
 option(OPTION_RELEASE_BUILD "Produce configurations for building a release build." OFF)
 
 # These are for debugging purposes only.
@@ -217,11 +222,6 @@ set(TARGET_FTS_HASH "846F0077129CB390BB206431A63E9246E3D8DA72") # SHA hash
 if (OPTION_CHECK_TARGET_BINARIES)
 set(CHECK_TARGET_BINARIES "true")
 else()
-set(CHECK_TARGET_BINARIES "false")
-endif()
-
-# Compatibility mode overrides this.
-if(OPTION_TS_CLIENT_BUILD)
 set(CHECK_TARGET_BINARIES "false")
 endif()
 
@@ -537,11 +537,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 # Set the build type defines.
-if(OPTION_TS_CLIENT_BUILD)
-target_compile_definitions(${PROJECT_NAME} PUBLIC "$<$<CONFIG:RelWithDebInfo>:TS_CLIENT>")
-target_compile_definitions(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:TS_CLIENT>")
-message(STATUS "Build: TS Client Compatibility")
-endif()
 if(RELEASE OR OPTION_RELEASE_BUILD)
 target_compile_definitions(${PROJECT_NAME} PUBLIC "$<$<CONFIG:RelWithDebInfo>:RELEASE>")
 message(STATUS "Build: Release")

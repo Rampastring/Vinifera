@@ -71,11 +71,11 @@ bool Vinifera_Load_INI()
 
     ini.Load(file);
 
-    ini.Get_String("General", "ProjectName", "", Vinifera_ProjectName, sizeof(Vinifera_ProjectName));
-    ini.Get_String("General", "IconFile", "", Vinifera_IconName, sizeof(Vinifera_IconName));
-    ini.Get_String("General", "CursorFile", "", Vinifera_CursorName, sizeof(Vinifera_CursorName));
+    Vinifera_ProjectName = ini.Get_String("General", "ProjectName", "");
+    Vinifera_ProjectVersion = ini.Get_String("General", "ProjectVersion", "");
+    Vinifera_IconName = ini.Get_String("General", "IconFile", "");
+    Vinifera_CursorName = ini.Get_String("General", "CursorFile", "");
 
-#if defined(TS_CLIENT)
     /**
      *  TS Client uses a seperate "version" file, so its best we fetch the current
      *  version from there rather than have the user update the INI file each time
@@ -85,18 +85,10 @@ bool Vinifera_Load_INI()
     if (ver_file.Is_Available()) {
         INIClass ver_ini;
         ver_ini.Load(ver_file);
-        ver_ini.Get_String("DTA", "Version", "", Vinifera_ProjectVersion, sizeof(Vinifera_ProjectVersion));
+        Vinifera_ProjectVersion = ver_ini.Get_String("DTA", "Version", "");
     } else {
-        ini.Get_String("General", "ProjectVersion", "", Vinifera_ProjectVersion, sizeof(Vinifera_ProjectVersion));
+        Vinifera_ProjectVersion = ini.Get_String("General", "ProjectVersion", "");
     }
-#else
-    ini.Get_String("General", "ProjectVersion", "", Vinifera_ProjectVersion, sizeof(Vinifera_ProjectVersion));
-#endif
-
-    Vinifera_ProjectName[sizeof(Vinifera_ProjectName)-1] = '\0';
-    Vinifera_ProjectVersion[sizeof(Vinifera_ProjectVersion)-1] = '\0';
-    Vinifera_IconName[sizeof(Vinifera_IconName)-1] = '\0';
-    Vinifera_CursorName[sizeof(Vinifera_CursorName)-1] = '\0';
 
     char buffer[1024];
     if (ini.Get_String("General", "SearchPaths", "", buffer, sizeof(buffer)) > 0) {
@@ -107,20 +99,10 @@ bool Vinifera_Load_INI()
             }
             path = std::strtok(nullptr, ",");
         }
-#if defined(TS_CLIENT)
-    } else {
-        DEBUG_ERROR("Failed to find SearchPaths in VINIFERA.INI!\n");
-        MessageBox(MainWindow, "Failed to find SearchPaths in VINIFERA.INI, please reinstall Vinifera.", "Vinifera", MB_ICONEXCLAMATION|MB_OK);
-        return false;
-#endif
     }
 
     Vinifera_NoTacticalVersionString = ini.Get_Bool("General", "NoVersionString", Vinifera_NoTacticalVersionString);
-
-    ini.Get_String("General", "SavedGamesDirectory", "", buffer, std::size(buffer));
-    if (std::strlen(buffer) > 0) {
-        std::strncpy(Vinifera_SavedGamesDirectory, buffer, std::size(Vinifera_SavedGamesDirectory) - 1);
-    }
+    Vinifera_SavedGamesDirectory = ini.Get_String("General", "SavedGamesDirectory", Vinifera_SavedGamesDirectory);
 
     return true;
 }
@@ -219,7 +201,7 @@ static bool Vinifera_Load_Exception_Database(const char *filename)
     DEV_DEBUG_INFO("Exception database dump...\n");
     for (int i = 0; i < ExceptionInfoDatabase.Count(); ++i) {
         ExceptionInfoDatabaseStruct &e = ExceptionInfoDatabase[i];
-        DEV_DEBUG_INFO("  0x%08X %s %s \"%.32s...\"\n",
+        DEV_DEBUG_INFO("  0x{:08X} {} {} \"{:.32}...\"\n",
                        e.Address, e.CanContinue ? "true " : "false",
                        e.Ignore ? "true " : "false",
                        e.Description);
@@ -383,7 +365,7 @@ bool Vinifera_Parse_Command_Line(int argc, char *argv[])
 
             CCFileClass::Set_Search_Drives(&string[3]);
             if (CCFileClass::Is_There_Search_Drives()) {
-                DEBUG_INFO("  - Search path set to \"%s\".\n", &string[3]);
+                DEBUG_INFO("  - Search path set to \"{}\".\n", &string[3]);
 
                 /**
                  *  Flag the cd search system to search for files locally.
@@ -528,15 +510,11 @@ bool Vinifera_Startup()
     if (Vinifera_Load_INI()) {
         DEBUG_INFO("\n");
         DEBUG_INFO("Project information:\n");
-        DEBUG_INFO("  Title: %s\n", Vinifera_ProjectName);
-        DEBUG_INFO("  Version: %s\n", Vinifera_ProjectVersion);
+        DEBUG_INFO("  Title: {}\n", Vinifera_ProjectName);
+        DEBUG_INFO("  Version: {}\n", Vinifera_ProjectVersion);
         DEBUG_INFO("\n");
     } else {
         DEBUG_WARNING("Failed to load VINIFERA.INI!\n");
-#if defined(TS_CLIENT)
-        MessageBoxA(nullptr, "Failed to load VINIFERA.INI!", "Vinifera", MB_ICONERROR|MB_OK);
-        return false;
-#endif
     }
 
     /**
@@ -571,7 +549,7 @@ bool Vinifera_Startup()
 
         delete[] new_path;
 
-        DEBUG_INFO("SearchPath: %s\n", CCFileClass::RawPath);
+        DEBUG_INFO("SearchPath: {}\n", CCFileClass::RawPath);
     }
 
     /**

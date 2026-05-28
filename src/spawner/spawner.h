@@ -45,7 +45,6 @@ public:
 
     static bool Init();
     static bool Start_Game();
-    static void Apply_Scenario_Values();
     static void Write_Data_To_Save_Version_Info(ViniferaSaveVersionInfo& saveversioninfo);
 
 private:
@@ -57,9 +56,6 @@ private:
     static bool Init_Session(char* scenario_name);
     static void Init_Network();
     static bool Reconcile_Players();
-
-    static void Init_UI();
-    static void Prepare_Screen();
 
 private:
     static bool HasSpawned;

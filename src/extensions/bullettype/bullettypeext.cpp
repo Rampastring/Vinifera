@@ -28,8 +28,6 @@ BulletTypeClassExtension::BulletTypeClassExtension(const BulletTypeClass *this_p
     IsTorpedo(false),
     SnapDistance(CELL_LEPTON_W * 2)
 {
-    //if (this_ptr) EXT_DEBUG_TRACE("BulletTypeClassExtension::BulletTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     BulletTypeExtensions.Add(this);
 }
 
@@ -42,7 +40,6 @@ BulletTypeClassExtension::BulletTypeClassExtension(const BulletTypeClass *this_p
 BulletTypeClassExtension::BulletTypeClassExtension(const NoInitClass &noinit) :
     ObjectTypeClassExtension(noinit)
 {
-    //EXT_DEBUG_TRACE("BulletTypeClassExtension::BulletTypeClassExtension(NoInitClass) - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
 
 
@@ -53,8 +50,6 @@ BulletTypeClassExtension::BulletTypeClassExtension(const NoInitClass &noinit) :
  */
 BulletTypeClassExtension::~BulletTypeClassExtension()
 {
-    //EXT_DEBUG_TRACE("BulletTypeClassExtension::~BulletTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     BulletTypeExtensions.Delete(this);
 }
 
@@ -66,8 +61,6 @@ BulletTypeClassExtension::~BulletTypeClassExtension()
  */
 HRESULT BulletTypeClassExtension::GetClassID(CLSID *lpClassID)
 {
-    //EXT_DEBUG_TRACE("BulletTypeClassExtension::GetClassID - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     if (lpClassID == nullptr) {
         return E_POINTER;
     }
@@ -85,8 +78,6 @@ HRESULT BulletTypeClassExtension::GetClassID(CLSID *lpClassID)
  */
 HRESULT BulletTypeClassExtension::Load(IStream *pStm)
 {
-    //EXT_DEBUG_TRACE("BulletTypeClassExtension::Load - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = ObjectTypeClassExtension::Load(pStm);
     if (FAILED(hr)) {
         return E_FAIL;
@@ -105,8 +96,6 @@ HRESULT BulletTypeClassExtension::Load(IStream *pStm)
  */
 HRESULT BulletTypeClassExtension::Save(IStream *pStm, BOOL fClearDirty)
 {
-    //EXT_DEBUG_TRACE("BulletTypeClassExtension::Save - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = ObjectTypeClassExtension::Save(pStm, fClearDirty);
     if (FAILED(hr)) {
         return hr;
@@ -123,8 +112,6 @@ HRESULT BulletTypeClassExtension::Save(IStream *pStm, BOOL fClearDirty)
  */
 int BulletTypeClassExtension::Get_Object_Size() const
 {
-    //EXT_DEBUG_TRACE("BulletTypeClassExtension::Get_Object_Size - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     return sizeof(*this);
 }
 
@@ -138,7 +125,6 @@ int BulletTypeClassExtension::Get_Object_Size() const
  */
 void BulletTypeClassExtension::Object_CRC(CRCEngine &crc) const
 {
-    //EXT_DEBUG_TRACE("BulletTypeClassExtension::Object_CRC - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
 
 
@@ -149,8 +135,6 @@ void BulletTypeClassExtension::Object_CRC(CRCEngine &crc) const
  */
 bool BulletTypeClassExtension::Read_INI(CCINIClass &ini)
 {
-    //EXT_DEBUG_TRACE("BulletTypeClassExtension::Read_INI - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     if (!AbstractTypeClassExtension::Read_INI(ini)) {
         return false;
     }

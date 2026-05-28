@@ -67,8 +67,6 @@ TeamClassExtension::TeamClassExtension(const TeamClass *this_ptr) :
     PenalizeSameTypeUnits(false),
     ProdFlags(PRODFLAG_NONE)
 {
-    //if (this_ptr) EXT_DEBUG_TRACE("TeamClassExtension::TeamClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     TeamExtensions.Add(this);
 }
 
@@ -81,7 +79,6 @@ TeamClassExtension::TeamClassExtension(const TeamClass *this_ptr) :
 TeamClassExtension::TeamClassExtension(const NoInitClass &noinit) :
     AbstractClassExtension(noinit)
 {
-    //EXT_DEBUG_TRACE("TeamClassExtension::TeamClassExtension(NoInitClass) - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
 
 
@@ -92,8 +89,6 @@ TeamClassExtension::TeamClassExtension(const NoInitClass &noinit) :
  */
 TeamClassExtension::~TeamClassExtension()
 {
-    //EXT_DEBUG_TRACE("TeamClassExtension::~TeamClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     TeamExtensions.Delete(this);
 }
 
@@ -105,8 +100,6 @@ TeamClassExtension::~TeamClassExtension()
  */
 HRESULT TeamClassExtension::GetClassID(CLSID *lpClassID)
 {
-    //EXT_DEBUG_TRACE("TeamClassExtension::GetClassID - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     if (lpClassID == nullptr) {
         return E_POINTER;
     }
@@ -124,8 +117,6 @@ HRESULT TeamClassExtension::GetClassID(CLSID *lpClassID)
  */
 HRESULT TeamClassExtension::Load(IStream *pStm)
 {
-    //EXT_DEBUG_TRACE("TeamClassExtension::Load - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = AbstractClassExtension::Internal_Load(pStm);
     if (FAILED(hr)) {
         return E_FAIL;
@@ -146,8 +137,6 @@ HRESULT TeamClassExtension::Load(IStream *pStm)
  */
 HRESULT TeamClassExtension::Save(IStream *pStm, BOOL fClearDirty)
 {
-    //EXT_DEBUG_TRACE("TeamClassExtension::Save - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = AbstractClassExtension::Internal_Save(pStm, fClearDirty);
     if (FAILED(hr)) {
         return hr;
@@ -164,8 +153,6 @@ HRESULT TeamClassExtension::Save(IStream *pStm, BOOL fClearDirty)
  */
 int TeamClassExtension::Get_Object_Size() const
 {
-    //EXT_DEBUG_TRACE("TeamClassExtension::Get_Object_Size - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     return sizeof(*this);
 }
 
@@ -179,7 +166,6 @@ int TeamClassExtension::Get_Object_Size() const
  */
 void TeamClassExtension::Object_CRC(CRCEngine &crc) const
 {
-    //EXT_DEBUG_TRACE("TeamClassExtension::Object_CRC - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
 
 /**
@@ -189,8 +175,6 @@ void TeamClassExtension::Object_CRC(CRCEngine &crc) const
  */
 const char* TeamClassExtension::Name() const
 {
-    //EXT_DEBUG_TRACE("ObjectClassExtension::Name - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     return This()->Class->Name();
 }
 
@@ -202,8 +186,6 @@ const char* TeamClassExtension::Name() const
  */
 const char* TeamClassExtension::Full_Name() const
 {
-    //EXT_DEBUG_TRACE("ObjectClassExtension::Full_Name - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     return This()->Class->Full_Name();
 }
 

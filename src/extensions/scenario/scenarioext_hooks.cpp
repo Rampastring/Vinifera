@@ -188,6 +188,22 @@ DEFINE_HOOK(0x005DC0A0, _Fill_In_Data_Home_Cell_Patch, 0)
 
 
 /**
+ *  Replace the ElapsedTimer constructor call in ScenarioClass's NoInit constructor
+ *  with a NoInit constructor to preserve the timer's saved value.
+ *
+ *  @author: ZivDero
+ */
+DEFINE_HOOK(0x005DAE13, _ScenarioClass_NoInit_CTOR_ElapsedTimer_Patch, 0)
+{
+    GET(ScenarioClass*, this_ptr, ESI);
+
+    new (&this_ptr->ElapsedTimer) TTimerClass<SystemTimerClass>(NoInitClass());
+
+    return 0x005DAE1E;
+}
+
+
+/**
  *  #issue-71
  *
  *  Replace waypoint number to string conversion.
@@ -309,11 +325,11 @@ static void Init_Loading_Screen(const char* filename)
     /**
      *  The spawner can forcibly override the loading screen, and it already includes .PCX.
      */
-    if (ScenExtension->HasCustomLoadScreen) {
-        std::snprintf(loadfilename, sizeof(loadfilename), "%s", ScenExtension->CustomLoadScreen);
+    if (!SessionExtension->SpawnerInfo.CustomLoadScreen.empty()) {
+        std::snprintf(loadfilename, sizeof(loadfilename), "%s", SessionExtension->SpawnerInfo.CustomLoadScreen.c_str());
 
-        if (ScenExtension->HasCustomLoadScreenPos) {
-            bar_pos = ScenExtension->CustomLoadScreenPos;
+        if (SessionExtension->SpawnerInfo.CustomLoadScreenPos.has_value()) {
+            bar_pos = *SessionExtension->SpawnerInfo.CustomLoadScreenPos;
         }
     }
 
@@ -323,7 +339,7 @@ static void Init_Loading_Screen(const char* filename)
     bar_pos.X += (VisibleRect.Width - loading_screen.Size.Size.X) / 2;
     bar_pos.Y += (VisibleRect.Height - loading_screen.Size.Size.Y) / 2;
 
-    DEV_DEBUG_INFO("Loading Screen: \"%s\"\n", loadfilename);
+    DEV_DEBUG_INFO("Loading Screen: \"{}\"\n", loadfilename);
 
     /**
      *  If this is a tournament game, format the game id.
@@ -571,6 +587,8 @@ void ScenarioClassExtension_Hooks()
     Patch_Jump(0x005DD4C0, &ScenarioClassExtension::Read_Scenario_INI);
     Patch_Jump(0x005DE210, &ScenarioClassExtension::Assign_Houses);
     Patch_Jump(0x005DE580, &ScenarioClassExtension::Create_Units);
+
+    Patch_Jump(0x005DAE28, 0x005DAE34); // Skip ElapsedTimer ctor
 
     /**
      *  #issue-71

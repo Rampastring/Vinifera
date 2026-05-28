@@ -210,31 +210,17 @@ void MultiScoreExt::_Tally_Score()
         const char* win_string = Session.Score[score_index].Wins > 0 ? "Winner" : "Loser";
 
         DEBUG_INFO(
-            "%s: %s\n Scheme: %d\n Lost = %d\n Kills = %d\n Economy = %d\n Score = %d\n",
+            "{}: {}\n Scheme: {}\n Lost = {}\n Kills = {}\n Economy = {}\n Score = {}\n",
             Session.Score[score_index].Name,
             win_string,
-            Session.Score[score_index].Color,
+            (int)Session.Score[score_index].Color,
             Session.Score[score_index].Lost[0],
             Session.Score[score_index].Kills[0],
             Session.Score[score_index].Economy[0],
             Session.Score[score_index].Score[0]);
 
-        DEBUG_INFO(" KillRatio = %f\n BuildEconomy = %f\n", kill_ratio, build_economy);
+        DEBUG_INFO(" KillRatio = {}\n BuildEconomy = {}\n", kill_ratio, build_economy);
     }
-}
-
-
-/**
- *  Patches the score screen to show the total time since the scenario was started,
- *  not since the last time the game was loaded.
- *
- *  @author: ZivDero
- */
-DEFINE_HOOK(0x00568D10, _MultiScore_568BE0_ElapsedTime_Patch, 0)
-{
-    unsigned elapsed_time = Scen->ElapsedTimer.Value() + Vinifera_TotalPlayTime;
-    R->EBX(elapsed_time);
-    return 0x00568D38;
 }
 
 

@@ -399,7 +399,6 @@ DEFINE_HOOK(0x004E1F24, _Select_Game_Clear_Globals_Patch, 0)
      *  Reset any globals.
      */
     Vinifera_ShowSuperWeaponTimers = true;
-    Vinifera_TotalPlayTime = 0;
     if (SessionExtension) {
         SessionExtension->Init_Clear();
     }
@@ -605,7 +604,7 @@ void Vinifera_Hooks()
      *  Set the save game version.
      */
     ViniferaGameVersion = Extension::Get_Save_Version_Number();
-    DEBUG_INFO("Save game version number: 0x%X\n", ViniferaGameVersion);
+    DEBUG_INFO("Save game version number: 0x{:X}\n", ViniferaGameVersion);
 
     /**
      *  This patch randomises the serial number for this client.

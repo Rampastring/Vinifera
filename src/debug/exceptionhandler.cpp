@@ -421,7 +421,7 @@ static void Dump_Exception_Info(unsigned int e_code, struct _EXCEPTION_POINTERS 
         DEBUG_WARNING("Exception is access violation\n");
     } else {
         //Exception_Printf("Exception code is %x\r\n", e_code);
-        DEBUG_WARNING("Exception code is %x\n", e_code);
+        DEBUG_WARNING("Exception code is {:x}\n", e_code);
     }
 
     const char *the_exception_desc = "UNKNOWN EXCEPTION";
@@ -438,7 +438,7 @@ static void Dump_Exception_Info(unsigned int e_code, struct _EXCEPTION_POINTERS 
 
     //WWASSERT(the_exception_desc != nullptr);
 
-    DEBUG_WARNING("%s\n", the_exception_desc);
+    DEBUG_WARNING("{}\n", the_exception_desc);
 
     DEBUG_WARNING("Dump exception info...\n");
 
@@ -526,7 +526,7 @@ static void Dump_Exception_Info(unsigned int e_code, struct _EXCEPTION_POINTERS 
         Exception_Printf("Additional Information:\r\n");
         DEBUG_WARNING("\r\nAdditional Information:\n");
         Exception_Printf("  %s\r\n", ExceptionInfoDescription.c_str());
-        DEBUG_WARNING("  %s\n\n", ExceptionInfoDescription.c_str());
+        DEBUG_WARNING("  {}\n\n", ExceptionInfoDescription);
         Exception_Printf("\r\n");
     }
 
@@ -716,7 +716,7 @@ static void Dump_Exception_Info(unsigned int e_code, struct _EXCEPTION_POINTERS 
      */
     for (int frame = 0; frame < EXCEPTION_STACK_DEPTH_MAX; ++frame) {
 
-        //DEBUG_WARNING("Frame %d\n", frame);
+        //DEBUG_WARNING("Frame {}\n", frame);
 
         /**
          *  If we can't read the address, then we don't know where we are.
@@ -1112,7 +1112,7 @@ LONG Vinifera_Exception_Handler(unsigned int e_code, struct _EXCEPTION_POINTERS 
          */
         char filename_buffer[512];
         std::snprintf(filename_buffer, sizeof(filename_buffer), "%s\\EXCEPT_%02u-%02u-%04u_%02u-%02u-%02u.TXT",
-            Vinifera_DebugDirectory,
+            Vinifera_DebugDirectory.c_str(),
             Execute_Day, Execute_Month, Execute_Year, Execute_Hour, Execute_Min, Execute_Sec);
 
         ExceptionFile.Set_Name(filename_buffer);

@@ -35,8 +35,6 @@ BuildingClassExtension::BuildingClassExtension(const BuildingClass *this_ptr) :
     LastFlameSpawnFrame(0),
     AssignedExpansionPoint(0, 0)
 {
-    //if (this_ptr) EXT_DEBUG_TRACE("BuildingClassExtension::BuildingClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     BuildingExtensions.Add(this);
 }
 
@@ -49,7 +47,6 @@ BuildingClassExtension::BuildingClassExtension(const BuildingClass *this_ptr) :
 BuildingClassExtension::BuildingClassExtension(const NoInitClass &noinit) :
     TechnoClassExtension(noinit)
 {
-    //EXT_DEBUG_TRACE("BuildingClassExtension::BuildingClassExtension(NoInitClass) - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
 
 
@@ -60,8 +57,6 @@ BuildingClassExtension::BuildingClassExtension(const NoInitClass &noinit) :
  */
 BuildingClassExtension::~BuildingClassExtension()
 {
-    //EXT_DEBUG_TRACE("BuildingClassExtension::~BuildingClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     BuildingExtensions.Delete(this);
 }
 
@@ -73,8 +68,6 @@ BuildingClassExtension::~BuildingClassExtension()
  */
 HRESULT BuildingClassExtension::GetClassID(CLSID *lpClassID)
 {
-    //EXT_DEBUG_TRACE("BuildingClassExtension::GetClassID - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     if (lpClassID == nullptr) {
         return E_POINTER;
     }
@@ -92,8 +85,6 @@ HRESULT BuildingClassExtension::GetClassID(CLSID *lpClassID)
  */
 HRESULT BuildingClassExtension::Load(IStream *pStm)
 {
-    //EXT_DEBUG_TRACE("BuildingClassExtension::Load - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = TechnoClassExtension::Load(pStm);
     if (FAILED(hr)) {
         return E_FAIL;
@@ -112,8 +103,6 @@ HRESULT BuildingClassExtension::Load(IStream *pStm)
  */
 HRESULT BuildingClassExtension::Save(IStream *pStm, BOOL fClearDirty)
 {
-    //EXT_DEBUG_TRACE("BuildingClassExtension::Save - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = TechnoClassExtension::Save(pStm, fClearDirty);
     if (FAILED(hr)) {
         return hr;
@@ -130,8 +119,6 @@ HRESULT BuildingClassExtension::Save(IStream *pStm, BOOL fClearDirty)
  */
 int BuildingClassExtension::Get_Object_Size() const
 {
-    //EXT_DEBUG_TRACE("BuildingClassExtension::Get_Object_Size - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     return sizeof(*this);
 }
 
@@ -145,8 +132,6 @@ int BuildingClassExtension::Get_Object_Size() const
  */
 void BuildingClassExtension::Object_CRC(CRCEngine &crc) const
 {
-    //EXT_DEBUG_TRACE("BuildingClassExtension::Object_CRC - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     /**
      *  #issue-26
      * 
@@ -166,8 +151,6 @@ void BuildingClassExtension::Object_CRC(CRCEngine &crc) const
  */
 void BuildingClassExtension::Produce_Cash_AI()
 {
-    //EXT_DEBUG_TRACE("BuildingClassExtension::Produce_Cash_AI - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     const BuildingClass *this_building = reinterpret_cast<const BuildingClass *>(This());
     const BuildingTypeClass *this_buildingtype = reinterpret_cast<const BuildingTypeClass *>(This()->Class_Of());
 

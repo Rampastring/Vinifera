@@ -217,24 +217,53 @@ bool Spawner::Start_Game()
     // DTA HACK: Initialize MIX files for the side. They are needed for OwnerDraw graphics.
     Prep_UI_For_Side((SideType)Config->Players[0].House);
 
-    Init_UI();
-    Prepare_Screen();
+    /**
+     *  Initialize some OD global state so that dialogs work correctly.
+     */
+    OwnerDraw::Initialize();
+    OwnerDraw::Init_Masks();
+    OwnerDraw::Cache_Images();
 
-    DEBUG_INFO("[Spawner] Start_Game: Starting scenario %s\n", Config->ScenarioName.c_str());
+    /**
+     *  Clear the screen before Start_Scenario just in case so that it has
+     *  a clean slate to work with.
+     */
+    HiddenSurface->Fill(TBLACK);
+    Update_Visible_Surface();
+
+    DEBUG_INFO("[Spawner] Start_Game: Starting scenario {}\n", Config->ScenarioName);
     const bool result = Start_Scenario(Config->ScenarioName.data());
     HasSpawned = true;
 
     if (!result) {
         DEBUG_ERROR("[Spawner] Start_Game: Start_Scenario returned false!\n");
+        return result;
     }
+
+    /**
+     *  Tail of Select_Game: set up the game screen and
+     *  render one frame for the caller to fade in. The unmatched final Hide
+     *  returns the mouse hidden-by-one, which the caller (Main_Game) shows.
+     */
+    HiddenSurface->Fill(TBLACK);
+    Update_Visible_Surface();
+    LogicalSurface = HiddenSurface;
+
+    Show_Mouse();
+
+    Map.Override_Mouse_Shape(MOUSE_NO_MOVE);
+    Map.Revert_Mouse_Shape();
+
+    Map.Activate(1);
+    Map.Flag_To_Redraw();
+
+    Hide_Mouse();
 
     return result;
 }
 
 int Spawner::Spawner_Config_AI_Difficulty_To_Game_AI_Difficulty(int difficulty)
 {
-    // Temporarily uses DTA's original setup for now to avoid client changes as we figure out what to do
-
     switch (difficulty) {
     case 0:
         return DIFF_HARD;
@@ -243,34 +272,19 @@ int Spawner::Spawner_Config_AI_Difficulty_To_Game_AI_Difficulty(int difficulty)
     case 2:
         return DIFF_EASY;
     case 3:
-        return EXT_DIFF_VERY_HARD;
+        return EXT_DIFF_VERY_EASY;
     case 4:
-        return EXT_DIFF_BRUTAL;
+        return EXT_DIFF_BRUTALLY_EASY;
     case 5:
-        return EXT_DIFF_EXTREME;
+        return EXT_DIFF_EXTREMELY_EASY;
     case 6:
-        return EXT_DIFF_ULTIMATE;
+        return EXT_DIFF_ULTIMATELY_EASY;
     }
 
-    // switch (difficulty)
-    // {
-    // case 0:
-    //     return EXT_DIFF_ULTIMATE;
-    // case 1:
-    //     return EXT_DIFF_EXTREME;
-    // case 2:
-    //     return EXT_DIFF_BRUTAL;
-    // case 3:
-    //     return EXT_DIFF_VERY_HARD;
-    // case 4:
-    //     return DIFF_HARD;
-    // case 5:
-    //     return DIFF_NORMAL;
-    // case 6:
-    //     return DIFF_EASY;
-    // }
-    
-    DEBUG_FATAL("Spawner_Config_AI_Difficulty_To_Game_AI_Difficulty: Unknown difficulty level %d", difficulty);
+    // Could also be described with this formula, given the difficulty setup.
+    // return (DIFF_HARD + EXT_DIFF_COUNT - difficulty) % EXT_DIFF_COUNT;
+
+    DEBUG_FATAL("Spawner_Config_AI_Difficulty_To_Game_AI_Difficulty: Unknown difficulty level {}", difficulty);
     return -1;
 }
 
@@ -339,12 +353,23 @@ bool Spawner::Init_Session(char* scenario_name)
     SessionExtension->ExtOptions.IsAINamesByDifficulty = Config->AINamesByDifficulty;
     SessionExtension->MultiplayerSavesInitializedForThisSession = Config->LoadSaveGame;
 
+    SessionExtension->SpawnerInfo.StatsMapName = Config->MapName.c_str();
+    SessionExtension->SpawnerInfo.StatsMapHash = Config->MapHash.c_str();
+    SessionExtension->SpawnerInfo.DifficultyName = Config->DifficultyName.c_str();
+    if (!Config->CustomLoadScreen.empty()) {
+        SessionExtension->SpawnerInfo.CustomLoadScreen = Config->CustomLoadScreen.c_str();
+    }
+    if (Config->CustomLoadScreenPos != Point2D(0, 0)) {
+        SessionExtension->SpawnerInfo.CustomLoadScreenPos = Config->CustomLoadScreenPos;
+    }
+
     /**
      *  NOTE: Scenario data gets cleared between this point and the scenario start, because the first step
      *  in reading a scenario is calling Clear_Scenario. Assume any scenario variables set here to get cleared.
      *  Only set up some fields that we need for initialization (like difficulty, which is read by the environment).
      */
-    Apply_Scenario_Values();
+    Scen->Difficulty = Config->CampaignDifficulty;
+    Scen->CDifficulty = Config->CampaignCDifficulty;
 
     const int total_slots = std::min(Config->HumanPlayers + Config->AIPlayers, MAX_PLAYERS);
 
@@ -384,60 +409,11 @@ bool Spawner::Init_Session(char* scenario_name)
     for (int i = 0; i < std::size(EnvironmentGlobals); i++) {
         EnvironmentGlobals[i] = Config->GlobalFlags[i];
         if (Config->GlobalFlags[i] > 0) {
-            DEBUG_INFO("[Spawner] Init_Session: Applied GlobalFlag %d as %d\n", i, EnvironmentGlobals[i]);
+            DEBUG_INFO("[Spawner] Init_Session: Applied GlobalFlag {} as {}\n", i, EnvironmentGlobals[i]);
         }
     }
 
     return true;
-}
-
-
-/**
- *  Writes spawner-related values to the scenario.
- *
- *  @author: Rampastring
- */
-void Spawner::Apply_Scenario_Values()
-{
-    // TODO maybe the stats, difficulty name, etc. should belong to SessionExtension instead?
-    Scen->Difficulty = Config->CampaignDifficulty;
-    Scen->CDifficulty = Config->CampaignCDifficulty;
-    std::snprintf(ScenExtension->StatsMapName, sizeof(ScenExtension->StatsMapName), "%s", Config->MapName.c_str());
-    std::snprintf(ScenExtension->StatsMapHash, sizeof(ScenExtension->StatsMapHash), "%s", Config->MapHash.c_str());
-    std::snprintf(ScenExtension->DifficultyName, sizeof(ScenExtension->DifficultyName), "%s", Config->DifficultyName.c_str());
-
-    if (!Config->CustomLoadScreen.empty()) {
-        ScenExtension->HasCustomLoadScreen = true;
-        std::snprintf(ScenExtension->CustomLoadScreen, sizeof(ScenExtension->CustomLoadScreen), "%s", Config->CustomLoadScreen.c_str());
-    }
-
-    if (Config->CustomLoadScreenPos != Point2D(0, 0)) {
-        ScenExtension->HasCustomLoadScreenPos = true;
-        ScenExtension->CustomLoadScreenPos = Config->CustomLoadScreenPos;
-    }
-}
-
-
-/**
- *  Writes spawner-related metadata to a saved game.
- *
- *  @author: Rampastring
- */
-void Spawner::Write_Data_To_Save_Version_Info(ViniferaSaveVersionInfo& saveversioninfo)
-{
-    saveversioninfo.Set_Mission_Internal_Name(Config->MissionInternalName.c_str());
-    saveversioninfo.Set_Client_Difficulty(Config->ClientDifficulty);
-    saveversioninfo.Set_Is_Cheat_Session(Config->IsCheatSession);
-    saveversioninfo.Set_Bonus_Name(Config->BonusName.c_str());
-
-    std::vector<int> gflags_vector;
-
-    for (int i = 0; i < std::size(Config->GlobalFlags); i++)
-    {
-        gflags_vector.push_back(Config->GlobalFlags[i]);
-    }
-
-    saveversioninfo.Set_Spawner_Global_Flag_Values(gflags_vector);
 }
 
 
@@ -452,7 +428,7 @@ bool Spawner::Start_Scenario(char* scenario_name)
      *  Can't read an unnamed file, bail.
      */
     if (scenario_name[0] == 0 && !Config->LoadSaveGame) {
-        DEBUG_INFO("[Spawner] Failed to read scenario [%s]\n", scenario_name);
+        DEBUG_INFO("[Spawner] Failed to read scenario [{}]\n", scenario_name);
         MessageBox(MainWindow, Text_String(TXT_UNABLE_READ_SCENARIO), "Vinifera", MB_OK);
 
         return false;
@@ -528,7 +504,7 @@ bool Spawner::Load_Game(const char* file_name)
 {
 //    if (strlen(file_name) == 0 || !::Load_Game(file_name)) {
     if (strlen(file_name) == 0 || !LoadOptionsClass().Load_File(file_name)) { // using LoadOptionsClass().Load_File here gives us a "Mission is loading. Please wait..." box.
-        DEBUG_INFO("[Spawner] Failed to load savegame [%s]\n", file_name);
+        DEBUG_INFO("[Spawner] Failed to load savegame [{}]\n", file_name);
         MessageBox(MainWindow, Text_String(TXT_ERROR_LOADING_GAME), "Vinifera", MB_OK);
 
         return false;
@@ -742,40 +718,4 @@ bool Spawner::Reconcile_Players()
     } else {
         return false;
     }
-}
-
-
-/**
- *  Initializes some things for OwnerDraw UI.
- *
- *  @author: ZivDero
- */
-void Spawner::Init_UI()
-{
-    OwnerDraw::Initialize();
-    OwnerDraw::Init_Masks();
-    OwnerDraw::Cache_Images();
-}
-
-
-/**
- *  Prepares the screen.
- *
- *  @author: ZivDero
- */
-void Spawner::Prepare_Screen()
-{
-    MouseCursor->Hide_Mouse();
-
-    HiddenSurface->Fill(TBLACK);
-    Update_Visible_Surface();
-    LogicalSurface = HiddenSurface;
-
-    MouseCursor->Show_Mouse();
-
-    Map.MouseClass::Set_Default_Mouse(MOUSE_NO_MOVE, false);
-    Map.MouseClass::Revert_Mouse_Shape();
-
-    Map.TabClass::Activate(1);
-    Map.SidebarClass::Flag_To_Redraw();
 }

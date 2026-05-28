@@ -38,7 +38,7 @@ public:
         ID_VINIFERA_COMMIT_HASH = 106,
         ID_PLAYTHROUGH_ID = 107,
         ID_DIFFICULTY = 108,
-        ID_TOTAL_PLAY_TIME = 109,
+        ID_ELAPSED_TIME = 109,
 
         ID_MISSION_INTERNAL_NAME = 120,
         ID_PLAYER_SIDE = 121,
@@ -102,8 +102,8 @@ public:
     void Set_Difficulty(int num);
     int Get_Difficulty() const;
 
-    void Set_Total_Play_Time(int num);
-    int Get_Total_Play_Time() const;
+    void Set_Elapsed_Time(int time);
+    int Get_Elapsed_Time() const;
 
     void Set_Mission_Internal_Name(const char* name);
     const char* Get_Mission_Internal_Name() const;
@@ -185,7 +185,7 @@ private:
     char ViniferaCommitHash[40];
     int PlaythroughID;
     int Difficulty;
-    int TotalPlayTime;
+    int ElapsedTime;
 
     /**
      *  DTA-specific fields for client mission progression and other features.

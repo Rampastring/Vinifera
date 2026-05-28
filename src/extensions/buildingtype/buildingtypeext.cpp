@@ -46,8 +46,6 @@ BuildingTypeClassExtension::BuildingTypeClassExtension(const BuildingTypeClass *
     IsAdvancedAIIgnoresPrerequisites(false),
     IsDefaultTarget(true)
 {
-    //if (this_ptr) EXT_DEBUG_TRACE("BuildingTypeClassExtension::BuildingTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     BuildingTypeExtensions.Add(this);
 }
 
@@ -60,7 +58,6 @@ BuildingTypeClassExtension::BuildingTypeClassExtension(const BuildingTypeClass *
 BuildingTypeClassExtension::BuildingTypeClassExtension(const NoInitClass &noinit) :
     TechnoTypeClassExtension(noinit)
 {
-    //EXT_DEBUG_TRACE("BuildingTypeClassExtension::BuildingTypeClassExtension(NoInitClass) - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
 
 
@@ -71,8 +68,6 @@ BuildingTypeClassExtension::BuildingTypeClassExtension(const NoInitClass &noinit
  */
 BuildingTypeClassExtension::~BuildingTypeClassExtension()
 {
-    //EXT_DEBUG_TRACE("BuildingTypeClassExtension::~BuildingTypeClassExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     BuildingTypeExtensions.Delete(this);
 }
 
@@ -84,8 +79,6 @@ BuildingTypeClassExtension::~BuildingTypeClassExtension()
  */
 HRESULT BuildingTypeClassExtension::GetClassID(CLSID *lpClassID)
 {
-    //EXT_DEBUG_TRACE("BuildingTypeClassExtension::GetClassID - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     if (lpClassID == nullptr) {
         return E_POINTER;
     }
@@ -103,8 +96,6 @@ HRESULT BuildingTypeClassExtension::GetClassID(CLSID *lpClassID)
  */
 HRESULT BuildingTypeClassExtension::Load(IStream *pStm)
 {
-    //EXT_DEBUG_TRACE("BuildingTypeClassExtension::Load - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = TechnoTypeClassExtension::Load(pStm);
     if (FAILED(hr)) {
         return E_FAIL;
@@ -123,8 +114,6 @@ HRESULT BuildingTypeClassExtension::Load(IStream *pStm)
  */
 HRESULT BuildingTypeClassExtension::Save(IStream *pStm, BOOL fClearDirty)
 {
-    //EXT_DEBUG_TRACE("BuildingTypeClassExtension::Save - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = TechnoTypeClassExtension::Save(pStm, fClearDirty);
     if (FAILED(hr)) {
         return hr;
@@ -141,8 +130,6 @@ HRESULT BuildingTypeClassExtension::Save(IStream *pStm, BOOL fClearDirty)
  */
 int BuildingTypeClassExtension::Get_Object_Size() const
 {
-    //EXT_DEBUG_TRACE("BuildingTypeClassExtension::Get_Object_Size - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     return sizeof(*this);
 }
 
@@ -156,8 +143,6 @@ int BuildingTypeClassExtension::Get_Object_Size() const
  */
 void BuildingTypeClassExtension::Object_CRC(CRCEngine &crc) const
 {
-    //EXT_DEBUG_TRACE("BuildingTypeClassExtension::Object_CRC - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     crc(IsEligibleForAllyBuilding);
     crc(IsExclusiveFactory);
 }
@@ -170,8 +155,6 @@ void BuildingTypeClassExtension::Object_CRC(CRCEngine &crc) const
  */
 bool BuildingTypeClassExtension::Read_INI(CCINIClass &ini)
 {
-    //EXT_DEBUG_TRACE("BuildingTypeClassExtension::Read_INI - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     if (!IsInitialized) {
         IsEligibleForAllyBuilding = This()->IsConstructionYard;
         EngineerChance = This()->ToBuild == RTTI_BUILDINGTYPE ? 25 : 0;

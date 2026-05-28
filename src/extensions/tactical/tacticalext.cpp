@@ -76,8 +76,6 @@ TacticalExtension::TacticalExtension(const Tactical* this_ptr) :
     SubtitleFontCacheHeight(0),
     SubtitleFontCacheWeight(0)
 {
-    //if (this_ptr) EXT_DEBUG_TRACE("TacticalExtension::TacticalExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     std::memset(CellRedraw, 0, sizeof(CellRedraw));
 }
 
@@ -92,7 +90,6 @@ TacticalExtension::TacticalExtension(const NoInitClass& noinit) :
     InfoTextTimer(noinit),
     TemplatedTextIndex(noinit)
 {
-    //EXT_DEBUG_TRACE("TacticalExtension::TacticalExtension(NoInitClass) - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
 
 
@@ -103,8 +100,6 @@ TacticalExtension::TacticalExtension(const NoInitClass& noinit) :
  */
 TacticalExtension::~TacticalExtension()
 {
-    //EXT_DEBUG_TRACE("TacticalExtension::~TacticalExtension - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     Invalidate_Subtitle_Font();
 }
 
@@ -116,8 +111,6 @@ TacticalExtension::~TacticalExtension()
  */
 HRESULT TacticalExtension::Load(IStream* pStm)
 {
-    //EXT_DEBUG_TRACE("TacticalExtension::Load - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = GlobalExtensionClass::Load(pStm);
     if (FAILED(hr)) {
         return E_FAIL;
@@ -140,8 +133,6 @@ HRESULT TacticalExtension::Load(IStream* pStm)
  */
 HRESULT TacticalExtension::Save(IStream* pStm, BOOL fClearDirty)
 {
-    //EXT_DEBUG_TRACE("TacticalExtension::Save - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     HRESULT hr = GlobalExtensionClass::Save(pStm, fClearDirty);
     if (FAILED(hr)) {
         return hr;
@@ -158,8 +149,6 @@ HRESULT TacticalExtension::Save(IStream* pStm, BOOL fClearDirty)
  */
 int TacticalExtension::Get_Object_Size() const
 {
-    //EXT_DEBUG_TRACE("TacticalExtension::Get_Object_Size - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
-
     return sizeof(*this);
 }
 
@@ -173,7 +162,6 @@ int TacticalExtension::Get_Object_Size() const
  */
 void TacticalExtension::Object_CRC(CRCEngine& crc) const
 {
-    //EXT_DEBUG_TRACE("TacticalExtension::Object_CRC - Name: %s (0x%08X)\n", Name(), (uintptr_t)(This()));
 }
 
 
@@ -436,7 +424,6 @@ void TacticalExtension::Draw_Information_Text()
     int pos_y = 0;
 
     switch (InfoTextPosition) {
-
     default:
     case InfoTextPosType::TOP_LEFT:
         pos_x = TacticalRect.X;
@@ -538,8 +525,6 @@ void TacticalExtension::Draw_Information_Text()
  */
 void TacticalExtension::Render_Post()
 {
-    //EXT_DEBUG_TRACE("TacticalExtension::Render_Post - 0x%08X\n", (uintptr_t)(This()));
-
     /**
      *  Draw any new post effects here.
      */
@@ -798,8 +783,6 @@ void TacticalExtension::Super_Draw_Timer(int row_index, ColorScheme * color, int
  */
 void TacticalExtension::Draw_Super_Timers()
 {
-    //EXT_DEBUG_TRACE("TacticalExtension::Draw_Super_Timers - 0x%08X\n", (uintptr_t)(This()));
-
     /**
      *  Super weapon timers are for multiplayer only.
      */
@@ -918,7 +901,6 @@ void TacticalExtension::Draw_Templated_Text()
     }
 
     switch (TemplatedTextPosition) {
-
     default:
     case InfoTextPosType::TOP_LEFT:
         pos_x = TacticalRect.X;
