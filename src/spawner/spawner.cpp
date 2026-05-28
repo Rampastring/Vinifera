@@ -106,7 +106,7 @@ void Prep_UI_For_Side(SideType side)
 {
     char name[64];
 
-    DEBUG_INFO("Preparing Mixfiles for Side %02d.\n", side);
+    DEBUG_INFO("Preparing Mixfiles for Side %02d.\n", (int)side);
 
     /**
      *  Delete previously loaded mixes.
@@ -414,6 +414,28 @@ bool Spawner::Init_Session(char* scenario_name)
     }
 
     return true;
+}
+
+
+/**
+ *  Writes spawner-related metadata to a saved game.
+ *
+ *  @author: Rampastring
+ */
+void Spawner::Write_Data_To_Save_Version_Info(ViniferaSaveVersionInfo& saveversioninfo)
+{
+    saveversioninfo.Set_Mission_Internal_Name(Config->MissionInternalName.c_str());
+    saveversioninfo.Set_Client_Difficulty(Config->ClientDifficulty);
+    saveversioninfo.Set_Is_Cheat_Session(Config->IsCheatSession);
+    saveversioninfo.Set_Bonus_Name(Config->BonusName.c_str());
+
+    std::vector<int> gflags_vector;
+
+    for (int i = 0; i < std::size(Config->GlobalFlags); i++) {
+        gflags_vector.push_back(Config->GlobalFlags[i]);
+    }
+
+    saveversioninfo.Set_Spawner_Global_Flag_Values(gflags_vector);
 }
 
 

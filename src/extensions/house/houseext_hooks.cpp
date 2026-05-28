@@ -1389,7 +1389,7 @@ void AdvAI_Check_Split_And_Commence_Team(TeamClass* team)
             if (remainder == 0)
                 numteams--;
 
-            DEBUG_INFO("AdvAI: House %d: Splitting a team of %d units into %d teams.\n", team->House->HeapID, team->Total, (numteams + 1));
+            DEBUG_INFO("AdvAI: House %d: Splitting a team of %d units into %d teams.\n", (int)team->House->HeapID, team->Total, (numteams + 1));
 
             // Create the new teams
             for (int i = 0; i < numteams; i++)
@@ -1414,7 +1414,7 @@ void AdvAI_Check_Split_And_Commence_Team(TeamClass* team)
     }
     else
     {
-        DEBUG_INFO("AdvAI: House %d: Commencing a single team.\n", team->House->HeapID);
+        DEBUG_INFO("AdvAI: House %d: Commencing a single team.\n", (int)team->House->HeapID);
     }
 
     // Finally, commence the primary team
@@ -1437,7 +1437,7 @@ void AdvAI_Commence_Current_Tactic(HouseClass* house)
     {
         if (Frame >= houseext->AdvAIGroundTactic.EndFrame()) {
 
-            DEBUG_INFO("AdvAI: House %d: Commencing tactic \"%s\". Frame: %d\n", house->HeapID, AdvAITacticType_To_Name(houseext->AdvAIGroundTactic.Tactic), Frame);
+            DEBUG_INFO("AdvAI: House %d: Commencing tactic \"%s\". Frame: %d\n", (int)house->HeapID, AdvAITacticType_To_Name(houseext->AdvAIGroundTactic.Tactic), Frame);
 
             // Direct attack tactics might not be executed at the first opportunity.
             if (house->Enemy != HOUSE_NONE &&
@@ -2422,7 +2422,7 @@ int AdvancedAI_AI_Infantry(HouseClass* house)
     bool debugprint = Frame > extension->LastInfantryValueDebugPrintFrame + 10000;
     if (debugprint) {
         extension->LastInfantryValueDebugPrintFrame = Frame;
-        DEBUG_INFO("AdvAI: House %d: Infantry values on Frame %d: Current Tactic: %s\n", house->HeapID, Frame, AdvAITacticType_To_Name(extension->AdvAIGroundTactic.Tactic));
+        DEBUG_INFO("AdvAI: House %d: Infantry values on Frame %d: Current Tactic: %s\n", (int)house->HeapID, Frame, AdvAITacticType_To_Name(extension->AdvAIGroundTactic.Tactic));
         DEBUG_INFO("    Has War Factory: %d\n", haswarfactory);
     }
 
@@ -2651,7 +2651,7 @@ int AdvancedAI_AI_Aircraft(HouseClass* house)
 
     if (debugprint) {
         houseext->LastAircraftValueDebugPrintFrame = Frame;
-        DEBUG_INFO("AdvAI: House %d: Aircraft values on frame %d:\n", house->HeapID, Frame);
+        DEBUG_INFO("AdvAI: House %d: Aircraft values on frame %d:\n", (int)house->HeapID, Frame);
     }
 
     // Build a list of all aircraft that we can build, alongside their scores for our current tactic.

@@ -640,7 +640,7 @@ void Draw_Tib(CellClass* cellptr, TiberiumClass* tib, Point2D point, Rect* windo
     }*/
 
     if (sdata == nullptr) {
-        DEBUG_ERROR("Tiberium Type %s is lacking an image for OverlayType %d!\n", tib->IniName, otype->HeapID);
+        DEBUG_ERROR("Tiberium Type %s is lacking an image for OverlayType %d!\n", tib->IniName, (int)otype->HeapID);
         WWMessageBox().Process("A Tiberium type is lacking an image. If you see this, please notify the developers. The game will now exit.", 0, TXT_OK);
         Emergency_Exit(0);
     }

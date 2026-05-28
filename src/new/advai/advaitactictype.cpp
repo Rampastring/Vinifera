@@ -229,12 +229,12 @@ HRESULT AdvancedAITacticTypeClass::Load(IStream* pStm)
 
     new (this) AdvancedAITacticTypeClass(NoInitClass());
 
-    hr = Load_Primitive_Vector(pStm, Conditions, "AdvancedAITacticTypeClass.Conditions");
+    hr = Load_Primitive_Vector(pStm, Conditions);
     if (FAILED(hr)) {
         return hr;
     }
     
-    hr = Load_Primitive_Vector(pStm, AdvAITeamTypes, "AdvancedAITacticTypeClass.AdvAITeamTypes");
+    hr = Load_Primitive_Vector(pStm, AdvAITeamTypes);
     if (FAILED(hr)) {
         return hr;
     }
@@ -276,12 +276,12 @@ HRESULT AdvancedAITacticTypeClass::Save(IStream* pStm, BOOL fClearDirty)
         return hr;
     }
     
-    hr = Save_Primitive_Vector(pStm, Conditions, "AdvancedAITacticTypeClass.Conditions");
+    hr = Save_Primitive_Vector(pStm, Conditions);
     if (FAILED(hr)) {
         return hr;
     }
     
-    hr = Save_Primitive_Vector(pStm, AdvAITeamTypes, "AdvancedAITacticTypeClass.AdvAITeamTypes");
+    hr = Save_Primitive_Vector(pStm, AdvAITeamTypes);
     if (FAILED(hr)) {
         return hr;
     }
@@ -1215,7 +1215,7 @@ bool AdvancedAITacticTypeClass::Process(HouseClass* house)
             pass = Extension::Fetch(house)->EnemyAntiAirStrength.Total() < condition.Parameter1;
             break;
         default:
-            DEBUG_ERROR("Unknown AdvAI tactic condition: %d\n", condition.ConditionType);
+            DEBUG_ERROR("Unknown AdvAI tactic condition: %d\n", (int)condition.ConditionType);
             Emergency_Exit(0);
             return false;
         }
@@ -1285,7 +1285,7 @@ bool AdvancedAITacticTypeClass::Process(HouseClass* house)
                 teamtype = Find_Or_Make_Aircraft_Vs_Factories_TeamType(house, advaiteamtype.IsSuicide);
                 break;
             default:
-                DEBUG_ERROR("Unknown AdvAI aircraft team type. Air tactic type: %d\n", AirTacticType);
+                DEBUG_ERROR("Unknown AdvAI aircraft team type. Air tactic type: %d\n", (int)AirTacticType);
                 Emergency_Exit(0);
                 return false;
             }
@@ -1300,7 +1300,7 @@ bool AdvancedAITacticTypeClass::Process(HouseClass* house)
                 teamtype = Find_Or_Make_Direct_Attack_TeamType(house);
                 break;
             default:
-                DEBUG_ERROR("Unknown AdvAI naval team type: %d\n", advaiteamtype.TeamType);
+                DEBUG_ERROR("Unknown AdvAI naval team type: %d\n", (int)advaiteamtype.TeamType);
                 Emergency_Exit(0);
                 return false;
             }
@@ -1340,7 +1340,7 @@ bool AdvancedAITacticTypeClass::Process(HouseClass* house)
                 teamtype = Find_Or_Make_Defense_TeamType(house);
                 break;
             default:
-                DEBUG_ERROR("Unknown AdvAI team type: %d\n", advaiteamtype.TeamType);
+                DEBUG_ERROR("Unknown AdvAI team type: %d\n", (int)advaiteamtype.TeamType);
                 Emergency_Exit(0);
                 return false;
             }

@@ -1080,7 +1080,7 @@ int AdvancedAI_AI_Unit(HouseClass* house)
 
     if (debugprint) {
         houseext->LastUnitValueDebugPrintFrame = Frame;
-        DEBUG_INFO("AdvAI: House %d: Unit values: Frame: %d, Current Tactic: %s\n", house->HeapID, Frame, AdvAITacticType_To_Name(houseext->AdvAIGroundTactic.Tactic));
+        DEBUG_INFO("AdvAI: House %d: Unit values: Frame: %d, Current Tactic: %s\n", (int)house->HeapID, Frame, AdvAITacticType_To_Name(houseext->AdvAIGroundTactic.Tactic));
     }
 
     // Build a list of all non-naval vehicles that we can build, alongside their scores for our current tactic.
@@ -1284,7 +1284,7 @@ int AdvancedAI_AI_Naval_Unit(HouseClass* house)
 
     if (debugprint) {
         houseext->LastUnitValueDebugPrintFrame = Frame;
-        DEBUG_INFO("AdvAI: House %d: Naval unit values: Frame: %d\n", house->HeapID, Frame);
+        DEBUG_INFO("AdvAI: House %d: Naval unit values: Frame: %d\n", (int)house->HeapID, Frame);
     }
 
     // Build a list of all non-naval vehicles that we can build, alongside their scores for our current tactic.
@@ -2147,7 +2147,7 @@ void HouseClassExtension::AdvAI_Set_Ground_Team_Desired_Ratios(TeamClass* team, 
 
 void HouseClassExtension::Assign_AdvAI_Tactic(AdvAITacticType tactic, int expected_duration)
 {
-    DEBUG_INFO("AdvAI: House {}: Assigning tactic {} with a duration of {}. Frame: {}\n", This()->HeapID, tactic, expected_duration, Frame);
+    DEBUG_INFO("AdvAI: House {}: Assigning tactic {} with a duration of {}. Frame: {}\n", (int)This()->HeapID, (int)tactic, expected_duration, Frame);
 
     assert(AdvAIGroundTactic.Tactic == TACTIC_NONE);
 
@@ -2158,7 +2158,7 @@ void HouseClassExtension::Assign_AdvAI_Tactic(AdvAITacticType tactic, int expect
 
 void HouseClassExtension::Assign_AdvAI_Air_Tactic(AdvAIAirTacticType airtactic, int expected_duration)
 {
-    DEBUG_INFO("AdvAI: House {}: Assigning air tactic {} with a duration of {}. Frame: {}\n", This()->HeapID, airtactic, expected_duration, Frame);
+    DEBUG_INFO("AdvAI: House {}: Assigning air tactic {} with a duration of {}. Frame: {}\n", (int)This()->HeapID, (int)airtactic, expected_duration, Frame);
 
     assert(AdvAIAirTactic.Tactic == TACTIC_NONE);
 
@@ -2168,7 +2168,7 @@ void HouseClassExtension::Assign_AdvAI_Air_Tactic(AdvAIAirTacticType airtactic, 
 
 void HouseClassExtension::Assign_AdvAI_Naval_Tactic(AdvAINavalTacticType navaltactic, int expected_duration)
 {
-    DEBUG_INFO("AdvAI: House {}: Assigning naval tactic {} with a duration of {}. Frame: {}\n", This()->HeapID, navaltactic, expected_duration, Frame);
+    DEBUG_INFO("AdvAI: House {}: Assigning naval tactic {} with a duration of {}. Frame: {}\n", (int)This()->HeapID, (int)navaltactic, expected_duration, Frame);
 
     assert(AdvAINavalTactic.Tactic == TACTIC_NONE);
 
