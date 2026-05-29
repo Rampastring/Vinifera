@@ -220,7 +220,7 @@ HRESULT ViniferaSaveVersionInfo::Load(IStorage* storage)
         return res;
     }
 
-    res = Load_Bool(storage, L"Is Cheat Session", IsCheatSession);
+    res = Load_Bool(storage, L"Cheat Session", IsCheatSession);
     if (FAILED(res)) {
         return res;
     }
