@@ -4672,6 +4672,21 @@ void HouseClassExt::_AI_Ion_Cannon(SuperClass* super)
     }
 }
 
+/**
+ *  Patches HouseClass::Recalc_Radar_Availability to allow Free Radar to still function when the player is in low power.
+ *  This requires 'FreeRadarOnLowPower=yes' to be set under [General].
+ *  Note that Ion Storms still turns off the radar regardless of this flag.
+ *
+ *  @author: JoyfulShush
+ */
+DEFINE_HOOK(0x004C958D, _HouseClass_Recalc_Radar_Availability_Free_Radar_Low_Power_Patch, 6)
+{
+    if (Scen->IsFreeRadar && RuleExtension->IsFreeRadarOnLowPower) {
+        return 0x004C966A;
+    }
+
+    return 0;
+}
 
 /**
  *  #issue-177

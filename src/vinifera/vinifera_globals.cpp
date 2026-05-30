@@ -98,3 +98,5 @@ bool Vinifera_SkipToInternet = false;
 bool Vinifera_ExitAfterSkip = false;
 
 DynamicVectorClass<ExceptionInfoDatabaseStruct> ExceptionInfoDatabase;
+
+std::unordered_map<Cell, int, CellHasher> BridgeHealths;
