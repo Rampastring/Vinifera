@@ -582,6 +582,12 @@ bool Vinifera_Collect_Debug_Files()
 }
 
 
+void Vinifera_Generate_PlaythroughID()
+{
+    Vinifera_PlaythroughID = std::time(nullptr);
+}
+
+
 /**
  *  Fetch string from the program resources.
  */
