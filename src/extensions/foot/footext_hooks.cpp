@@ -31,6 +31,7 @@
 #include "scripttype.h"
 #include "session.h"
 #include "syringe.h"
+#include "tag.h"
 #include "tactical.h"
 #include "team.h"
 #include "teamext.h"
@@ -1422,6 +1423,29 @@ DEFINE_HOOK(0x004A49A3, _FootClass_Mission_Enter_Seek_New_Refinery_After_Dropped
     return 0x004A49B1;
 }
 
+
+/**
+ *  Patches FootClass::Per_Cell_Process inside the cloak check.
+ *  Trigger cell tags via the TEVENT_PLAYER_ENTERED trigger event.
+ *  Cell Tags can only be sprung by cloaked units if the 'CloakedTechnosTriggerCellTags' key is set in rules under [General].
+ * 
+ *  @author: JoyfulShush
+ */
+DEFINE_HOOK(0x004A3E25, _FootClass_Spring_Entered_By_Cloaked_Units_Patch, 6)
+{
+    GET(FootClass*, this_ptr, ESI);
+        
+    if (!RuleExtension->IsCellTagsIgnoreStealth) {
+        CellClass* cellptr = &Map[this_ptr->PositionCell];
+        TagClass* tag = cellptr->CellTag;
+
+        if (((!cellptr->IsUnderBridge && !cellptr->WasUnderBridge) || this_ptr->IsOnBridge) && tag != nullptr) {
+            tag->Spring(TEVENT_PLAYER_ENTERED, this_ptr, this_ptr->PositionCell);
+        }
+    }    
+
+    return 0;
+}
 
 /**
  *  #issue-177
