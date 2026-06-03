@@ -25,11 +25,13 @@
 #include "infantry.h"
 #include "iomap.h"
 #include "msgbox.h"
+#include "options.h"
 #include "rules.h"
 #include "rulesext.h"
 #include "spawnmanager.h"
 #include "syringe.h"
 #include "tactical.h"
+#include "tacticalext.h"
 #include "tag.h"
 #include "target.h"
 #include "technotype.h"
@@ -1764,6 +1766,38 @@ DEFINE_HOOK(0x0064FDB4, _Unit_Class_Take_Damage_Cargo_Hold_Patch, 6)
         }
     }
     
+    return 0;
+}
+
+
+/**
+ *  Patches UnitClass::Take_Damage not to alert of harvesters receiving damage
+ *  if the player was just recently told about it, or the damage was dealt
+ *  by a passive damage source.
+ *
+ *  @author: Rampastring
+ */
+DEFINE_HOOK(0x0065019F, _UnitClass_Take_Damage_Throttle_Harvester_Under_Attack_Patch, 6)
+{
+    GET(ObjectClass*, source, EBX);
+
+    /**
+     *  Damage without an owner most likely means incidental damage rather than "we're under attack".
+     */
+    if (source == nullptr) {
+        return 0x006501F3;
+    }
+
+    /**
+     *  If EVA has just recently alerted about a harvester being under attack, there might be no need to repeat it yet.
+     */
+    if (RuleExtension->HarvesterUnderAttackThrottleTime > 0 &&
+        Frame < TacticalMapExtension->LastHarvesterUnderAttackFrame + Options.Normalize_Delay(RuleExtension->HarvesterUnderAttackThrottleTime))
+    {
+        return 0x006501F3;
+    }
+
+    TacticalMapExtension->LastHarvesterUnderAttackFrame = Frame;
     return 0;
 }
 

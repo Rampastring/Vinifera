@@ -198,4 +198,9 @@ public:
     std::string SubtitleFontCacheName;
     int SubtitleFontCacheHeight;
     int SubtitleFontCacheWeight;
+
+    /**
+     *  Records the last frame when EVA told the player that their harvester is under attack.
+     */
+    int LastHarvesterUnderAttackFrame;
 };
