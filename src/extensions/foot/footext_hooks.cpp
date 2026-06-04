@@ -720,11 +720,11 @@ bool FootClassExt::_Unlimbo(const Coord& coord, Dir256 dir)
         Locomotion->Unlimbo();
 
         bool off = false;
-        if (IonStorm_Is_Active()) {
-            if (Locomotion->Is_Ion_Sensitive()) {
-                off = true;
-            }
-        }
+        // if (IonStorm_Is_Active()) {
+        //     if (Locomotion->Is_Ion_Sensitive()) {
+        //         off = true;
+        //     }
+        // }
 
         if (off) {
             Locomotion->Power_Off();

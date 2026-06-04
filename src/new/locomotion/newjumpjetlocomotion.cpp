@@ -101,14 +101,14 @@ IFACEMETHODIMP_(bool) NewJumpjetLocomotionClass::Process()
             return false;
         }
 
-        if (IonStorm_Is_Active()) {
-            if (CurrentState != GROUNDED) {
-                ResultType result = LinkedTo->Take_Damage(LinkedTo->Strength, 0, Rule->C4Warhead, nullptr, true, true);
-                if (result == RESULT_DESTROYED) {
-                    return false;
-                }
-            }
-        }
+        // if (IonStorm_Is_Active()) {
+        //     if (CurrentState != GROUNDED) {
+        //         ResultType result = LinkedTo->Take_Damage(LinkedTo->Strength, 0, Rule->C4Warhead, nullptr, true, true);
+        //         if (result == RESULT_DESTROYED) {
+        //             return false;
+        //         }
+        //     }
+        // }
 
         switch (CurrentState) {
             case GROUNDED:
@@ -259,14 +259,14 @@ void NewJumpjetLocomotionClass::Process_Grounded()
         CurrentSpeed = 0;
         TargetSpeed = 0;
         FlightLevel = JumpjetCruiseHeight;
-        if (!IonStorm_Is_Active()) {
+        // if (!IonStorm_Is_Active()) {
             const auto extension = Extension::Fetch(LinkedTo);
             if (extension->Get_Last_Flight_Cell() == CELL_NONE) {
                 AircraftTracker->Track(LinkedTo);
             }
 
             CurrentState = ASCENDING;
-        }
+        // }
     }
 }
 
