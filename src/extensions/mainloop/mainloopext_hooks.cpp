@@ -24,9 +24,6 @@
 #include "event.h"
 #include "eventext.h"
 #include "fatal.h"
-#include "debughandler.h"
-#include "asserthandler.h"
-#include "asserthandler.h"
 #include "extension_globals.h"
 #include "session.h"
 
@@ -35,6 +32,7 @@
 #include "infantry.h"
 #include "iomap.h"
 #include "ipxmgr.h"
+#include "msgbox.h"
 #include "netdlg.h"
 #include "nullmgr.h"
 #include "optionsext.h"
@@ -197,6 +195,21 @@ static void After_Main_Loop()
     }
 
     SessionExtension->Service_Autosave_After_Main_Loop();
+
+    if (PendingMultiplayerSaveLoadTime && std::chrono::steady_clock::now() >= *PendingMultiplayerSaveLoadTime)
+    {
+        int slot = PendingMultiplayerSaveLoadSlot;
+        PendingMultiplayerSaveLoadSlot = -1;
+        PendingMultiplayerSaveLoadTime.reset();
+
+        DEBUG_INFO("Loading multiplayer game while mid-session.\n");
+
+        if (!SessionExtension->Load_Multiplayer_Save(slot)) {
+            WWMessageBox().Process("Failed to load saved game! The game will now exit.", 0);
+            Emergency_Exit(0);
+            return;
+        }
+    }
 }
 
 

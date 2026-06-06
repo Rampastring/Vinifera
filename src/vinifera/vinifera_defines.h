@@ -338,7 +338,8 @@ DEFINE_ENUMERATION_OPERATORS(ExtActionType);
 enum ExtNetCommandType {
     EXT_NET_BEACON_PLACE = NET_PROPOSE_KICK + 1,
     EXT_NET_BEACON_DELETE,
-    EXT_NET_BEACON_TEXT
+    EXT_NET_BEACON_TEXT,
+    EXT_NET_LOAD_GAME,
 };
 
 /**
@@ -370,6 +371,9 @@ struct ExtGlobalPacketType {
             PlayerColorType Color;
             unsigned long NameCRC;
         } Message;
+        struct {
+            int ID;
+        } SaveInfo;
         char padding[455 - sizeof(Command) - sizeof(Name) - sizeof(Serial)];
     };
 };
