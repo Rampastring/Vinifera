@@ -34,7 +34,7 @@ BuildingTypeClassExtension::BuildingTypeClassExtension(const BuildingTypeClass *
     ProduceCashBudget(0),
     IsStartupCashOneTime(false),
     IsResetBudgetOnCapture(false),
-    IsEligibleForAllyBuilding(false),
+    IsEligibleForAllyBuilding(true),
     EngineerChance(0),
     IsHideDuringSpecialAnim(false),
     RoofDeployingAnim(nullptr),
