@@ -799,68 +799,6 @@ bool FootClassExt::_Limbo()
 }
 
 /**
- *  Patches FootClass::Do_MISSION_GUARD_AREA during the archive target check.
- *  This overrides the distance that a unit can move away before a area-guarding unit will still to chase it,
- *  as well as allowing units to keep engaging a target before abandoning it and returning to the unit it is guarding.
- *  When not provided, falls back to the original game logic.
- *
- *  @author: JoyfulShush
- */
-DEFINE_HOOK(0x004A2B90, _FootClass_Do_MISSION_GUARD_AREA_Escort_Distance_Patch, 6)
-{
-    GET(FootClass*, this_ptr, ESI);
-    TechnoTypeClassExtension* ext = Extension::Fetch(this_ptr->TClass);
-
-    enum {
-        TarComCheck = 0x004A2BDD,
-        GoToArchiveTarget = 0x004A2BBE,
-        ApproachTarcomTarget = 0x004A2C25
-    };
-
-    if (this_ptr->ArchiveTarget == nullptr) {
-        return TarComCheck;
-    }
-    
-    if (this_ptr->TarCom != nullptr) {
-        int abandon_target_escort_range = -1;
-        if (ext->AbandonTargetEscortRange > 0) {
-            abandon_target_escort_range = ext->AbandonTargetEscortRange;
-        }
-
-        if (abandon_target_escort_range <= 0 && RuleExtension->AbandonTargetEscortRange > 0) {
-            abandon_target_escort_range = RuleExtension->AbandonTargetEscortRange;
-        }
-
-        if (abandon_target_escort_range > 0) {
-            if (this_ptr->Distance_To(this_ptr->ArchiveTarget) >= abandon_target_escort_range) {
-                return GoToArchiveTarget;
-            }
-        }
-
-        return ApproachTarcomTarget;
-    }
-    
-    int escort_range = -1;
-    if (ext->EscortRange > 0) {
-        escort_range = ext->EscortRange;
-    }
-
-    if (escort_range <= 0 && RuleExtension->EscortRange > 0) {
-        escort_range = RuleExtension->EscortRange;
-    }
-
-    if (escort_range > 0) {
-        if (this_ptr->Distance_To(this_ptr->ArchiveTarget) >= escort_range) {
-            return GoToArchiveTarget;
-        }
-
-        return TarComCheck;
-    }
-    
-    return 0;
-}
-
-/**
  *  Patches FootClass::Active_Click_With inside the 'ACTION_ATTACK_SUPPORT' case.
  *  Makes healing units (negative damage) prefer to guard other units instead of themselves.
  *  Healing units will guard other combatants, if any, and will assign themselves to the unit closest to them.
@@ -906,24 +844,6 @@ DEFINE_HOOK(0x004A3518, _FootClass_Active_Click_With_Attack_Support_Patch, 0)
 
     return 0x004A2F95;
 }
-
-/**
- *  Patches FootClass::Do_MISSION_GUARD_AREA inside the 'this->TarCom' case, where the unit is assigned to approach its tarcom target.
- *  Clears the current destination, which made object-specific Area Guarding units have to go back to their guard object
- *  between each time a tarcom target is acquired, as Approach_Target in vanilla code only kicked in
- *  after the unit started moving towards its guard object.
- *
- *  @author: JoyfulShush
- */
-DEFINE_HOOK(0x004A2C25, _FootClass_Do_MISSION_GUARD_AREA_Approach_Target_Patch, 10)
-{
-    GET(FootClass*, this_ptr, ESI);
-
-    this_ptr->Assign_Destination(nullptr);
-
-    return 0;
-}
-
 
 // Copy of Target_Something_Nearby that does not ignore ThreatTypes other than the range specifiers.
 bool Respectable_Target_Something_Nearby(FootClassExt* foot, Coord & coord, ThreatType threat)
@@ -1279,6 +1199,8 @@ DEFINE_HOOK(0x004A58A8, _FootClass_AI_Hook, 0)
 */
 int FootClassExt::_Do_MISSION_GUARD_AREA()
 {
+    TechnoTypeClassExtension* technotype_ext = Extension::Fetch(TClass);
+
     if (!House->Is_Human_Player() && NavQueue.Count() > 0 && NavCom == nullptr && NavQueue[0] == ArchiveTarget) {
         AbstractClass* first = NavQueue[0];
         if (first != nullptr) {
@@ -1343,6 +1265,24 @@ int FootClassExt::_Do_MISSION_GUARD_AREA()
             Assign_Target(nullptr);
         }
 
+        int escort_range = -1;
+        if (technotype_ext->EscortRange > 0) {
+            escort_range = technotype_ext->EscortRange;
+        }
+
+        if (escort_range <= 0) {
+            if (RuleExtension->EscortRange > 0) {
+                escort_range = RuleExtension->EscortRange;
+            }
+         }
+
+        if (escort_range > 0) {
+            if (Distance_To(ArchiveTarget) >= escort_range) {
+                Assign_Target(nullptr);
+                Assign_Destination(ArchiveTarget);
+            }
+        }
+
         if (!IsFiring && NavCom == nullptr && Distance(ArchiveTarget) > maxrange && 
             (!RuleExtension->AdvancedAIAreaGuard || TarCom == nullptr))
         {
@@ -1370,7 +1310,25 @@ int FootClassExt::_Do_MISSION_GUARD_AREA()
             }
         }
         else {
-            Approach_Target();
+            int abandon_target_escort_range = -1;
+            if (technotype_ext->AbandonTargetEscortRange > 0) {
+                abandon_target_escort_range = technotype_ext->AbandonTargetEscortRange;
+            }
+
+            if (abandon_target_escort_range <= 0) {
+                if (RuleExtension->AbandonTargetEscortRange > 0) {
+                    abandon_target_escort_range = RuleExtension->AbandonTargetEscortRange;
+                }
+            }
+
+            if (abandon_target_escort_range > 0) {
+                if (Distance_To(ArchiveTarget) >= abandon_target_escort_range) {
+                    Assign_Target(nullptr);
+                    Assign_Destination(ArchiveTarget);
+                }
+            } else {                
+                Approach_Target();
+            }
         }
     }
 
