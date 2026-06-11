@@ -944,7 +944,7 @@ void AdvAI_Aircraft_Maintenance(AircraftClass* aircraft)
                 BuildingClass* cellbldg = Map[aircraft->PositionCell].Cell_Building();
                 if (cellbldg == nullptr) {
                     for (int i = 0; i < aircraft->Class->Dock.Count(); i++) {
-                        BuildingClass* dockingbay = aircraft->Find_Docking_Bay(aircraft->Class->Dock[i], false, false);
+                        BuildingClass* dockingbay = aircraft->Find_Docking_Bay(aircraft->Class->Dock[i], false, true);
                         if (dockingbay != nullptr && aircraft->Transmit_Message(RADIO_HELLO, dockingbay) == RADIO_ROGER) {
                             aircraft->Assign_Destination(dockingbay);
                             aircraft->Assign_Mission(MISSION_ENTER);
