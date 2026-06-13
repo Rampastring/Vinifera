@@ -52,6 +52,9 @@ class SessionClassExtension final : public GlobalExtensionClass<SessionClass>
         void Announce_Master();
         void Update_Master_After_Player_Removal();
 
+        bool Are_Statistics_Enabled() const;
+        bool Are_Extra_Statistics_Enabled() const;
+
     private:
         static std::string Multiplayer_Save_File_Name_From_Index(int index);
         void Init_Multiplayer_Saves_For_Session();
