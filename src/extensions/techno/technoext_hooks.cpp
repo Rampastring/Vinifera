@@ -1400,6 +1400,16 @@ void TechnoClassExt::_Record_The_Kill(TechnoClass* source)
                 value = value * RuleExtension->StrengthenBuildingValueMultiplier;
             }
 
+            // Take current modifiers into account - destroying objects from a tougher player
+            // is rewarded to make it harder for one player to snowball to invincible levels.
+            // Similarly, a tougher player bullying a weaker player receives somewhat less benefit,
+            // though always receives at least half the benefit to keep the game aggressive.
+            if (source->House->FirepowerBias < House->FirepowerBias) {
+                value += value * (House->FirepowerBias / source->House->FirepowerBias);
+            } else if (source->House->FirepowerBias > House->FirepowerBias) {
+                value -= (value / (source->House->FirepowerBias / House->FirepowerBias)) / 2;
+            }
+
             houseext->StrengthenDestroyedCost += value;
 
             /**
