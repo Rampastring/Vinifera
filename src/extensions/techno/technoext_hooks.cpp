@@ -2499,8 +2499,8 @@ DEFINE_HOOK(0x006328DE, _TechnoClass_Take_Damage_Intercept_Patch, 7)
      *  scale the damage by the techno's armor modifier. This keeps Ion Cannons and 
      *  animation-related damage relevant.
      */
-    if (RuleExtension->IsStrengtheningEnabled && source == nullptr && this_ptr->ArmorBias > 1.0) {
-        *damage = *damage * this_ptr->ArmorBias;
+    if (RuleExtension->IsStrengtheningEnabled && source == nullptr && this_ptr->House->ArmorBias > 1.0) {
+        *damage = *damage * this_ptr->House->ArmorBias;
     }
 
     return 0;
