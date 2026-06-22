@@ -222,6 +222,8 @@ ViniferaSwizzleManagerClass::~ViniferaSwizzleManagerClass()
  */
 void ViniferaSwizzleManagerClass::Process_Tables()
 {
+    bool corrupted = false;
+
     if (!RequestTable.empty()) {
 
 #ifdef VINIFERA_ENABLE_SWIZZLE_DEBUG_PRINTING
@@ -258,7 +260,12 @@ void ViniferaSwizzleManagerClass::Process_Tables()
                  *  If there is additional debug information attached to this
                  *  pointer, then throw an assertion instead.
                  */
-                if (!request.Variable.empty()) {
+                if (!corrupted) {
+
+                    /**
+                     *  Only inform the user about it once.
+                     */
+                    corrupted = true;
 
                     /**
                      *  If a variable value has been set, then it will be a
@@ -267,36 +274,26 @@ void ViniferaSwizzleManagerClass::Process_Tables()
                      */
                     static char buffer[1024];
 
-                    DEV_DEBUG_ERROR("SwizzleManager::Process_Tables() - Request info:\n  File: {}\n  Line: {}\n  Function: {}\n  Variable: {}\n"
-                                    , !request.File.empty() ? request.File.c_str() : "<no-filename-info>"
-                                    , request.Line
-                                    , !request.Function.empty() ? request.Function.c_str() : "<no-function-info>"
-                                    , !request.Variable.empty() ? request.Variable.c_str() : "<no-variable-info>");
+                    DEV_DEBUG_ERROR("SwizzleManager::Process_Tables() - Request info:\n  File: {}\n  Line: {}\n  Function: {}\n  Variable: {}\n", !request.File.empty() ? request.File.c_str() : "<no-filename-info>", request.Line, !request.Function.empty() ? request.Function.c_str() : "<no-function-info>",
+                                    !request.Variable.empty() ? request.Variable.c_str() : "<no-variable-info>");
 
                     std::snprintf(buffer, sizeof(buffer),
-                                  "SwizzleManager failed to remap a pointer from the save file!\n\n"
+                                  "Corrupted saved game detected!\n\n"
                                   "Additional debug information:\n"
                                   "  File: %s\n"
                                   "  Line: %d\n"
                                   "  Function: %s\n"
-                                  "  Variable: %s\n"
-                                  "\nThe game will now exit.\n"
-                                  
-                                , !request.File.empty() ? request.File.c_str() : "<no-filename-info>"
-                                , request.Line
-                                , !request.Function.empty() ? request.Function.c_str() : "<no-function-info>"
-                                , !request.Variable.empty() ? request.Variable.c_str() : "<no-variable-info>");
+                                  "  Variable: %s\n\n"
+                                  "DTA will attempt to repair the saved game and load it anyway.\n"
+                                  "If the game crashes after loading, then this is likely why.\n"
+                                  ,
+                                  !request.File.empty() ? request.File.c_str() : "<no-filename-info>", request.Line, !request.Function.empty() ? request.Function.c_str() : "<no-function-info>", !request.Variable.empty() ? request.Variable.c_str() : "<no-variable-info>");
 
                     MessageBox(MainWindow, buffer, "Vinifera", MB_OK | MB_ICONEXCLAMATION);
-                } else {
-                    MessageBox(MainWindow, "SwizzleManager failed to remap a pointer from the save file!\n\nThe game will now exit.", "Vinifera", MB_OK | MB_ICONEXCLAMATION);
                 }
 
-                // Fatal("SwizzleManager failed to remap a pointer from the save file!\n");
-                Emergency_Exit(EXIT_FAILURE);
-                exit(EXIT_FAILURE);
-
-                return; // For clean binary analysis.
+                uintptr_t* ptr = (uintptr_t*)request.Pointer;
+                *ptr = reinterpret_cast<uintptr_t>(nullptr);
             }
         }
 
