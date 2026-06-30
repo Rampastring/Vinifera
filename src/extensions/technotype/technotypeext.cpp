@@ -116,6 +116,8 @@ TechnoTypeClassExtension::TechnoTypeClassExtension(const TechnoTypeClass *this_p
     EscortRange(-1),
     AbandonTargetEscortRange(-1),
     ScrapExplosion(),
+    VeteranSightRange(-1),
+    EliteSightRange(-1),
     Buildability(TechnoTypeBuildability::BUILDABILITY_NORMAL)
 {
 }
@@ -297,6 +299,8 @@ void TechnoTypeClassExtension::Object_CRC(CRCEngine &crc) const
     crc(IronCurtainPriorityTarget);
     crc(EscortRange);
     crc(AbandonTargetEscortRange);
+    crc(VeteranSightRange);
+    crc(EliteSightRange);
 }
 
 
@@ -457,6 +461,9 @@ bool TechnoTypeClassExtension::Read_INI(CCINIClass &ini)
     if (SessionExtension->ExtOptions.IsScrapMetal) {
         This()->Explosion = ScrapExplosion;
     }
+
+    VeteranSightRange = ini.Get_Int(ini_name, "VeteranSight", VeteranSightRange);
+    EliteSightRange = ini.Get_Int(ini_name, "EliteSight", EliteSightRange);
 
     char buffer[32];
     if (ini.Get_String(ini_name, "Buildability", "", buffer, std::size(buffer)) > 0) {

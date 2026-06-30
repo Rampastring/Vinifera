@@ -499,6 +499,7 @@ DEFINE_HOOK(0x0040BDCF, _AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TA
 
 }
 
+
 DEFINE_HOOK(0x0040C054, _AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TARGET2_Can_Fire_FIRE_OK_Patch, 0)
 {
     GET(AircraftClass *, this_ptr, ESI);
@@ -510,6 +511,7 @@ DEFINE_HOOK(0x0040C054, _AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TA
     return 0x0040BFA8;
 }
 
+
 DEFINE_HOOK(0x0040BF9D, _AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TARGET2_Can_Fire_FIRE_FACING_Patch, 0)
 {
     GET(AircraftClass *, this_ptr, ESI);
@@ -520,6 +522,7 @@ DEFINE_HOOK(0x0040BF9D, _AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TA
 
     return 0x0040C060;
 }
+
 
 DEFINE_HOOK(0x0040C0AC, _AircraftClass_Mission_Attack_IsCurleyShuffle_FIRE_AT_TARGET2_Can_Fire_DEFAULT_Patch, 0)
 {
@@ -675,6 +678,7 @@ DEFINE_HOOK(0x004097FF, _AircraftClass_Do_MISSION_UNLOAD_Carryall_Drop_Off_Patch
     return 0x00409833;
 }
 
+
 DEFINE_HOOK(0x0040AD82, _AircraftClass_Do_MISSION_MOVE_CARRYALL_Drop_Off_Patch, 6)
 {
     GET(AircraftClass*, this_ptr, ESI);
@@ -685,6 +689,7 @@ DEFINE_HOOK(0x0040AD82, _AircraftClass_Do_MISSION_MOVE_CARRYALL_Drop_Off_Patch, 
 
     return 0x0040ADD0;
 }
+
 
 DEFINE_HOOK(0x0040D60D, _AircraftClass_Do_MISSION_ENTER_Drop_Off_Patch, 0)
 {
@@ -763,6 +768,7 @@ LONG AircraftClassExt::_Landing_Altitude()
 
     return 0;
 }
+
 
 /**
  *  AircraftClass::Landing_Altitude is an interface method so we need to make
@@ -1315,6 +1321,7 @@ DEFINE_HOOK(0x0040A195, _AircraftClass_Fire_At_No_Reveal_On_Fire_For_Spawned_Air
     return 0x0040A1C8;
 }
 
+
 /**
  *  Patches AircraftClass::Assign_Mission to allow Q-Move missions to be registered.
  *
@@ -1332,6 +1339,7 @@ DEFINE_HOOK(0x0040B78E, _AircraftClass_Assign_Mission_QMove_Patch, 8)
 
     return 0;
 }
+
 
 /**
  *  Patches AircraftClass::Enter_Idle_Mode to add Q-Move processing, similarly to ground classes.
@@ -1355,6 +1363,7 @@ DEFINE_HOOK(0x0040B35A, _AircraftClass_Enter_Idle_Mode_QMove_Patch, 6)
 
     return 0;
 }
+
 
 /**
  *  Determines if the aircraft applies their next QMove while moving.
@@ -1400,6 +1409,7 @@ bool AircraftClassExt::_Do_MISSION_MOVE_Apply_QMove()
     return false;
 }
 
+
 /**
  *  Patches AircraftClass::Do_MISSION_MOVE_ to support Q-Moving during movement in order to allow aircraft to stay in the air.
  *  Without this, they will land after each position, enter idle mode, trigger Q-Move processing, and move to the next position.
@@ -1420,6 +1430,7 @@ DEFINE_HOOK(0x0040A655, _AircraftClass_Do_MISSION_MOVE__QMove_Patch, 6)
     return 0;
 }
 
+
 /**
  *  Patches AircraftClass::Do_MISSION_MOVE_Carryall to support Q-Moving during movement in order to allow aircraft to stay in the air.
  *  Without this, they will land after each position, enter idle mode, trigger Q-Move processing, and move to the next position.
@@ -1439,6 +1450,7 @@ DEFINE_HOOK(0x0040AD38, _AircraftClass_Do_MISSION_MOVE_Carryall_QMove_Patch, 6)
 
     return 0;
 }
+
 
 /**
  *  Patches AircraftClass::Do_MISSION_MOVE_Carryall after possibly attaching a unit
@@ -1470,6 +1482,7 @@ DEFINE_HOOK(0x0040AE92, _AircraftClass_Do_MISSION_MOVE_Carryall_QMove_Attach_Car
     return 0;
 }
 
+
 /**
  *  Patches AircraftClass::Do_MISSION_MOVE_Carryall to fix a bug where carryall can land on a unit without picking it up.
  *  This can happen if the player clicks on a Service Depot while the carryall is landing to pick up a unit
@@ -1489,6 +1502,25 @@ DEFINE_HOOK(0x0040ABEB, _Aircraft_Class_Do_MISSION_MOVE_Carryall_Lost_Contact, 6
 
     return 0;
 }
+
+
+/*
+ *  Patches AircraftClass::Look, replacing the value of Sight to take into account all sight range modifications for this techno.
+ *  Particularly relevant to veterancy granting sight range bonuses.
+ * 
+ *  @author: JoyfulShush
+ */
+DEFINE_HOOK(0x0040E565, _Aircraft_Class_Look_Sight_Range_Patch, 6)
+{
+    GET(AircraftClass*, this_ptr, ESI);
+    
+    auto techno_ext = Extension::Fetch(this_ptr);
+
+    R->EDI(techno_ext->Get_Sight_Range());
+
+    return 0;
+}
+
 
 /**
  *  Main function for patching the hooks.

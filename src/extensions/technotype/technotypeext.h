@@ -422,6 +422,19 @@ public:
      */
     TypeList<AnimTypeClass*> ScrapExplosion;
 
+    /*
+     *  Specifies the sight range that should be used when the techno is veteran.
+     *  Falls back to vanilla SightRange when not provided.
+     *  Used as a fall back if EliteSightRange is not provided.
+     */
+    int VeteranSightRange;
+
+    /*
+     *  Specifies the sight range that should be used when the techno is elite.
+     *  Falls back to VeteranSightRange when not provided.
+     */
+    int EliteSightRange;
+
     /**
      *  Specifies whether this object is available to be built by all players, only AI players, or only human players.
      */
