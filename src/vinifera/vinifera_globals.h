@@ -128,6 +128,8 @@ extern unsigned Vinifera_PlaythroughID;
 extern int PendingMultiplayerSaveLoadSlot;
 extern std::optional<std::chrono::steady_clock::time_point> PendingMultiplayerSaveLoadTime;
 
+extern bool Vinifera_ClearingScenario;
+
 /**
  *  Global vectors and heaps.
  */

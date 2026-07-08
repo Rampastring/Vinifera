@@ -514,7 +514,9 @@ bool Vinifera_Get_All(IStream *pStm, bool load_net)
      *  Clear the existing scenario data, ready for loading.
      */
     DEBUG_INFO("About to call Clear_Scenario()...\n");
+    Vinifera_ClearingScenario = true;
     Clear_Scenario();
+    Vinifera_ClearingScenario = false;
 
     /**
      *  Now the scenario data has been cleaned up, we can now tell the extension

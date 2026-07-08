@@ -73,6 +73,8 @@ unsigned Vinifera_PlaythroughID = 0;
 int PendingMultiplayerSaveLoadSlot = -1;
 std::optional<std::chrono::steady_clock::time_point> PendingMultiplayerSaveLoadTime;
 
+bool Vinifera_ClearingScenario = false;
+
 DynamicVectorClass<EBoltClass *> EBolts;
 DynamicVectorClass<TheaterTypeClass *> TheaterTypes;
 DynamicVectorClass<ArmorTypeClass *> ArmorTypes;

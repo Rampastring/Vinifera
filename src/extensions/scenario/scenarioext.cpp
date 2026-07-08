@@ -1307,7 +1307,9 @@ bool ScenarioClassExtension::Read_Scenario_INI(CCINIClass& ini, bool random)
     ScenarioInit++;
 
     DEBUG_INFO("Clearing old scenario\n");
+    Vinifera_ClearingScenario = true;
     Clear_Scenario();
+    Vinifera_ClearingScenario = false;
 
     /**
      *  Set up difficulty and fog of war settings.

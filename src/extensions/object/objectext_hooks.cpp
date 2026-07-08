@@ -148,9 +148,12 @@ DEFINE_HOOK(0x00585AAD, _ObjectClass_Limbo_AmbientSound_Patch, 5)
 {
     GET(ObjectClass*, this_ptr, ESI);
 
-    auto ext = Extension::Fetch(this_ptr);
-    if (ext != nullptr) {
-        Extension::Fetch(this_ptr)->Stop_Ambient();
+    if (!Vinifera_ClearingScenario)
+    {
+        auto ext = Extension::Fetch(this_ptr);
+        if (ext != nullptr) {
+            Extension::Fetch(this_ptr)->Stop_Ambient();
+        }
     }
 
     return 0;
