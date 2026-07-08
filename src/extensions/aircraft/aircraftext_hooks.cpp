@@ -1264,17 +1264,21 @@ int AircraftClassExt::_Do_MISSION_GUARD(void)
     /*
     **	Perform a special check to hunt for harvesters that are outside of the protective
     **	shield of their base.
+    **
+    **  Rampastring: This is supposedly vanilla TS, but is rather nonsensical... not that they'd rule each other out,
+    **               and it also breaks many DTA missions which weren't designed with this in mind.
+    **               Did a community patch disable this before, or was this part incorrect in the TS reverse-engineering project?
     */
-    if ((!RuleExtension->AdvancedAIAircraftReuse || House->Class->IsMultiplayPassive) &&
-        !House->Is_Human_Player() && House->State != STATE_ATTACKED)
-    {
-        AbstractClass* target = House->Find_Juicy_Target(PositionCoord);
-    
-        if (target != NULL) {
-            Assign_Target(target);
-            Assign_Mission(MISSION_ATTACK);
-        }
-    }
+    // if ((!RuleExtension->AdvancedAIAircraftReuse || House->Class->IsMultiplayPassive) &&
+    //     !House->Is_Human_Player() && House->State != STATE_ATTACKED)
+    // {
+    //     AbstractClass* target = House->Find_Juicy_Target(PositionCoord);
+    //
+    //     if (target != NULL) {
+    //         Assign_Target(target);
+    //         Assign_Mission(MISSION_ATTACK);
+    //     }
+    // }
 
     if (/*House->Is_Human_Player() && */!In_Air()) {
         return(MISSION_GUARD);
