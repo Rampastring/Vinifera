@@ -1021,6 +1021,12 @@ bool AircraftClassExt::_Enter_Idle_Mode(bool initial, bool a2)
 
     bool result = FootClass::Enter_Idle_Mode(initial, a2);
 
+    Handle_Navigation_List();
+    if (NavCom != nullptr) {
+        Assign_Mission(MISSION_MOVE);
+        return result;
+    }
+
     MissionType mission = MISSION_GUARD;
     
     if ((!RuleExtension->AdvancedAIAircraftReuse || House->Class->IsMultiplayPassive) && Team == nullptr && Is_Weapon_Equipped())
@@ -1324,30 +1330,6 @@ DEFINE_HOOK(0x0040B78E, _AircraftClass_Assign_Mission_QMove_Patch, 8)
     }
 
     R->EDI(mission);
-
-    return 0;
-}
-
-
-/**
- *  Patches AircraftClass::Enter_Idle_Mode to add Q-Move processing, similarly to ground classes.
- *  When entering this function, we have no NavCom. When we enter Handle_Navigation_List, 
- *  it will pop out the next Q-Move registered in the queue, if any, and will assign it to the NavCom as the next destination.
- *  We then assign the move mission so it will go out of being idle and continue processing the next move.
- *  Note that in most cases, this is not actually used by aircraft as typically players will move aircraft around with a move order followed by
- *  additional queued moves, so this is a default in case we entered idle mode for some reason (such as carryalls just releasing a unit it was carrying)
- *
- *  @author: JoyfulShush
- */
-DEFINE_HOOK(0x0040B35A, _AircraftClass_Enter_Idle_Mode_QMove_Patch, 6)
-{
-    GET(AircraftClass*, this_ptr, ESI);
-
-    this_ptr->Handle_Navigation_List();
-    if (this_ptr->NavCom != nullptr) {
-        this_ptr->Assign_Mission(MISSION_MOVE);
-        return 0x0040B340;
-    }
 
     return 0;
 }
