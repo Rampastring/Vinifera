@@ -1288,22 +1288,6 @@ int AircraftClassExt::_Do_MISSION_GUARD(void)
 }
 
 
-void Reveal_Around_Aircraft(AircraftClass* aircraft)
-{
-    if (Extension::Fetch(aircraft)->SpawnOwner != nullptr) {
-        return;
-    }
-
-    // Don't reveal if attacking aircraft sight range has been specified as 0 in Rules.
-    // The original game did not have this check (though maybe it has one in MapClass::Sight_From).
-    if (Rule->AttackingAircraftSightRange <= 0) {
-        return;
-    }
-
-    Map.Sight_From(aircraft->PositionCoord, Rule->AttackingAircraftSightRange, aircraft->House);
-}
-
-
 /**
  *  Patch to prevent spawned aircraft from revealing terrain when they fire.
  *
