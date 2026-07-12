@@ -1280,7 +1280,7 @@ int FootClassExt::_Do_MISSION_GUARD_AREA()
                 }
             }
 
-            bool should_escort_target = escort_range > 0 && Distance_To(ArchiveTarget) >= escort_range;
+            bool should_escort_target = TarCom == nullptr && escort_range > 0 && Distance_To(ArchiveTarget) >= escort_range;
             bool target_beyond_max_range = Distance(ArchiveTarget) > maxrange && (!RuleExtension->AdvancedAIAreaGuard || TarCom == nullptr);
 
             if (should_escort_target || target_beyond_max_range) {
