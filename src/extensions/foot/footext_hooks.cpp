@@ -1268,29 +1268,25 @@ int FootClassExt::_Do_MISSION_GUARD_AREA()
             Assign_Target(nullptr);
         }
 
-        int escort_range = -1;
-        if (technotype_ext->EscortRange > 0) {
-            escort_range = technotype_ext->EscortRange;
-        }
-
-        if (escort_range <= 0) {
-            if (RuleExtension->EscortRange > 0) {
-                escort_range = RuleExtension->EscortRange;
+        if (!IsFiring && NavCom == nullptr) {
+            int escort_range = -1;
+            if (technotype_ext->EscortRange > 0) {
+                escort_range = technotype_ext->EscortRange;
             }
-        }
 
-        if (escort_range > 0) {
-            if (Distance_To(ArchiveTarget) >= escort_range) {
+            if (escort_range <= 0) {
+                if (RuleExtension->EscortRange > 0) {
+                    escort_range = RuleExtension->EscortRange;
+                }
+            }
+
+            bool should_escort_target = TarCom == nullptr && escort_range > 0 && Distance_To(ArchiveTarget) >= escort_range;
+            bool target_beyond_max_range = Distance(ArchiveTarget) > maxrange && (!RuleExtension->AdvancedAIAreaGuard || TarCom == nullptr);
+
+            if (should_escort_target || target_beyond_max_range) {
                 Assign_Target(nullptr);
                 Assign_Destination(ArchiveTarget);
             }
-        }
-
-        if (!IsFiring && NavCom == nullptr && Distance(ArchiveTarget) > maxrange && 
-            (!RuleExtension->AdvancedAIAreaGuard || TarCom == nullptr))
-        {
-            Assign_Target(nullptr);
-            Assign_Destination(ArchiveTarget);
         }
 
         if (TarCom == nullptr) {
@@ -1308,7 +1304,6 @@ int FootClassExt::_Do_MISSION_GUARD_AREA()
             }
             else
             {
-                Assign_Destination(nullptr);
                 return(1);
             }
         }
@@ -1325,11 +1320,9 @@ int FootClassExt::_Do_MISSION_GUARD_AREA()
                 }
             }
 
-            if (abandon_target_escort_range > 0) {
-                if (Distance_To(ArchiveTarget) >= abandon_target_escort_range) {
-                    Assign_Target(nullptr);
-                    Assign_Destination(ArchiveTarget);
-                }
+            if (abandon_target_escort_range > 0 && Distance_To(ArchiveTarget) >= abandon_target_escort_range) {
+                Assign_Target(nullptr);
+                Assign_Destination(ArchiveTarget);
             } else {
                 Approach_Target();
             }
