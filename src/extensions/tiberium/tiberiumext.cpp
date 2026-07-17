@@ -106,6 +106,11 @@ HRESULT TiberiumClassExtension::Load(IStream *pStm)
     }
 
     new (this) TiberiumClassExtension(NoInitClass());
+
+    hr = Load_Primitive_Vector(pStm, GrowthOnlyState);
+    if (FAILED(hr)) {
+        return hr;
+    }
     
     return hr;
 }
@@ -123,7 +128,7 @@ HRESULT TiberiumClassExtension::Save(IStream *pStm, BOOL fClearDirty)
         return hr;
     }
 
-    return hr;
+    return Save_Primitive_Vector(pStm, GrowthOnlyState);
 }
 
 
@@ -241,6 +246,16 @@ void TiberiumClassExtension::Spread_AI()
 
             Cell cell = node.second;
             CellClass& cellptr = Map[cell];
+            const int cellindex = Map_Cell_Index(cell);
+
+            /**
+             *  Tiberium dropped by an object is allowed to grow, but it must
+             *  never act as a source for spreading.
+             */
+            if (GrowthOnlyState[cellindex]) {
+                SpreadState[cellindex] = false;
+                continue;
+            }
 
             /**
              *  If we can't spread, skip without increasing the counter. This fixes a bug in vanilla
@@ -305,9 +320,10 @@ void TiberiumClassExtension::Recalc_Spread()
     CellClass* iter = Map.Iterate();
 
     while (iter != nullptr) {
-        if (iter->Tiberium_Type_Here() == This()->HeapID && iter->Can_Tiberium_Spread()) {
+        const int cellindex = Map_Cell_Index(iter->CellID);
+        if (iter->Tiberium_Type_Here() == This()->HeapID && !GrowthOnlyState[cellindex] && iter->Can_Tiberium_Spread()) {
             SpreadQueue.emplace((float)Random_Pick(0, 10000), iter->CellID);
-            SpreadState[Map_Cell_Index(iter->CellID)] = true;
+            SpreadState[cellindex] = true;
         }
         iter = Map.Iterate();
     }
@@ -324,6 +340,11 @@ void TiberiumClassExtension::Clear_Spread()
     SpreadQueue = decltype(SpreadQueue)();
     SpreadState.clear();
     SpreadState.resize(Map_Cell_Count());
+
+    if (GrowthOnlyState.size() != Map_Cell_Count()) {
+        GrowthOnlyState.clear();
+        GrowthOnlyState.resize(Map_Cell_Count());
+    }
 }
 
 
@@ -334,10 +355,23 @@ void TiberiumClassExtension::Clear_Spread()
  */
 void TiberiumClassExtension::Queue_Spread(Cell const& cell)
 {
-    if (Map[cell].Can_Tiberium_Spread() && !SpreadState[Map_Cell_Index(cell)]) {
+    const int cellindex = Map_Cell_Index(cell);
+    if (!GrowthOnlyState[cellindex] && Map[cell].Can_Tiberium_Spread() && !SpreadState[cellindex]) {
         SpreadQueue.emplace(Frame + Random_Pick(0, 49), cell);
-        SpreadState[Map_Cell_Index(cell)] = true;
+        SpreadState[cellindex] = true;
     }
+}
+
+
+/**
+ *  Controls whether Tiberium in this cell may grow without spreading.
+ *
+ *  @author: Rampastring
+ */
+void TiberiumClassExtension::Set_Growth_Only(Cell const& cell, bool growth_only)
+{
+    const int cellindex = Map_Cell_Index(cell);
+    GrowthOnlyState[cellindex] = growth_only;
 }
 
 
@@ -385,7 +419,9 @@ void TiberiumClassExtension::Growth_AI()
                 if (cellptr.OverlayData < This()->FrameCount - 1) {
                     GrowthQueue.emplace(Frame + Random_Pick(0, 49), cell);
                     GrowthState[Map_Cell_Index(cell)] = true;
-                    Queue_Spread(cell);
+                    if (!GrowthOnlyState[Map_Cell_Index(cell)]) {
+                        Queue_Spread(cell);
+                    }
                 } else {
                     GrowthState[Map_Cell_Index(cell)] = false;
                 }

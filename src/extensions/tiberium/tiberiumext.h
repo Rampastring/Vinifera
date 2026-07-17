@@ -48,6 +48,7 @@ public:
     void Recalc_Spread(void);
     void Clear_Spread(void);
     void Queue_Spread(Cell const& cell);
+    void Set_Growth_Only(Cell const& cell, bool growth_only);
 
     void Growth_AI(void);
     void Init_Growth(void);
@@ -103,6 +104,11 @@ public:
     std::vector<bool> SpreadState;
     std::priority_queue<QueueItem, std::vector<QueueItem>, CompareQueueItem> GrowthQueue;
     std::vector<bool> GrowthState;
+
+    /**
+     *  Cells whose Tiberium may grow but must never act as a spread source.
+     */
+    std::vector<unsigned char> GrowthOnlyState;
 };
 
 int Map_Cell_Index(Cell const& cell);

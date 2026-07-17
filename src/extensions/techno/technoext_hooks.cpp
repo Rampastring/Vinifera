@@ -1343,7 +1343,9 @@ void TechnoClassExt::_Drop_Tiberium()
             CellClass& cell = Map[adjacent_cell];
 
             const int tib_frame = Random_Pick(0, 2);
-            cell.Place_Tiberium(droplist[i], tib_frame);
+            if (cell.Place_Tiberium(droplist[i], tib_frame)) {
+                Extension::Fetch(Tiberiums[droplist[i]])->Set_Growth_Only(adjacent_cell, true);
+            }
         }
     }
 }

@@ -60,6 +60,7 @@ public:
     bool _Spread_Tiberium(bool forced);
     void _Recalc_Passability();
     int _Reduce_Tiberium(int levels);
+    bool _Place_Object_Death_Tiberium(TiberiumType tiberium, int frame);
 };
 
 
@@ -296,6 +297,7 @@ int CellClassExt::_Reduce_Tiberium(int levels)
             }
             Map.Flag_Background_Update(CellID);
             tiberium->Clear_Spread_State(CellID);
+            Extension::Fetch(tiberium)->Set_Growth_Only(CellID, false);
             for (int facing = FACING_FIRST; facing < FACING_COUNT; facing++) {
                 Cell adjacent = ::Adjacent_Cell(CellID, static_cast<FacingType>(facing));
                 if (Map.In_Radar(adjacent) && !Extension::Fetch(tiberium)->SpreadState[Map_Cell_Index(adjacent)]) {
@@ -307,6 +309,28 @@ int CellClassExt::_Reduce_Tiberium(int levels)
         return reducer;
     }
     return 0;
+}
+
+
+/**
+ *  Places Tiberium released when a Tiberium-healing object dies and prevents
+ *  that deposit from spreading. The deposit remains eligible for growth.
+ *
+ *  TechnoClass::Take_Damage calls CellClass::Place_Tiberium from 0x00632AF7
+ *  after checking TechnoTypeClass::IsTiberiumHeal at 0x00632A4E. This path is
+ *  used by both Cyborgs and Visceroids.
+ *
+ *  @author: Rampastring
+ */
+bool CellClassExt::_Place_Object_Death_Tiberium(TiberiumType tiberium, int frame)
+{
+    const bool placed = Place_Tiberium(tiberium, frame);
+
+    if (placed && tiberium >= TIBERIUM_FIRST && tiberium < Tiberiums.Count()) {
+        Extension::Fetch(Tiberiums[tiberium])->Set_Growth_Only(CellID, true);
+    }
+
+    return placed;
 }
 
 
@@ -673,6 +697,7 @@ void CellClassExtension_Hooks()
     Patch_Jump(0x004594D0, &CellClassExt::_Spread_Tiberium);
     Patch_Jump(0x00459A00, &CellClassExt::_Recalc_Passability);
     Patch_Jump(0x00456BF0, &CellClassExt::_Reduce_Tiberium);
+    Patch_Call(0x00632AF7, &CellClassExt::_Place_Object_Death_Tiberium);
     /**
      *  Patch away a check for GAME_INTERNET to enable statistics collection.
      */
