@@ -1261,6 +1261,7 @@ int FootClassExt::_Do_MISSION_GUARD_AREA()
     int maxrange = (int)(Threat_Range(1) * 0.75);
 
     if (ArchiveTarget != nullptr) {
+        bool is_too_far_from_archive_target = Distance(ArchiveTarget) > maxrange;
 
         // Advanced AI: Invalidate our target if it is not in range.
         if (RuleExtension->AdvancedAIAreaGuard && Team != nullptr && Extension::Fetch(Team)->IsAdvAITeam && TarCom != nullptr && !In_Range_Of(TarCom))
@@ -1280,10 +1281,12 @@ int FootClassExt::_Do_MISSION_GUARD_AREA()
                 }
             }
 
-            bool should_escort_target = TarCom == nullptr && escort_range > 0 && Distance_To(ArchiveTarget) >= escort_range;
-            bool target_beyond_max_range = Distance(ArchiveTarget) > maxrange && (!RuleExtension->AdvancedAIAreaGuard || TarCom == nullptr);
+            bool should_escort_target = escort_range > 0 &&
+                ArchiveTarget->Fetch_RTTI() != RTTI_CELL &&
+                TarCom == nullptr &&
+                Distance_To(ArchiveTarget) >= escort_range;
 
-            if (should_escort_target || target_beyond_max_range) {
+            if (should_escort_target || is_too_far_from_archive_target) {
                 Assign_Target(nullptr);
                 Assign_Destination(ArchiveTarget);
             }
@@ -1320,7 +1323,9 @@ int FootClassExt::_Do_MISSION_GUARD_AREA()
                 }
             }
 
-            if (abandon_target_escort_range > 0 && Distance_To(ArchiveTarget) >= abandon_target_escort_range) {
+            bool should_abandon_target = abandon_target_escort_range > 0 && Distance_To(ArchiveTarget) >= abandon_target_escort_range;
+
+            if (should_abandon_target || is_too_far_from_archive_target) {
                 Assign_Target(nullptr);
                 Assign_Destination(ArchiveTarget);
             } else {
