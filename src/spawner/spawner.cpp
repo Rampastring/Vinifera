@@ -88,7 +88,10 @@ void Prep_UI_For_Side(SideType side)
 {
     char name[64];
 
-    DEBUG_INFO("Preparing Mixfiles for Side %02d.\n", (int)side);
+    DEBUG_INFO("Preparing Mixfiles for Side {}.\n", (int)side);
+
+    // Hack
+    if (side == SIDE_NONE) side = SIDE_GDI;
 
     /**
      *  Delete previously loaded mixes.
