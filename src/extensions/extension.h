@@ -485,6 +485,7 @@ void Destroy(const AbstractClass *abstract)
 bool Save(IStream *pStm);
 bool Load(IStream *pStm);
 bool Request_Pointer_Remap();
+bool Is_Object_Extension_Valid(const ObjectClass *object);
 unsigned Get_Save_Version_Number();
 
 /**

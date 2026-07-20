@@ -52,6 +52,7 @@
 #include "loadoptions.h"
 #include "logic.h"
 #include "miscutil.h"
+#include "object.h"
 #include "overlaytype.h"
 #include "particle.h"
 #include "particlesys.h"
@@ -118,6 +119,7 @@
 #include <atlbase.h>
 #include <charconv>
 #include <filesystem>
+#include <type_traits>
 
 
 /**
@@ -136,6 +138,22 @@ template<class T>
 static HRESULT Vinifera_Save_Vector(LPSTREAM &pStm, DynamicVectorClass<T> &list, const char *heap_name)
 {
     DEBUG_INFO("Saving {}...\n", heap_name);
+
+    using ObjectType = typename std::remove_pointer<T>::type;
+    if constexpr (std::is_pointer<T>::value && std::is_base_of<ObjectClass, ObjectType>::value) {
+        for (int index = 0; index < list.Count(); ++index) {
+            ObjectType *object = list[index];
+            if (!object) {
+                DEBUG_ERROR("  Unable to save {} because it contains a null object at index {}!\n", heap_name, index);
+                return E_FAIL;
+            }
+
+            if (!object->IsActive) {
+                DEBUG_ERROR("  Unable to save {} because the object at index {} is inactive!\n", heap_name, index);
+                return E_FAIL;
+            }
+        }
+    }
 
     /**
      *  Save the number of instances of this class.
@@ -282,6 +300,55 @@ static HRESULT Save_Unordered_Map(LPSTREAM& pStm, std::unordered_map<TKey, TValu
     return S_OK;
 }
 
+
+/**
+ *  Validates the ObjectClass pointers stored in a logic or map layer before
+ *  the layer is written to the save stream.
+ */
+static bool Vinifera_Validate_Layer(LayerClass &layer, const char *layer_name)
+{
+    for (int index = 0; index < layer.Count(); ++index) {
+        ObjectClass *object = layer[index];
+        if (!object) {
+            DEBUG_ERROR("Unable to save {} because it contains a null object at index {}!\n", layer_name, index);
+            return false;
+        }
+
+        if (Objects.ID(object) < 0) {
+            DEBUG_ERROR("Unable to save {} because the object at index {} does not exist in the ObjectClass heap!\n", layer_name, index);
+            return false;
+        }
+
+        if (!object->IsActive) {
+            DEBUG_ERROR("Unable to save {} because the object at index {} is inactive!\n", layer_name, index);
+            return false;
+        }
+
+        if (!Extension::Is_Object_Extension_Valid(object)) {
+            DEBUG_ERROR("Unable to save {} because the object at index {} does not have a valid extension in its extension heap!\n", layer_name, index);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+static bool Vinifera_Validate_Layers()
+{
+    if (!Vinifera_Validate_Layer(Logic, "Logic layer")) {
+        return false;
+    }
+
+    for (LayerType layer = LAYER_FIRST; layer < LAYER_COUNT; ++layer) {
+        if (!Vinifera_Validate_Layer(Map.Layer[layer], Name_From_Layer(layer))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 /**
  * Loads a map of objects from the data stream.
  */
@@ -346,6 +413,10 @@ static HRESULT Load_Unordered_Map(IStream* pStm, std::unordered_map<TKey, TValue
  */
 bool Vinifera_Put_All(IStream *pStm, bool save_net)
 {
+    if (!Vinifera_Validate_Layers()) {
+        return false;
+    }
+
     /**
      *  Save the scenario global information.
      */

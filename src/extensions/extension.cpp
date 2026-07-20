@@ -272,30 +272,98 @@ static bool Extension_Destroy(const BASE_CLASS *abstract_ptr)
  *  @author: CCHyper
  */
 template<class BASE_CLASS, class EXT_CLASS>
-static bool Extension_Save(IStream *pStm, const DynamicVectorClass<EXT_CLASS *> &list)
+static bool Extension_Object_Has_Valid_Extension(
+    const BASE_CLASS *object,
+    const DynamicVectorClass<EXT_CLASS *> &extension_list)
 {
+    if (!object) {
+        return false;
+    }
+
+    EXT_CLASS *extension = reinterpret_cast<EXT_CLASS *>(Extension_Get_Abstract_Pointer(object));
+    if (!extension) {
+        return false;
+    }
+
+    int matches = 0;
+    for (int index = 0; index < extension_list.Count(); ++index) {
+        if (extension_list[index] == extension) {
+            ++matches;
+        }
+    }
+
+    return matches == 1 && extension->This() == object;
+}
+
+
+template<class BASE_CLASS, class EXT_CLASS>
+static bool Extension_Save(
+    IStream *pStm,
+    const DynamicVectorClass<BASE_CLASS *> &base_list,
+    const DynamicVectorClass<EXT_CLASS *> &extension_list)
+{
+    const int base_count = base_list.Count();
+    const int extension_count = extension_list.Count();
+
+    if (base_count != extension_count) {
+        DEBUG_ERROR("Unable to save \"{}\" extensions because the base and extension object counts do not match (Base: {}, Extensions: {})!\n",
+                    Extension::Utility::Get_TypeID_Name<BASE_CLASS>(), base_count, extension_count);
+        return false;
+    }
+
+    for (int index = 0; index < base_count; ++index) {
+        if (!Extension_Object_Has_Valid_Extension(base_list[index], extension_list)) {
+            DEBUG_ERROR("Unable to save \"{}\" extensions because the base object at index {} does not have exactly one valid extension in the extension heap!\n",
+                        Extension::Utility::Get_TypeID_Name<BASE_CLASS>(), index);
+            return false;
+        }
+    }
+
+    for (int extension_index = 0; extension_index < extension_count; ++extension_index) {
+        EXT_CLASS *extension = extension_list[extension_index];
+        if (!extension) {
+            DEBUG_ERROR("Unable to save \"{}\" extensions because the extension heap contains a null object at index {}!\n",
+                        Extension::Utility::Get_TypeID_Name<BASE_CLASS>(), extension_index);
+            return false;
+        }
+
+        BASE_CLASS *object = extension->This();
+        int matches = 0;
+        for (int base_index = 0; base_index < base_count; ++base_index) {
+            if (base_list[base_index] == object) {
+                ++matches;
+            }
+        }
+
+        if (!object || matches != 1 || Extension_Get_Abstract_Pointer(object) != extension) {
+            DEBUG_ERROR("Unable to save \"{}\" extensions because the extension at index {} does not have exactly one valid base object in the base heap!\n",
+                        Extension::Utility::Get_TypeID_Name<BASE_CLASS>(), extension_index);
+            return false;
+        }
+    }
+
     /**
      *  Save the number of instances of this class.
      */
-    int count = list.Count();
+    int count = extension_count;
     HRESULT hr = pStm->Write(&count, sizeof(count), nullptr);
     if (FAILED(hr)) {
         return false;
     }
 
-    if (list.Count() <= 0) {
+    if (extension_count <= 0) {
         DEBUG_INFO("List for \"{}\" has a count of zero, skipping save.\n", Extension::Utility::Get_TypeID_Name<EXT_CLASS>());
         return true;
     }
 
-    DEBUG_INFO("Saving \"{}\" extensions (Count: {})\n", Extension::Utility::Get_TypeID_Name<BASE_CLASS>(), list.Count());
+    DEBUG_INFO("Saving \"{}\" extensions (Count: {})\n", Extension::Utility::Get_TypeID_Name<BASE_CLASS>(), extension_count);
 
     /**
      *  Save each instance of this class.
      */
     for (int index = 0; index < count; ++index) {
 
-        EXT_CLASS *ptr = list[index];
+        EXT_CLASS *ptr = extension_list[index];
 
         /**
          *  Tell the extension class to persist itself into the data stream.
@@ -332,6 +400,32 @@ static bool Extension_Save(IStream *pStm, const DynamicVectorClass<EXT_CLASS *> 
     }
 
     return true;
+}
+
+
+/**
+ *  Checks that an ObjectClass instance has exactly one valid extension in its
+ *  corresponding extension heap. Object types without extension support are
+ *  considered valid.
+ */
+bool Extension::Is_Object_Extension_Valid(const ObjectClass *object)
+{
+    if (!object) {
+        return false;
+    }
+
+    switch (object->RTTI) {
+        case RTTI_UNIT:      return Extension_Object_Has_Valid_Extension(static_cast<const UnitClass *>(object), UnitExtensions);
+        case RTTI_AIRCRAFT:  return Extension_Object_Has_Valid_Extension(static_cast<const AircraftClass *>(object), AircraftExtensions);
+        case RTTI_ANIM:      return Extension_Object_Has_Valid_Extension(static_cast<const AnimClass *>(object), AnimExtensions);
+        case RTTI_BUILDING:  return Extension_Object_Has_Valid_Extension(static_cast<const BuildingClass *>(object), BuildingExtensions);
+        case RTTI_INFANTRY:  return Extension_Object_Has_Valid_Extension(static_cast<const InfantryClass *>(object), InfantryExtensions);
+        case RTTI_OVERLAY:   return Extension_Object_Has_Valid_Extension(static_cast<const OverlayClass *>(object), OverlayExtensions);
+        case RTTI_SMUDGE:    return Extension_Object_Has_Valid_Extension(static_cast<const SmudgeClass *>(object), SmudgeExtensions);
+        case RTTI_TERRAIN:   return Extension_Object_Has_Valid_Extension(static_cast<const TerrainClass *>(object), TerrainExtensions);
+        case RTTI_WAVE:      return Extension_Object_Has_Valid_Extension(static_cast<const WaveClass *>(object), WaveExtensions);
+        default:             return !Extension::Private::Is_Supported(object);
+    }
 }
 
 
@@ -708,60 +802,60 @@ bool Extension::Save(IStream *pStm)
     /**
      *  #NOTE: The order of these calls must match the relevant RTTIType order!
      */
-    if (!Extension_Save<UnitClass, UnitClassExtension>(pStm, UnitExtensions)) { return false; }
-    if (!Extension_Save<AircraftClass, AircraftClassExtension>(pStm, AircraftExtensions)) { return false; }
-    if (!Extension_Save<AircraftTypeClass, AircraftTypeClassExtension>(pStm, AircraftTypeExtensions)) { return false; }
-    if (!Extension_Save<AnimClass, AnimClassExtension>(pStm, AnimExtensions)) { return false; }
-    if (!Extension_Save<AnimTypeClass, AnimTypeClassExtension>(pStm, AnimTypeExtensions)) { return false; }
-    if (!Extension_Save<BuildingClass, BuildingClassExtension>(pStm, BuildingExtensions)) { return false; }
-    if (!Extension_Save<BuildingTypeClass, BuildingTypeClassExtension>(pStm, BuildingTypeExtensions)) { return false; }
+    if (!Extension_Save<UnitClass, UnitClassExtension>(pStm, Units, UnitExtensions)) { return false; }
+    if (!Extension_Save<AircraftClass, AircraftClassExtension>(pStm, Aircrafts, AircraftExtensions)) { return false; }
+    if (!Extension_Save<AircraftTypeClass, AircraftTypeClassExtension>(pStm, AircraftTypes, AircraftTypeExtensions)) { return false; }
+    if (!Extension_Save<AnimClass, AnimClassExtension>(pStm, Anims, AnimExtensions)) { return false; }
+    if (!Extension_Save<AnimTypeClass, AnimTypeClassExtension>(pStm, AnimTypes, AnimTypeExtensions)) { return false; }
+    if (!Extension_Save<BuildingClass, BuildingClassExtension>(pStm, Buildings, BuildingExtensions)) { return false; }
+    if (!Extension_Save<BuildingTypeClass, BuildingTypeClassExtension>(pStm, BuildingTypes, BuildingTypeExtensions)) { return false; }
     //if (!Extension_Save<BulletClass, BulletClassExtension>(pStm, BulletExtensions)) { return false; }                 // Not yet implemented
-    if (!Extension_Save<BulletTypeClass, BulletTypeClassExtension>(pStm, BulletTypeExtensions)) { return false; }
+    if (!Extension_Save<BulletTypeClass, BulletTypeClassExtension>(pStm, BulletTypes, BulletTypeExtensions)) { return false; }
     //if (!Extension_Save<CampaignClass, CampaignClassExtension>(pStm, CampaignExtensions)) { return false; }           // Supported, but Campaigns are not saved to file.
     //if (!Extension_Save<CellClass, CellClassExtension>(pStm, CellExtensions)) { return false; }                       // Not yet implemented
-    if (!Extension_Save<FactoryClass, FactoryClassExtension>(pStm, FactoryExtensions)) { return false; }
-    if (!Extension_Save<HouseClass, HouseClassExtension>(pStm, HouseExtensions)) { return false; }
-    if (!Extension_Save<HouseTypeClass, HouseTypeClassExtension>(pStm, HouseTypeExtensions)) { return false; }
-    if (!Extension_Save<InfantryClass, InfantryClassExtension>(pStm, InfantryExtensions)) { return false; }
-    if (!Extension_Save<InfantryTypeClass, InfantryTypeClassExtension>(pStm, InfantryTypeExtensions)) { return false; }
+    if (!Extension_Save<FactoryClass, FactoryClassExtension>(pStm, Factories, FactoryExtensions)) { return false; }
+    if (!Extension_Save<HouseClass, HouseClassExtension>(pStm, Houses, HouseExtensions)) { return false; }
+    if (!Extension_Save<HouseTypeClass, HouseTypeClassExtension>(pStm, HouseTypes, HouseTypeExtensions)) { return false; }
+    if (!Extension_Save<InfantryClass, InfantryClassExtension>(pStm, Infantry, InfantryExtensions)) { return false; }
+    if (!Extension_Save<InfantryTypeClass, InfantryTypeClassExtension>(pStm, InfantryTypes, InfantryTypeExtensions)) { return false; }
     //if (!Extension_Save<IsometricTileClass, IsometricTileClassExtension>(pStm, IsometricTileExtensions)) { return false; } // Not yet implemented
     //if (!Extension_Save<IsometricTileTypeClass, IsometricTileTypeClassExtension>(pStm, IsometricTileTypeExtensions)) { return false; } // Supported, but IsoTileTypess are not saved to file.
     //if (!Extension_Save<BuildingLightClass, BuildingLightClassExtension>(pStm, BuildingLightExtensions)) { return false; } // Not yet implemented
-    //if (!Extension_Save<OverlayClass, OverlayClassExtension>(pStm, OverlayExtensions)) { return false; } // Base class instances are not saved
-    if (!Extension_Save<OverlayTypeClass, OverlayTypeClassExtension>(pStm, OverlayTypeExtensions)) { return false; }
+    //if (!Extension_Save<OverlayClass, OverlayClassExtension>(pStm, Overlays, OverlayExtensions)) { return false; } // Base class instances are not saved
+    if (!Extension_Save<OverlayTypeClass, OverlayTypeClassExtension>(pStm, OverlayTypes, OverlayTypeExtensions)) { return false; }
     //if (!Extension_Save<ParticleClass, ParticleClassExtension>(pStm, ParticleClassExtensions)) { return false; }      // Not yet implemented
-    if (!Extension_Save<ParticleTypeClass, ParticleTypeClassExtension>(pStm, ParticleTypeExtensions)) { return false; }
+    if (!Extension_Save<ParticleTypeClass, ParticleTypeClassExtension>(pStm, ParticleTypes, ParticleTypeExtensions)) { return false; }
     //if (!Extension_Save<ParticleSystemClass, ParticleSystemClassExtension>(pStm, ParticleSystemExtensions)) { return false; } // Not yet implemented
-    if (!Extension_Save<ParticleSystemTypeClass, ParticleSystemTypeClassExtension>(pStm, ParticleSystemTypeExtensions)) { return false; }
+    if (!Extension_Save<ParticleSystemTypeClass, ParticleSystemTypeClassExtension>(pStm, ParticleSystemTypes, ParticleSystemTypeExtensions)) { return false; }
     //if (!Extension_Save<ScriptClass, ScriptClassExtension>(pStm, ScriptExtensions)) { return false; }                 // Not yet implemented
     //if (!Extension_Save<ScriptTypeClass, ScriptTypeClassExtension>(pStm, ScriptTypeExtensions)) { return false; }     // Not yet implemented
-    if (!Extension_Save<SideClass, SideClassExtension>(pStm, SideExtensions)) { return false; }
-    //if (!Extension_Save<SmudgeClass, SmudgeClassExtension>(pStm, SmudgeExtensions)) { return false; } // Base class instances are not saved
-    if (!Extension_Save<SmudgeTypeClass, SmudgeTypeClassExtension>(pStm, SmudgeTypeExtensions)) { return false; }
-    if (!Extension_Save<SuperWeaponTypeClass, SuperWeaponTypeClassExtension>(pStm, SuperWeaponTypeExtensions)) { return false; }
+    if (!Extension_Save<SideClass, SideClassExtension>(pStm, Sides, SideExtensions)) { return false; }
+    //if (!Extension_Save<SmudgeClass, SmudgeClassExtension>(pStm, Smudges, SmudgeExtensions)) { return false; } // Base class instances are not saved
+    if (!Extension_Save<SmudgeTypeClass, SmudgeTypeClassExtension>(pStm, SmudgeTypes, SmudgeTypeExtensions)) { return false; }
+    if (!Extension_Save<SuperWeaponTypeClass, SuperWeaponTypeClassExtension>(pStm, SuperWeaponTypes, SuperWeaponTypeExtensions)) { return false; }
     //if (!Extension_Save<TaskForceClass, TaskForceClassExtension>(pStm, TaskForceExtensions)) { return false; }        // Not yet implemented
-    if (!Extension_Save<TeamClass, TeamClassExtension>(pStm, TeamExtensions)) { return false; }
-    if (!Extension_Save<TeamTypeClass, TeamTypeClassExtension>(pStm, TeamTypeExtensions)) { return false; }
-    if (!Extension_Save<TerrainClass, TerrainClassExtension>(pStm, TerrainExtensions)) { return false; }
-    if (!Extension_Save<TerrainTypeClass, TerrainTypeClassExtension>(pStm, TerrainTypeExtensions)) { return false; }
+    if (!Extension_Save<TeamClass, TeamClassExtension>(pStm, Teams, TeamExtensions)) { return false; }
+    if (!Extension_Save<TeamTypeClass, TeamTypeClassExtension>(pStm, TeamTypes, TeamTypeExtensions)) { return false; }
+    if (!Extension_Save<TerrainClass, TerrainClassExtension>(pStm, Terrains, TerrainExtensions)) { return false; }
+    if (!Extension_Save<TerrainTypeClass, TerrainTypeClassExtension>(pStm, TerrainTypes, TerrainTypeExtensions)) { return false; }
     //if (!Extension_Save<TriggerClass, TriggerClassExtension>(pStm, TriggerExtensions)) { return false; }              // Not yet implemented
     //if (!Extension_Save<TriggerTypeClass, TriggerTypeClassExtension>(pStm, TriggerTypeExtensions)) { return false; }  // Not yet implemented
-    if (!Extension_Save<UnitTypeClass, UnitTypeClassExtension>(pStm, UnitTypeExtensions)) { return false; }
+    if (!Extension_Save<UnitTypeClass, UnitTypeClassExtension>(pStm, UnitTypes, UnitTypeExtensions)) { return false; }
     //if (!Extension_Save<VoxelAnimClass, VoxelAnimClassExtension>(pStm, VoxelAnimExtensions)) { return false; }        // Not yet implemented
-    if (!Extension_Save<VoxelAnimTypeClass, VoxelAnimTypeClassExtension>(pStm, VoxelAnimTypeExtensions)) { return false; }
-    if (!Extension_Save<WaveClass, WaveClassExtension>(pStm, WaveExtensions)) { return false; }
+    if (!Extension_Save<VoxelAnimTypeClass, VoxelAnimTypeClassExtension>(pStm, VoxelAnimTypes, VoxelAnimTypeExtensions)) { return false; }
+    if (!Extension_Save<WaveClass, WaveClassExtension>(pStm, Waves, WaveExtensions)) { return false; }
     //if (!Extension_Save<TagClass, TagClassExtension>(pStm, TagExtensions)) { return false; }                          // Not yet implemented
     //if (!Extension_Save<TagTypeClass, TagTypeClassExtension>(pStm, TagTypeExtensions)) { return false; }              // Not yet implemented
-    if (!Extension_Save<TiberiumClass, TiberiumClassExtension>(pStm, TiberiumExtensions)) { return false; }
-    if (!Extension_Save<TActionClass, TActionClassExtension>(pStm, TActionExtensions)) { return false; }
-    if (!Extension_Save<TEventClass, TEventClassExtension>(pStm, TEventExtensions)) { return false; }
-    if (!Extension_Save<WeaponTypeClass, WeaponTypeClassExtension>(pStm, WeaponTypeExtensions)) { return false; }
-    if (!Extension_Save<WarheadTypeClass, WarheadTypeClassExtension>(pStm, WarheadTypeExtensions)) { return false; }
+    if (!Extension_Save<TiberiumClass, TiberiumClassExtension>(pStm, Tiberiums, TiberiumExtensions)) { return false; }
+    if (!Extension_Save<TActionClass, TActionClassExtension>(pStm, TActions, TActionExtensions)) { return false; }
+    if (!Extension_Save<TEventClass, TEventClassExtension>(pStm, TEvents, TEventExtensions)) { return false; }
+    if (!Extension_Save<WeaponTypeClass, WeaponTypeClassExtension>(pStm, Weapons, WeaponTypeExtensions)) { return false; }
+    if (!Extension_Save<WarheadTypeClass, WarheadTypeClassExtension>(pStm, Warheads, WarheadTypeExtensions)) { return false; }
     //if (!Extension_Save<WaypointClass, WaypointClassExtension>(pStm, WaypointExtensions)) { return false; }           // Not yet implemented
     //if (!Extension_Save<TubeClass, TubeClassExtension>(pStm, TubeExtensions)) { return false; }                       // Not yet implemented
     //if (!Extension_Save<LightSourceClass, LightSourceClassExtension>(pStm, LightSourceExtensions)) { return false; }  // Not yet implemented
     //if (!Extension_Save<EMPulseClass, EMPulseClassExtension>(pStm, EMPulseExtensions)) { return false; }              // Not yet implemented
-    if (!Extension_Save<SuperClass, SuperClassExtension>(pStm, SuperExtensions)) { return false; }
+    if (!Extension_Save<SuperClass, SuperClassExtension>(pStm, Supers, SuperExtensions)) { return false; }
     //if (!Extension_Save<AITriggerClass, AITriggerClassExtension>(pStm, AITriggerExtensions)) { return false; }        // Not yet implemented
     //if (!Extension_Save<AITriggerTypeClass, AITriggerTypeClassExtension>(pStm, AITriggerExtensions)) { return false; } // Not yet implemented
     //if (!Extension_Save<NeuronClass, NeuronClassExtension>(pStm, NeuronExtensions)) { return false; }                 // Not yet implemented
