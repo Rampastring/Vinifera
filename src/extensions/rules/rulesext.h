@@ -329,6 +329,11 @@ public:
     **	Is the "PlayerNormal" difficulty level available?
     */
     bool IsHasPlayerNormal;
+    
+    /*
+     *  Whether AI units that deploy should persist their tags, if any, on the building that the unit deployed into
+     */
+    bool PersistTagsOnAIDeploy;
 
     /**
      *  How much value (in credits) a house needs to destroy to strengthen their objects by one percentage.

@@ -115,6 +115,7 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     Diff(),
     PlayerNormal(),
     IsHasPlayerNormal(false),
+    PersistTagsOnAIDeploy(false),
     StrengthenDestroyedValueThreshold(0),
     StrengthenBuildingValueMultiplier(3),
     IsStrengtheningEnabled(false),
@@ -345,6 +346,7 @@ void RulesClassExtension::Object_CRC(CRCEngine &crc) const
     crc(IsCellTagsIgnoreStealth);
     crc(SelfHealingStep);
     crc(BaseUnit.Count());
+    crc(PersistTagsOnAIDeploy);
 	crc(StrengthenDestroyedValueThreshold);
     crc(StrengthenBuildingValueMultiplier);
     crc(IsStrengtheningEnabled);
@@ -799,6 +801,7 @@ bool RulesClassExtension::General(CCINIClass &ini)
     AbandonTargetEscortRange = ini.Get_Lepton(GENERAL, "AbandonTargetEscortRange", AbandonTargetEscortRange);
     IsFreeRadarOnLowPower = ini.Get_Bool(GENERAL, "FreeRadarOnLowPower", IsFreeRadarOnLowPower);    
     IsCellTagsIgnoreStealth = ini.Get_Bool(GENERAL, "CellTagsIgnoreStealth", IsCellTagsIgnoreStealth);
+    PersistTagsOnAIDeploy = ini.Get_Bool(GENERAL, "PersistTagsOnAIDeploy", PersistTagsOnAIDeploy);
 
     /**
      *  Allow replacing any signle movement zone with a copy of RA2's water MZone.
