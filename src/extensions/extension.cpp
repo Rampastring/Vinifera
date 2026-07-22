@@ -18,6 +18,7 @@
 #include "aircrafttypeext.h"
 #include "aitrigtype.h"
 #include "alphashape.h"
+#include "abstracttype.h"
 #include "anim.h"
 #include "animext.h"
 #include "animtype.h"
@@ -138,6 +139,7 @@
 
 #include <float.h>
 #include <iostream>
+#include <type_traits>
 
 
 extern int Execute_Day;
@@ -296,6 +298,168 @@ static bool Extension_Object_Has_Valid_Extension(
 }
 
 
+template<class LIST_CLASS, class OBJECT_CLASS>
+static int Extension_Find_Pointer_In_List(
+    const DynamicVectorClass<LIST_CLASS *> &list,
+    const OBJECT_CLASS *object,
+    int &matches)
+{
+    int first_index = -1;
+    matches = 0;
+
+    for (int index = 0; index < list.Count(); ++index) {
+        if (list[index] == object) {
+            if (first_index == -1) {
+                first_index = index;
+            }
+            ++matches;
+        }
+    }
+
+    return first_index;
+}
+
+
+template<class BASE_CLASS>
+static bool Extension_Get_Base_Diagnostic_Names(
+    const BASE_CLASS *object,
+    const char *&name,
+    const char *&full_name)
+{
+    if (!object) {
+        return false;
+    }
+
+    if constexpr (std::is_base_of_v<ObjectClass, BASE_CLASS>) {
+        const ObjectTypeClass *object_type = object->Class_Of();
+        if (!object_type) {
+            return false;
+        }
+
+        name = object_type->Name();
+        full_name = object_type->Full_Name();
+        return true;
+    } else if constexpr (std::is_base_of_v<AbstractTypeClass, BASE_CLASS>) {
+        name = object->Name();
+        full_name = object->Full_Name();
+        return true;
+    }
+
+    return false;
+}
+
+
+static const char *Extension_Diagnostic_String(const char *value)
+{
+    return value ? value : "<null>";
+}
+
+
+template<class BASE_CLASS, class EXT_CLASS>
+static void Extension_Dump_Mismatched_Lists(
+    const DynamicVectorClass<BASE_CLASS *> &base_list,
+    const DynamicVectorClass<EXT_CLASS *> &extension_list)
+{
+    DEBUG_ERROR("Base-object list dump for \"{}\" (Count: {}):\n",
+                Extension::Utility::Get_TypeID_Name<BASE_CLASS>(), base_list.Count());
+
+    for (int base_index = 0; base_index < base_list.Count(); ++base_index) {
+        BASE_CLASS *object = base_list[base_index];
+        if (!object) {
+            DEBUG_ERROR("    Base[{}]: Status=NULL_BASE, Object=0x00000000\n", base_index);
+            continue;
+        }
+
+        EXT_CLASS *extension = reinterpret_cast<EXT_CLASS *>(Extension_Get_Abstract_Pointer(object));
+        int extension_matches = 0;
+        const int extension_index = Extension_Find_Pointer_In_List(extension_list, extension, extension_matches);
+        const bool link_valid = extension && extension_matches == 1 && extension->This() == object;
+
+        const char *status = "OK";
+        if (!extension) {
+            status = "MISSING_EXTENSION";
+        } else if (extension_matches == 0) {
+            status = "EXTENSION_NOT_IN_HEAP";
+        } else if (extension_matches > 1) {
+            status = "DUPLICATE_EXTENSION_POINTER";
+        } else if (!link_valid) {
+            status = "OWNER_MISMATCH";
+        }
+
+        const char *name = "<unavailable>";
+        const char *full_name = "<unavailable>";
+        const bool base_has_names = Extension_Get_Base_Diagnostic_Names(object, name, full_name);
+        if (!base_has_names && link_valid) {
+            name = extension->Name();
+            full_name = extension->Full_Name();
+        }
+
+        const RTTIType rtti = object->RTTI;
+        DEBUG_ERROR("    Base[{}]: Status={}, Object=0x{:08X}, ID={}, HeapID={}, RTTI={} ({}), ExtPtr=0x{:08X}, ExtIndex={}, ExtMatches={}, Name=\"{}\", FullName=\"{}\"\n",
+                    base_index,
+                    status,
+                    reinterpret_cast<uintptr_t>(object),
+                    object->ID,
+                    object->Fetch_Heap_ID(),
+                    static_cast<int>(rtti),
+                    Extension_Diagnostic_String(Name_From_RTTI(rtti)),
+                    reinterpret_cast<uintptr_t>(extension),
+                    extension_index,
+                    extension_matches,
+                    Extension_Diagnostic_String(name),
+                    Extension_Diagnostic_String(full_name));
+    }
+
+    DEBUG_ERROR("Extension-object list dump for \"{}\" (Count: {}):\n",
+                Extension::Utility::Get_TypeID_Name<BASE_CLASS>(), extension_list.Count());
+
+    for (int extension_index = 0; extension_index < extension_list.Count(); ++extension_index) {
+        EXT_CLASS *extension = extension_list[extension_index];
+        if (!extension) {
+            DEBUG_ERROR("    Extension[{}]: Status=NULL_EXTENSION, Extension=0x00000000\n", extension_index);
+            continue;
+        }
+
+        BASE_CLASS *object = extension->This();
+        int base_matches = 0;
+        const int base_index = Extension_Find_Pointer_In_List(base_list, object, base_matches);
+        const bool link_valid = object && base_matches == 1 && Extension_Get_Abstract_Pointer(object) == extension;
+
+        const char *status = "OK";
+        if (!object) {
+            status = "NULL_OWNER";
+        } else if (base_matches == 0) {
+            status = "ORPHAN";
+        } else if (base_matches > 1) {
+            status = "DUPLICATE_BASE_POINTER";
+        } else if (!link_valid) {
+            status = "BASE_BACK_POINTER_MISMATCH";
+        }
+
+        const char *name = "<owner absent; unsafe to retrieve>";
+        const char *full_name = "<owner absent; unsafe to retrieve>";
+        if (base_matches == 1) {
+            if (!Extension_Get_Base_Diagnostic_Names(object, name, full_name)) {
+                name = extension->Name();
+                full_name = extension->Full_Name();
+            }
+        }
+
+        DEBUG_ERROR("    Extension[{}]: Status={}, Extension=0x{:08X}, RTTI={} ({}), This=0x{:08X}, BaseIndex={}, BaseMatches={}, Name=\"{}\", FullName=\"{}\"\n",
+                    extension_index,
+                    status,
+                    reinterpret_cast<uintptr_t>(extension),
+                    static_cast<int>(extension->Fetch_RTTI()),
+                    Extension_Diagnostic_String(Name_From_RTTI(extension->Fetch_RTTI())),
+                    reinterpret_cast<uintptr_t>(object),
+                    base_index,
+                    base_matches,
+                    Extension_Diagnostic_String(name),
+                    Extension_Diagnostic_String(full_name));
+    }
+}
+
+
 template<class BASE_CLASS, class EXT_CLASS>
 static bool Extension_Save(
     IStream *pStm,
@@ -308,6 +472,7 @@ static bool Extension_Save(
     if (base_count != extension_count) {
         DEBUG_ERROR("Unable to save \"{}\" extensions because the base and extension object counts do not match (Base: {}, Extensions: {})!\n",
                     Extension::Utility::Get_TypeID_Name<BASE_CLASS>(), base_count, extension_count);
+        Extension_Dump_Mismatched_Lists(base_list, extension_list);
         return false;
     }
 
