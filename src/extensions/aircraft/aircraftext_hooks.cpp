@@ -1021,10 +1021,13 @@ bool AircraftClassExt::_Enter_Idle_Mode(bool initial, bool a2)
 
     bool result = FootClass::Enter_Idle_Mode(initial, a2);
 
-    Handle_Navigation_List();
-    if (NavCom != nullptr) {
-        Assign_Mission(MISSION_MOVE);
-        return result;
+    if (House->Is_Human_Player())
+    {
+        Handle_Navigation_List();
+        if (NavCom != nullptr) {
+            Assign_Mission(MISSION_MOVE);
+            return result;
+        }
     }
 
     MissionType mission = MISSION_GUARD;
