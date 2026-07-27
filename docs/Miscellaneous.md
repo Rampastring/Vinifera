@@ -526,7 +526,8 @@ PausedRepairsFrame=6  ; integer, the frame index on the wrench shape to show whi
 - Vinifera allows modders to specify the range in which an area-guarding unit that is assigned to guard another unit will follow it, as well as the range where it will abandon targets it is currently attacking (or healing) and go back to their assigned unit.
 - This only applies on Area Guards on a unit; Area Guards on a cell does not count.
 - Can be specified globally or for each unit individually. When both are applied, unit-specific values are used over the global values. 
-- When those values are not stated or are non-positive, Vinifera falls back to the original behavior, which causes area-guarding units to follow their assigned unit once it leaves 2x the area-guarding unit's Guard Range (up to a maximum of 12 cells).
+- When `EscortRange` is not stated or is non-positive, Vinifera falls back to the original return behavior, which causes area-guarding units to follow their assigned unit once it leaves 2x the area-guarding unit's Guard Range (up to a maximum of 12 cells).
+- When `AbandonTargetEscortRange` is not stated or is non-positive, Vinifera falls back to the original active-target behavior. Area-guarding units do not abandon a target based on travel distance and only become eligible to return after successfully engaging it.
 
 in `RULES.INI`:
 ```ini
@@ -540,7 +541,7 @@ AbandonTargetEscortRange=-1  ; integer, the range in cells that an area guarding
 ```
 
 ```{note}
-To achieve good results with `AbandonTargetEscortRange`, it is recommended to set a value that is higher than 2x its `GuardRange`. Otherwise, the unit will keep re-acquiring and abdndoning it repeatedly as long as it is in range.
+To achieve good results with `AbandonTargetEscortRange`, it is recommended to set a value that is higher than 2x its `GuardRange`. Otherwise, the unit will keep re-acquiring and abandoning it repeatedly as long as it is in range. Terrain can also cause this if the path to a target is significantly longer than the straight-line distance used to acquire it.
 ```
 
 ## File System

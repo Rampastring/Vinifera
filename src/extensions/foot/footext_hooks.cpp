@@ -1197,7 +1197,7 @@ DEFINE_HOOK(0x004A58A8, _FootClass_AI_Hook, 0)
 /*
 **	Adjusts area guard mode for Advanced AI.
 **
-**  Author: Rampastring, ZivDero
+**  Author: Rampastring, ZivDero, Shush
 */
 int FootClassExt::_Do_MISSION_GUARD_AREA()
 {
@@ -1256,37 +1256,52 @@ int FootClassExt::_Do_MISSION_GUARD_AREA()
 
     /*
     **	Make sure that the unit has not strayed too far from the home position.
-    **	If it has, then race back to it.
+    **	If it has, then race back to it. Do not impose a default pursuit limit
+    **	while the unit is moving towards a target: area-guard acquisition uses
+    **	straight-line distance, while terrain can make the actual path much longer
+    **	and cause an abandon/re-acquire loop.
     */
     int maxrange = (int)(Threat_Range(1) * 0.75);
 
     if (ArchiveTarget != nullptr) {
-        bool is_too_far_from_archive_target = Distance(ArchiveTarget) > maxrange;
+        const bool is_escorting = ArchiveTarget->Fetch_RTTI() != RTTI_CELL;
+        int escort_range = -1;
+        int abandon_target_escort_range = -1;
+
+        if (is_escorting) {
+            if (technotype_ext->EscortRange > 0) {
+                escort_range = technotype_ext->EscortRange;
+            } else if (RuleExtension->EscortRange > 0) {
+                escort_range = RuleExtension->EscortRange;
+            }
+
+            if (technotype_ext->AbandonTargetEscortRange > 0) {
+                abandon_target_escort_range = technotype_ext->AbandonTargetEscortRange;
+            } else if (RuleExtension->AbandonTargetEscortRange > 0) {
+                abandon_target_escort_range = RuleExtension->AbandonTargetEscortRange;
+            }
+        }
 
         // Advanced AI: Invalidate our target if it is not in range.
-        if (RuleExtension->AdvancedAIAreaGuard && Team != nullptr && Extension::Fetch(Team)->IsAdvAITeam && TarCom != nullptr && !In_Range_Of(TarCom))
+        if (!House->Is_Human_Player() && RuleExtension->AdvancedAIAreaGuard && Team != nullptr && Extension::Fetch(Team)->IsAdvAITeam && TarCom != nullptr && !In_Range_Of(TarCom))
         {
             Assign_Target(nullptr);
         }
 
         if (!IsFiring && NavCom == nullptr) {
-            int escort_range = -1;
-            if (technotype_ext->EscortRange > 0) {
-                escort_range = technotype_ext->EscortRange;
-            }
-
-            if (escort_range <= 0) {
-                if (RuleExtension->EscortRange > 0) {
-                    escort_range = RuleExtension->EscortRange;
+            bool should_return_to_archive_target = false;
+            if (TarCom == nullptr) {
+                if (escort_range > 0) {
+                    should_return_to_archive_target = Distance_To(ArchiveTarget) >= escort_range;
+                } else {
+                    should_return_to_archive_target = Distance(ArchiveTarget) > maxrange;
                 }
+            } else if (abandon_target_escort_range <= 0 &&
+                (!RuleExtension->AdvancedAIAreaGuard || House->Is_Human_Player())) {
+                should_return_to_archive_target = Distance(ArchiveTarget) > maxrange;
             }
 
-            bool should_escort_target = escort_range > 0 &&
-                ArchiveTarget->Fetch_RTTI() != RTTI_CELL &&
-                TarCom == nullptr &&
-                Distance_To(ArchiveTarget) >= escort_range;
-
-            if (should_escort_target || is_too_far_from_archive_target) {
+            if (should_return_to_archive_target) {
                 Assign_Target(nullptr);
                 Assign_Destination(ArchiveTarget);
             }
@@ -1312,20 +1327,10 @@ int FootClassExt::_Do_MISSION_GUARD_AREA()
         }
         else
         {
-            int abandon_target_escort_range = -1;
-            if (technotype_ext->AbandonTargetEscortRange > 0) {
-                abandon_target_escort_range = technotype_ext->AbandonTargetEscortRange;
-            }
+            bool should_abandon_target = abandon_target_escort_range > 0 &&
+                Distance_To(ArchiveTarget) >= abandon_target_escort_range;
 
-            if (abandon_target_escort_range <= 0) {
-                if (RuleExtension->AbandonTargetEscortRange > 0) {
-                    abandon_target_escort_range = RuleExtension->AbandonTargetEscortRange;
-                }
-            }
-
-            bool should_abandon_target = abandon_target_escort_range > 0 && Distance_To(ArchiveTarget) >= abandon_target_escort_range;
-
-            if (should_abandon_target || is_too_far_from_archive_target) {
+            if (should_abandon_target) {
                 Assign_Target(nullptr);
                 Assign_Destination(ArchiveTarget);
             } else {
