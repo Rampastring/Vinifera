@@ -27,6 +27,7 @@
 #include "rulesext.h"
 #include "saveload.h"
 #include "session.h"
+#include "sessionext.h"
 #include "storageext.h"
 #include "team.h"
 #include "teamext.h"
@@ -631,9 +632,92 @@ ProdFailType HouseClassExtension::Abandon_Production(RTTIType type, int id, Prod
 
 
 /**
+ *  Replacement for Westwood's absolutely deranged original implementation of Passes_Proximity_Check.
+ *
+ *  @author: Rampastring, CCHyper
+ */
+bool Passes_Proximity_Check(BuildingTypeClass const * bldgtype, HousesType house, Cell const & trycell)
+{
+    if (bldgtype == nullptr)
+    {
+        DEBUG_FATAL("Null building type passed to Passes_Proximity_Check!\n");
+    }
+
+    int height = bldgtype->Height();
+    int width = bldgtype->Width();
+
+    int adj = (bldgtype->Adjacent + 1);
+
+    int tryX = trycell.X;
+    int tryY = trycell.Y;
+
+    int xmin = tryX - adj;
+    int ymin = tryY - adj;
+
+    int xmax = xmin + ((2 * adj) + width);
+    int ymax = ymin + ((2 * adj) + height);
+
+    /*
+    **	Scan through all cells that the building foundation would cover. If any adjacent
+    **	cells to these are of friendly persuasion, then consider the proximity check to
+    **	have been a success.
+    */
+    for (int x = xmin; x < xmax; x++) {
+        for (int y = ymin; y < ymax; y++) {
+            Cell newcell(x, y);
+
+            if ((short)x < tryX || (short)x >= tryX + width || (short)y < tryY || (short)y >= tryY + height) {
+                CellClass* cellptr = &Map[newcell];
+
+                /*
+                **	The special cell ownership flag allows building adjacent
+                **	to friendly walls and bibs even though there is no official
+                **	building located there.
+                */
+                // BG: Modified so only walls can be placed next to walls - buildings can't.
+                if (bldgtype->IsWall) {
+
+                    if (cellptr->Owner == house) {
+                        return true;
+                    }
+                }
+
+                BuildingClass* newbase = cellptr->Cell_Building();
+
+                // we've found a building...
+                if (newbase != nullptr && newbase->Class->IsBase)
+                {
+                    if (newbase->House->HeapID == house) {
+                        return true;
+                    }
+
+                    /**
+                     *  If the build-off-ally option is enabled, ensure the building is
+                     *  owned by an ally house and is eligible for adjacent building before
+                     *  passing the check.
+                     *
+                     *  #NOTE: This feature is only available for multiplayer games.
+                     */
+                    if (Session.Type != GAME_NORMAL && SessionExtension->ExtOptions.IsBuildOffAlly && newbase->House->Is_Ally(house))
+                    {
+                        BuildingTypeClassExtension* btypeext = Extension::Fetch(newbase->Class);
+                        if (btypeext->IsEligibleForAllyBuilding) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+
+/**
  *  Extended replacement of HouseClass::Place_Object.
  *
- *  @author: ZivDero
+ *  @author: ZivDero, Rampastring
  */
 bool HouseClassExtension::Place_Object(RTTIType type, Cell const& cell, ProductionFlags flags)
 {
@@ -673,8 +757,8 @@ bool HouseClassExtension::Place_Object(RTTIType type, Cell const& cell, Producti
                 return placed;
             }
 
-            if (cell == CELL_NONE || cell == Cell(-1, -1)) {
-
+            if (cell == CELL_NONE || cell == Cell(-1, -1))
+            {
                 /*
                 **  Try to find a place for the object to appear from. For helicopters, it has the
                 **  option of finding a nearby helipad if no helipads are free.
@@ -711,20 +795,21 @@ bool HouseClassExtension::Place_Object(RTTIType type, Cell const& cell, Producti
                         return placed;
                     }
                 }
-
-            } else {
+            }
+            else if (tech->RTTI == RTTI_BUILDING) // Only buildings can be placed on a specific cell
+            {
+                BuildingClass* bldg = reinterpret_cast<BuildingClass*>(tech);
                 TechnoClass* builder = tech->Who_Can_Build_Me(false, false);
                 if (builder) {
 
                     builder->Transmit_Message(RADIO_HELLO, tech);
-                    if (tech->Unlimbo(cell.As_Coord())) {
-                        if (tech->RTTI == RTTI_BUILDING) {
-                            if (static_cast<BuildingClass*>(tech)->Class->IsFirestormWall) {
-                                Map.Place_Firestorm_Wall(cell, This(), static_cast<BuildingClass*>(tech)->Class);
-                            } else if (static_cast<BuildingClass*>(tech)->Class->ToOverlay != nullptr && static_cast<BuildingClass*>(tech)->Class->ToOverlay->IsWall) {
-                                Map.Place_Wall(cell, This(), static_cast<BuildingClass*>(tech)->Class);
-                            }
+                    if (Passes_Proximity_Check(bldg->Class, This()->HeapID, cell) && tech->Unlimbo(cell.As_Coord())) {
+                        if (bldg->Class->IsFirestormWall) {
+                            Map.Place_Firestorm_Wall(cell, This(), bldg->Class);
+                        } else if (bldg->Class->ToOverlay != nullptr && bldg->Class->ToOverlay->IsWall) {
+                            Map.Place_Wall(cell, This(), bldg->Class);
                         }
+
                         factory->Completed();
                         tech->Transmit_Message(RADIO_COMPLETE, builder);
                         Abandon_Production(type, -1, flags);
