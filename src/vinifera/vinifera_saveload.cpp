@@ -301,6 +301,21 @@ static HRESULT Save_Unordered_Map(LPSTREAM& pStm, std::unordered_map<TKey, TValu
 }
 
 
+static void Print_Object_Info(ObjectClass const* object)
+{
+    DEBUG_INFO("    Offending object RTTI: {}\n", Name_From_RTTI(object->RTTI));
+    DEBUG_INFO("    Offending object ID: {}\n", object->Fetch_ID());
+    DEBUG_INFO("    Offending object heap ID: {}\n", object->Fetch_Heap_ID());
+
+    auto otype = object->Class_Of();
+    if (otype == nullptr) {
+        DEBUG_ERROR("Offending object type is null!\n");
+    } else {
+        DEBUG_INFO("   Offending object type: {}", otype->IniName.c_str());
+    }
+}
+
+
 /**
  *  Validates the ObjectClass pointers stored in a logic or map layer before
  *  the layer is written to the save stream.
@@ -311,21 +326,25 @@ static bool Vinifera_Validate_Layer(LayerClass &layer, const char *layer_name)
         ObjectClass *object = layer[index];
         if (!object) {
             DEBUG_ERROR("Unable to save {} because it contains a null object at index {}!\n", layer_name, index);
+            Print_Object_Info(object);
             return false;
         }
 
         if (Objects.ID(object) < 0) {
             DEBUG_ERROR("Unable to save {} because the object at index {} does not exist in the ObjectClass heap!\n", layer_name, index);
+            Print_Object_Info(object);
             return false;
         }
 
         if (!object->IsActive) {
             DEBUG_ERROR("Unable to save {} because the object at index {} is inactive!\n", layer_name, index);
+            Print_Object_Info(object);
             return false;
         }
 
         if (!Extension::Is_Object_Extension_Valid(object)) {
             DEBUG_ERROR("Unable to save {} because the object at index {} does not have a valid extension in its extension heap!\n", layer_name, index);
+            Print_Object_Info(object);
             return false;
         }
     }
