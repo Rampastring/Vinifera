@@ -265,7 +265,7 @@ DEFINE_HOOK(0x004762E4, _DisplayClass_Passes_Proximity_Passes_Check_Patch, 0)
     if (Session.Type != GAME_NORMAL) {
         if (SessionExtension && SessionExtension->ExtOptions.IsBuildOffAlly) {
 
-            if (base->House != hptr && base->House->Is_Ally(hptr)) {
+            if (base->Class->IsBase && base->House != hptr && base->House->Is_Ally(hptr)) {
 
                 BuildingTypeClassExtension* buildingtypeext = Extension::Fetch(base->Class);
                 if (buildingtypeext->IsEligibleForAllyBuilding) {
