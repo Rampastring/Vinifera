@@ -2183,3 +2183,10 @@ BuildSlowdown=yes
 DestroyWalls=yes
 ContentScan=yes
 ```
+
+### Select Same Type Command
+
+- The Select Same Type command is used by players to select all units and structures across the screen that are of the same types of the currently selected units and structures. The command has been improved in the following ways:
+	- No longer deselects units that are outside of the screen.
+	- Command is now ignored when non-player controlled units or structures are selected.
+	- Players can now press the Select Same Type command twice in quick succession to select units and structures across the map.
