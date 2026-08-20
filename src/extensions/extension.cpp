@@ -582,13 +582,21 @@ bool Extension::Is_Object_Extension_Valid(const ObjectClass *object)
     switch (object->RTTI) {
         case RTTI_UNIT:      return Extension_Object_Has_Valid_Extension(static_cast<const UnitClass *>(object), UnitExtensions);
         case RTTI_AIRCRAFT:  return Extension_Object_Has_Valid_Extension(static_cast<const AircraftClass *>(object), AircraftExtensions);
-        case RTTI_ANIM:      return Extension_Object_Has_Valid_Extension(static_cast<const AnimClass *>(object), AnimExtensions);
         case RTTI_BUILDING:  return Extension_Object_Has_Valid_Extension(static_cast<const BuildingClass *>(object), BuildingExtensions);
         case RTTI_INFANTRY:  return Extension_Object_Has_Valid_Extension(static_cast<const InfantryClass *>(object), InfantryExtensions);
         case RTTI_OVERLAY:   return Extension_Object_Has_Valid_Extension(static_cast<const OverlayClass *>(object), OverlayExtensions);
         case RTTI_SMUDGE:    return Extension_Object_Has_Valid_Extension(static_cast<const SmudgeClass *>(object), SmudgeExtensions);
         case RTTI_TERRAIN:   return Extension_Object_Has_Valid_Extension(static_cast<const TerrainClass *>(object), TerrainExtensions);
         case RTTI_WAVE:      return Extension_Object_Has_Valid_Extension(static_cast<const WaveClass *>(object), WaveExtensions);
+        case RTTI_ANIM:
+            /**
+             *  In multiplayer, the move flash anim is transferred out of the Anims heap
+             *  into the local-only MoveFlashes list right after construction (see
+             *  FootClass::Active_Click_With), identified by an ID of -2. Its extensions
+             *  are also kept outside the anim extension heap, so the regular verification path fails.
+             */
+            if (reinterpret_cast<const AnimClass*>(object)->Fetch_ID() == -2) return true;
+            return Extension_Object_Has_Valid_Extension(static_cast<const AnimClass*>(object), AnimExtensions);
         default:             return !Extension::Private::Is_Supported(object);
     }
 }
