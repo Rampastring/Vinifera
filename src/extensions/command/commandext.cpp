@@ -237,50 +237,9 @@ const char *PNGScreenCaptureCommandClass::Get_Description() const
 
 bool PNGScreenCaptureCommandClass::Process()
 {
-    if (!IsWindow(MainWindow)) {
+    if (VisibleSurface == nullptr) {
         return false;
     }
-
-    RECT crect;
-    if (!GetClientRect(MainWindow, &crect)) {
-        return false;
-    }
-
-    POINT tl_point;
-    tl_point.x = crect.left;
-    tl_point.y = crect.top;
-    if (!ClientToScreen(MainWindow, &tl_point)) {
-        return false;
-    }
-
-    POINT br_point;
-    br_point.x = crect.right;
-    br_point.y = crect.bottom;
-    if (!ClientToScreen(MainWindow, &br_point)) {
-        return false;
-    }
-
-    int w = std::min((int)crect.right+1, HiddenSurface->Get_Width());
-    int h = std::min((int)crect.bottom+1, HiddenSurface->Get_Height());
-
-    Rect src(tl_point.x, tl_point.y, w, h);
-    Rect dest(0, 0, HiddenSurface->Get_Width(), HiddenSurface->Get_Height());
-
-    /**
-     *  We don't want the mouse to appear in screenshots!
-     */
-    Hide_Mouse();
-
-    /**
-     *  Blit primary surface to the hidden.
-     */
-    bool blit = HiddenSurface->Blit_From(dest, *VisibleSurface, src);
-    ASSERT(blit);
-
-    /**
-     *  Now show the mouse again.
-     */
-    Show_Mouse();
 
     char buffer[256];
 
@@ -321,7 +280,7 @@ bool PNGScreenCaptureCommandClass::Process()
     /**
      *  We found a free filename, now write the buffer to a PNG file.
      */
-    bool success = Write_PNG_File(&RawFileClass(fullpath_buffer), *HiddenSurface, &GamePalette);
+    bool success = Write_PNG_File(&RawFileClass(fullpath_buffer), *VisibleSurface, &GamePalette);
 
     if (success) {
         DEBUG_INFO("PNG screenshot \"{}\" written sucessfully.\n", buffer);
