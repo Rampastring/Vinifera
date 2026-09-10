@@ -3036,7 +3036,7 @@ void ScenarioClassExtension::Create_Units(bool official)
                                     building->House->Begin_Construction();
 
                                     building->House->Base.Nodes[0].CellID = cell;
-                                    building->House->Base.field_50 = cell;
+                                    building->House->Base.PlacementCenter = cell;
 
                                     building->House->IsStarted = true;
                                     building->House->IsAITriggersOn = true;

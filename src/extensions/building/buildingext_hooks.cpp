@@ -4075,6 +4075,29 @@ MoveType BuildingClassExt::_Can_Enter_Cell(CellClass const* cell, FacingType dir
 
 
 /**
+ *  Patches BuildingClass::Unlimbo right after a building was identified as a ConYard, before being added to the ConYard list.
+ *  AI houses that build base nodes need to know the placement center of their base in order to correctly place structures around it.
+ *  In a skirmish setting, it is immediately set as the AI deploys its ConYards (in UnitClass::Try_To_Deploy).
+ *  However, in campaign, it is only set when the Auto Base Building trigger action is used, which can cause bases to get stuck
+ *  trying to build the next node at the ConYard's position, which is registered as the center. (in HouseClass::Where_To_Place_Building).
+ *  This makes sure that the AI has this value correctly set during any reason a ConYard is being unlimboed.
+ *  Note that this happens after Recalc_Center was already done as part of Unlimbo, so it is already set correctly.
+ *
+ *  @author: JoyfulShush
+ */
+DEFINE_HOOK(0x0042AA8B, _BuildingClass_Unlimbo_ConYard_PlacementCenter_Patch, 6)
+{
+    GET(BuildingClass*, this_ptr, ESI);
+
+    if (this_ptr->House->Base.PlacementCenter == CELL_NONE && !this_ptr->House->Is_Human_Player()) {
+        this_ptr->House->Base.PlacementCenter = this_ptr->House->Center.As_Cell();
+    }
+
+    return 0;
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void BuildingClassExtension_Hooks()

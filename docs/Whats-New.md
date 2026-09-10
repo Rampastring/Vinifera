@@ -64,6 +64,8 @@ Fixes:
 - Fix alternative war factory selection not respecting the `Naval=` key (by Rampastring)
 - Introduce -4 as a possible argument meaning "any human player" for the "Entered By" event (by Rampastring)
 - Fix crash when loading a game when a game object's or animation's graphics are present in side-specific MIX file (by Rampastring)
+- Fix game exiting with a "The legacy version of HouseClass::Fetch_Factory has been called" error when a spectator selected a factory building (by Rampastring)
+- Fix a bug where an AI house could get stuck trying to build base nodes after being interrupted by a friendly immovable object (by JoyfulShush)
 
 :::
 

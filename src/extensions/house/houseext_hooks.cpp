@@ -2177,7 +2177,7 @@ int HouseClassExt::_AI_Building()
     if (node->Type == BASE_DEFENSE || BuildingTypes[node->Type] == Rule->WallTower && node->CellID == Cell(0, 0)) {
 
         const int nodeid = Base.Nodes.ID(node);
-        if (!AI_Build_Defense(nodeid, Base.field_38.Count() > 0 ? &Base.field_38 : nullptr)) {
+        if (!AI_Build_Defense(nodeid, Base.OuterCells.Count() > 0 ? &Base.OuterCells : nullptr)) {
 
             /**
              *  If it's a wall tower, delete it twice?

@@ -3379,12 +3379,7 @@ bool DumpAIBaseNodesCommandClass::Process()
             DEBUG_INFO("\n");
 
             DEBUG_INFO("{:02} \"{}\":\n", house_index, house->Class->Name());
-
-            //DEBUG_INFO("  field_50: {}\n", house->Base.field_50);
-            //DEBUG_INFO("  field_64: {}\n", house->Base.field_64);
-            //DEBUG_INFO("  field_68: {}\n", house->Base.field_68);
-            //DEBUG_INFO("  field_6C: {}\n", house->Base.field_6C);
-            //DEBUG_INFO("  field_70: {}\n", house->Base.field_70);
+            
             DEBUG_INFO("  PercentBuilt: {:03}\n", house->Base.PercentBuilt);
 
             DEBUG_INFO("  Nodes.Count: {}\n", house->Base.Nodes.Count());
