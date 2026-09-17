@@ -318,12 +318,13 @@ void SyncRecorder::Print_Anim_Constructor_Calls(FILE* fp, unsigned count)
 
 
 /**
- *  Prints all recorded call histories into the desync log.
+ *  Prints the cell snapshot and all recorded call histories into the desync log.
  *
  *  @author: ZivDero
  */
 void SyncRecorder::Print_All(FILE* fp)
 {
+    Print_Cell_State(fp);
     Print_RNG_Calls(fp, 4096);
     Print_Facing_Changes(fp, 1024);
     Print_TarCom_Changes(fp, 1024);

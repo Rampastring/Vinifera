@@ -40,6 +40,7 @@ public:
     static void Print_All(FILE* fp);
 
 private:
+    static void Print_Cell_State(FILE* fp);
     static void Print_RNG_Calls(FILE* fp, unsigned count);
     static void Print_Facing_Changes(FILE* fp, unsigned count);
     static void Print_TarCom_Changes(FILE* fp, unsigned count);
