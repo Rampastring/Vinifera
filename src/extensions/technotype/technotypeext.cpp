@@ -557,6 +557,10 @@ int Missile_Spawn_Weapon_Value(TechnoTypeClass* technotype, const WeaponTypeClas
     TechnoTypeClassExtension* technotypeext = Extension::Fetch(technotype);
     const RocketTypeClass* rockettype = RocketTypeClass::From_AircraftType(technotypeext->Spawns);
 
+    // On scenario teardown, rocket types might be null
+    if (rockettype == nullptr)
+        return 0;
+
     int spawnerdamage = rockettype->Damage;
     const WarheadTypeClass* spawnerwarhead = rockettype->Warhead;
 

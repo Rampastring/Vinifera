@@ -31,6 +31,7 @@
 #include "prerequisitegroup.h"
 #include "advaitactictype.h"
 #include "rockettype.h"
+#include "rulesext.h"
 #include "spawner.h"
 #include "spawnmanager.h"
 #include "syringe.h"
@@ -70,6 +71,17 @@ static void _Free_Heaps_Intercept()
      *  Cleanup global heaps/vectors.
      */
     ++ScenarioInit;
+
+    /**
+     *  If Advanced AI is enabled, delete active teams before other objects.
+     */
+    if (RuleExtension->IsUseAdvancedAI)
+    {
+        while (Teams.Count()) {
+            delete Teams[0];
+        }
+        Delete_Marked();
+    }
 
     /**
      *  Delete things that may depend on extensions/vanilla objects still existing.
