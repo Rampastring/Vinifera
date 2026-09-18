@@ -4052,11 +4052,11 @@ MoveType BuildingClassExt::_Can_Enter_Cell(CellClass const* cell, FacingType dir
         if (ScenarioInit) {
             return MOVE_OK;
         }
-
-        auto class_ext = Extension::Fetch(Class);
+        
         auto passability = cell->Passability;        
         
-        if (class_ext->IsNaval) {
+        // Buildings that are WaterBound=yes have the SPEED_FLOAT speed type.
+        if (Class->Speed == SPEED_FLOAT) {
             if (passability != PASSABLE_WATER || cell->Is_Bridge_Here()) {
                 return MOVE_NO;
             }
