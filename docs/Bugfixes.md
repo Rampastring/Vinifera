@@ -140,3 +140,5 @@ This page lists all vanilla bugs fixed by Vinifera.
 - Fix a bug where cloaked units sensed by nearby enemy units can cloak again immediately.
 - Fix a bug where the game often reported multiple synchronization errors when one player got out of sync.
 - Fix a bug where an AI house could get stuck trying to build base nodes after being interrupted by a friendly immovable object.
+- Fix a bug where a theme with `Repeat=yes` blocked the "Play Music Theme" trigger action.
+- Fix a bug where music stopped for the rest of the mission once `[Basic]Theme=` had played through.
