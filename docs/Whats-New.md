@@ -76,6 +76,8 @@ Fixes:
 - Fix crash when loading a game when a game object's or animation's graphics are present in side-specific MIX file (by Rampastring)
 - Fix game exiting with a "The legacy version of HouseClass::Fetch_Factory has been called" error when a spectator selected a factory building (by Rampastring)
 - Fix a bug where an AI house could get stuck trying to build base nodes after being interrupted by a friendly immovable object (by JoyfulShush)
+- Fix a bug where a theme with `Repeat=yes` blocked the "Play Music Theme" trigger action (by ZivDero)
+- Fix a bug where music stopped for the rest of the mission once `[Basic]Theme=` had played through (by ZivDero)
 
 :::
 

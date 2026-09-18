@@ -157,6 +157,16 @@ void AudioThemeClass::AI()
         return;
     }
 
+    /**
+     *  #BUGFIX:
+     *  Score used to keep pointing at a finished song, which stopped Main_Loop
+     *  from ever asking for a new one.
+     */
+    if (Pending == THEME_NONE && Score != THEME_NONE && !AudioManager.Query_Is_Active(ScoreHandle)) {
+        Score = THEME_NONE;
+        ScoreHandle = INVALID_AUDIO_INSTANCE_HANDLE;
+    }
+
     if (Pending == THEME_NONE || Pending == THEME_QUIET) {
         return;
     }
@@ -385,11 +395,13 @@ bool AudioThemeClass::Play_Song(ThemeType theme)
     ScoreHandle = handle;
     
     /**
-     *  If this theme is flagged to repeat, set pending.
+     *  #BUGFIX:
+     *  Pending used to be pinned to this theme, which made Queue_Song reject
+     *  every other theme while it played. Next_Song() repeats it anyway.
      */
     if (tctrl->Repeat || IsRepeat) {
         DEBUG_INFO("Theme::Play_Song - Playing \"{}\" (Repeating)\n", Themes[theme]->Name);
-        Pending = theme;
+        Pending = THEME_PICK_ANOTHER;
 
     } else {
         DEBUG_INFO("Theme::Play_Song - Playing \"{}\" (Normal)\n", Themes[theme]->Name);
