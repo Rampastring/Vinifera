@@ -35,6 +35,7 @@
 #include "spawner.h"
 #include "spawnmanager.h"
 #include "syringe.h"
+#include "team.h"
 #include "theme.h"
 #include "tibsun_functions.h"
 #include "tibsun_globals.h"
