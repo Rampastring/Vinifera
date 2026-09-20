@@ -4370,9 +4370,22 @@ DEFINE_HOOK(0x004BE218, _HouseClass_Begin_Production_Check_For_Unallowed_Buildab
 }
 
 
-DEFINE_HOOK(0x004BC9D4, _HouseClass_AI_AdvAI_Team_Production, 0)
+/**
+ *  Prevent automatic AI team creation for human houses. Native recruitment
+ *  uses local control groups, so these teams can cause multiplayer desyncs.
+ *  Explicitly scripted team creation and reinforcements use other paths.
+ */
+DEFINE_HOOK(0x004BC9D4, _HouseClass_AI_Team_Production, 0)
 {
     GET(HouseClass*, this_ptr, ESI);
+
+    // Preserve the native OR EBX, -1 at 0x004BC9E0. The DamageTime check
+    // at 0x004BCAA0 also uses this timer sentinel after either continuation.
+    R->EBX(0xFFFFFFFF);
+
+    if (this_ptr->Is_Human_Player()) {
+        return 0x004BCAA0;
+    }
 
     if (RuleExtension->AdvancedAIUnitProduction) {
         // Skip TeamDelay processing for Advanced AI.
