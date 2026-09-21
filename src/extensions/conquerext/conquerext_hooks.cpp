@@ -468,9 +468,8 @@ void _Special_Dialog()
                     SpecialDialog = SDLG_OPTIONS;
                     break;
                 } else {
-                    // maybe we should return if Load_Dialog returns true? to avoid calling Resume_Scenario after loading a save
                     SpecialDialog = SDLG_NONE;
-                    return;
+                    break;
                 }
 
             default:
