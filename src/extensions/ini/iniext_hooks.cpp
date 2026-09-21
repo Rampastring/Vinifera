@@ -280,15 +280,20 @@ int INIClassExt::_Get_String(char const* section, char const* entry, char const*
      *  Verify that the parameters are nominally legal.
      */
     if (buffer == nullptr || size < 2 || section == nullptr || entry == nullptr) return 0;
+    
+    bool has_value = false;
+    std::string current_value = "";
 
     /**
-     *  Fetch the entry string if it is present.
+     *  Fetch the entry string if it is present. 
+     *  If it is not present, then use the contents of 'defvalue' as the fallback.
      */
-    bool has_value = false;
     INIEntry* entryptr = Find_Entry(section, entry);
     if (entryptr != nullptr && entryptr->Value != nullptr) {
-        defvalue = entryptr->Value;
+        current_value = entryptr->Value;
         has_value = true;
+    } else if (defvalue != nullptr) {
+        current_value = defvalue;
     }
 
     /**
@@ -311,11 +316,11 @@ int INIClassExt::_Get_String(char const* section, char const* entry, char const*
     /**
      *  Fill in the buffer with the entry value and return with the length of the string.
      */
-    if (defvalue == nullptr) {
+    if (current_value.empty()) {
         buffer[0] = '\0';
         return 0;
     } else {
-        strncpy(buffer, defvalue, size);
+        strncpy(buffer, current_value.c_str(), size);
         buffer[size - 1] = '\0';
         strtrim(buffer);
         return strlen(buffer);
