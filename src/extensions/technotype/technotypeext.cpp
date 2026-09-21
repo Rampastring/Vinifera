@@ -477,6 +477,16 @@ bool TechnoTypeClassExtension::Read_INI(CCINIClass &ini)
         }
     }
 
+    if (!IsInitialized) {
+        if (This()->RTTI == RTTI_INFANTRYTYPE) {
+            This()->CollateralDamageCoefficient = 0.66f;
+        } else {
+            This()->CollateralDamageCoefficient = 1.0f;
+        }
+    }
+
+    This()->CollateralDamageCoefficient = ini.Get_Float(ini_name, "CollateralDamageCoefficient", This()->CollateralDamageCoefficient);
+
     return true;
 }
 

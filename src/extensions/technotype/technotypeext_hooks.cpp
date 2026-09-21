@@ -138,6 +138,20 @@ DEFINE_HOOK(0x0063DE35, _TechnoTypeClass_Load_CameoName_Patch, 0)
 
 
 /**
+ *  Skips the Collateral Damage Coefficient assignment logic in TechnoTypeClass::Read_INI
+ *  in order to allow for our extension to set it instead.
+ *  This fixes the issue where CollateralDamageCoefficient gets reset if the section is overridden on the map file
+ *  without this line specified, causing unexpected and violent explosions from units that explode when they die.
+ *
+ *  @author: JoyfulShush
+ */
+DEFINE_HOOK(0x0063BA70, _TechnoTypeClass_Read_INI_CollateralDamageCoefficient_Skip_Patch, 0)
+{
+    return 0x0063BAC8;
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void TechnoTypeClassExtension_Hooks()

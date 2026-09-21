@@ -203,6 +203,7 @@ This page lists all the individual contributions to the project by their author.
   - Improve same-type select command logic, and allow map-wide select when pressing twice in succession.
   - Fix the game crashing on scenario start when a HouseType has no valid starting infantry and UnitCount is above 0.
   - Fix a bug where an AI house could get stuck trying to build base nodes after being interrupted by a friendly immovable object.
+  - Fix a bug where CollateralDamageCoefficient would be reset if an object's section is specified on the map file.
 - **Kerbiter (Metadorius)**:
   - Initial documentation setup.
 - **Krnyoshi**:
