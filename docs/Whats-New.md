@@ -79,6 +79,7 @@ Fixes:
 - Fix a bug where a theme with `Repeat=yes` blocked the "Play Music Theme" trigger action (by ZivDero)
 - Fix a bug where music stopped for the rest of the mission once `[Basic]Theme=` had played through (by ZivDero)
 - Fix a bug where CollateralDamageCoefficient would be reset if an object's section is specified on the map file (by JoyfulShush)
+- Fix a bug where AITrigger team creation happened for human players in multiplayer if enabled through a trigger, leading to desyncs due to team recruitment depending on local unit control group state (by Rampastring)
 
 :::
 

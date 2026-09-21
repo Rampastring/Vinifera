@@ -2059,6 +2059,35 @@ DEFINE_HOOK(0x004C9937, HouseClass_Updated_Spied_By_Sight_Range_Patch, 0)
 
 
 /**
+ *  Prevents AITrigger team creation for human players in case
+ *  production for a Spawn house has been enabled by a trigger.
+ *  AITrigger team creation for human players causes desyncs because team recruitment
+ *  relies on the Group= setting of units, which for human players is local state.
+ *
+ *  @author: Rampastring
+ */
+DEFINE_HOOK(0x004BC9D4, _HouseClass_AI_Team_Production, 0)
+{
+    GET(HouseClass*, this_ptr, ESI);
+
+    // Preserve the native OR EBX, -1 at 0x004BC9E0. The DamageTime check
+    // at 0x004BCAA0 also uses this timer sentinel after either continuation.
+    R->EBX(0xFFFFFFFF);
+
+    if (this_ptr->Is_Human_Player()) {
+        return 0x004BCAA0;
+    }
+
+    // Stolen bytes / code.
+    if (this_ptr->TeamTime.Expired()) {
+        return 0x004BC9FD;
+    }
+
+    return 0x004BCAA0;
+}
+
+
+/**
  *  Main function for patching the hooks.
  */
 void HouseClassExtension_Hooks()
