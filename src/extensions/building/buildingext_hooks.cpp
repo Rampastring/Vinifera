@@ -1157,6 +1157,20 @@ void BuildingClassExt::_Draw_Overlays(const Point2D& coord, const Rect& rect)
 
 
 /**
+ *  Extracted logic for #issue-204 fixes for reuse.
+ *  Note that this function assumes the building is in contact with a valid aircraft.
+ *
+ *  @author: CCHyper, JoyfulShush
+ */
+int Get_Aircraft_Reload_Time(BuildingClass* building)
+{
+    AircraftClass* radio = reinterpret_cast<AircraftClass*>(building->Contact_With_Whom());
+    AircraftTypeClassExtension* radio_class_ext = Extension::Fetch(radio->Class);
+    return radio_class_ext->Get_ReloadRate() * TICKS_PER_MINUTE;
+}
+
+
+/**
  *  #issue-204
  * 
  *  Implements ReloadRate for AircraftTypes, allowing each aircraft to have
@@ -1164,13 +1178,31 @@ void BuildingClassExt::_Draw_Overlays(const Point2D& coord, const Rect& rect)
  * 
  *  @author: CCHyper
  */
-DEFINE_HOOK(0x0043266C, _BuildingClass_Mission_Repair_ReloadRate_Patch, 0)
+DEFINE_HOOK(0x0043266C, _BuildingClass_Mission_Repair_ReloadRate_Patch_Initial, 0)
+{
+    GET(BuildingClass*, this_ptr, EBP);
+           
+    int time = Get_Aircraft_Reload_Time(this_ptr);
+    R->EAX(time);
+
+    return 0x0043260F;
+}
+
+
+/**
+ *  #issue-204
+ *
+ *  Implements ReloadRate for AircraftTypes, allowing each aircraft to have
+ *  its own independent ammo reloading rate when docked with a helipad.
+ *  Fixes an issue where aircraft only did reload with their own rate when starting to regenerate ammo
+ *
+ *  @author: JoyfulShush
+ */
+DEFINE_HOOK(0x004325FE, _BuildingClass_Mission_Repair_ReloadRate_Patch_During, 0)
 {
     GET(BuildingClass*, this_ptr, EBP);
 
-    AircraftClass* radio = reinterpret_cast<AircraftClass*>(this_ptr->Contact_With_Whom());
-    AircraftTypeClassExtension* radio_class_ext = Extension::Fetch(radio->Class);
-    int time = radio_class_ext->Get_ReloadRate() * TICKS_PER_MINUTE;
+    int time = Get_Aircraft_Reload_Time(this_ptr);
     R->EAX(time);
 
     return 0x0043260F;
