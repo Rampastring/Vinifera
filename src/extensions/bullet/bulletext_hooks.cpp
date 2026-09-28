@@ -5,6 +5,12 @@
  *
  *  SPDX-License-Identifier: GPL-3.0-or-later
  *  Copyright (c) 2020-2026 Vinifera contributors
+ *  Copyright 2025 Electronic Arts Inc.
+ *  Copyright 2026 OpenTS contributors
+ *
+ *  BulletClass::AI is adapted from OpenTS, with DTA modifications.
+ *  See OPENTS-LICENSE.md for the upstream license, additional terms and
+ *  supplemental warranty disclaimers applicable to that material.
  ******************************************************************************/
 
 #include "always.h"
@@ -23,12 +29,17 @@
 #include "house.h"
 #include "infantry.h"
 #include "iomap.h"
+#include "matrix3d.h"
+#include "tibsun_functions.h"
 #include "overlaytype.h"
 #include "rules.h"
 #include "syringe.h"
 #include "techno.h"
 #include "warheadtype.h"
 #include "warheadtypeext.h"
+
+#include <algorithm>
+#include <cmath>
 
 
 /**
@@ -42,7 +53,7 @@ static DECLARE_EXTENDING_CLASS_AND_PAIR(BulletClass)
 {
 public:
     bool _Is_Forced_To_Explode(Coord& coord);
-    void _BulletClass_AI_Replacement(void);
+    void _AI();
     int _Shape_Number(void);
 };
 
@@ -139,37 +150,6 @@ bool BulletClassExt::_Is_Forced_To_Explode(Coord& coord)
 
 
 /**
- *  #issue-563
- *
- *  Implements SpawnDelay for BulletTypes.
- *
- *  @author: CCHyper
- */
-DEFINE_HOOK(0x004447BF, _BulletClass_AI_SpawnDelay_Patch, 0)
-{
-    GET(BulletClass *, this_ptr, EBP);
-
-    /**
-     *  Fetch the extension instance.
-     */
-    BulletTypeClassExtension* bullettypeext = Extension::Fetch(this_ptr->Class);
-
-    /**
-     *  If this bullet has a custom spawn delay (defaults to the original delay of 3), perform that check first.
-     */
-    if (Frame % bullettypeext->SpawnDelay == 0) {
-        goto create_trailer_anim;
-    }
-
-skip_anim:
-    return 0x00444801;
-
-create_trailer_anim:
-    return 0x004447D0;
-}
-
-
-/**
  *  #issue-415
  *
  *  Implements screen shake values for WarheadTypes.
@@ -207,525 +187,374 @@ DEFINE_HOOK(0x00446652, _BulletClass_Logic_ShakeScreen_Patch, 0)
 
 
 /**
- *  #issue-19
- *
- *  Reimplements the part of BulletClass::AI that deals with homing projectiles
- *  (projectiles that have ROT > 0).
- *
- *  @author: Rampastring
+ *  Full replacement of BulletClass::AI, adapted from OpenTS code/bullet.cpp.
+ *  DTA retains missiles after target loss, changes degeneration, and applies
+ *  SnapDistance to non-airburst homing detonations.
  */
-void BulletClass_AI_Homing_Reimplementation(BulletClass* this_ptr)
+void BulletClassExt::_AI()
 {
-    /*double fly_class_length = this_ptr->Fly.Length_3D();
+    static const int closure_limit = 4 * TICKS_PER_SECOND;
 
-    if (this_ptr->MaxSpeed >= 40 || (double)this_ptr->MaxSpeed <= fly_class_length + 0.5)
-    {
-        this_ptr->field_A45 = false; // CourseLocked?
-    }
+    // Names recovered by OpenTS for fields still unnamed in TS++.
+    int& bounce_count = field_A0;
+    bool& is_launching = field_A45;
+    int& closure_samples = field_B0;
+    double& smoothed_closure = field_B8;
 
-    int acceleration = this_ptr->Class->Acceleration;
-    if (this_ptr->field_A45)
-    {
-        if (Frame % 2 == 0)
-        {
-            acceleration = 1;
-        }
-        else
-        {
-            acceleration = 0;
-        }
-    }
-    int acceleration2 = acceleration;
-
-    int dirrr;
-    double max_speed_as_double = (double)this_ptr->MaxSpeed;
-    bool process_flyclass = false;
-
-    if (fly_class_length < max_speed_as_double)
-    {
-        process_flyclass = true;
-
-        fly_class_length = (double)acceleration2 + fly_class_length;
-        if (fly_class_length >= max_speed_as_double)
-        {
-            fly_class_length = max_speed_as_double;
-        }
-    }
-    else if (fly_class_length > max_speed_as_double)
-    {
-        process_flyclass = true;
-
-        dirrr = acceleration / 2;
-        fly_class_length = fly_class_length - (double)(acceleration / 2);
-        if (fly_class_length <= 0.0)
-        {
-            fly_class_length = 0.0;
-        }
-    }
-
-    if (process_flyclass)
-    {
-        this_ptr->Fly.If_XYZ_0_Set_X_100();
-
-        double new_fly_class_length = this_ptr->Fly.Length_3D();
-        double scalar = fly_class_length / new_fly_class_length;
-        this_ptr->Fly.field_88 = scalar * this_ptr->Fly.field_88;
-        this_ptr->Fly.field_90 = scalar * this_ptr->Fly.field_90;
-        this_ptr->Fly.field_98 = scalar * this_ptr->Fly.field_98;
-    }*/
-
-    Coord target_coord;
-
-    if (this_ptr->TarCom)
-    {
-        // target_coord_v26 = this->TarCom->r.m.o.a.vt->t.r.m.o.a.__some_coords__As_Coord(this->TarCom);
-        // I can't see a sensible alternative to Center_Coord, so let's just go with it for now
-        target_coord = this_ptr->TarCom->Center_Coord();
-    }
-    else
-    {
-        // original TS code
-        // fetch default invalid coords
-        // target_coord = Coord(0, 0, 0);
-
-        /**
-         *  #issue-19
-         *
-         *  Let's just continue flying straight instead of assigning invalid coords.
-         */
-        target_coord = this_ptr->Center_Coord() +
-            Coord(this_ptr->Fly.field_88, this_ptr->Fly.field_90, this_ptr->Fly.field_98);
-    }
-
-    ObjectClass* target_as_object = dynamic_cast<ObjectClass*>(this_ptr->TarCom);
-    if (target_as_object)
-    {
-        target_coord = target_as_object->Target_Coord(); // hopefully copy constructor here too
-    }
-
-    int dirrr = (Frame + this_ptr->Fetch_ID()) % 15; // ????
-    double pi = 3.141592653; // surely I could find this from somewhere...
-    double v31 = (FastMath::Sin((double)dirrr * (1.0 / 15.0) * pi * 2.0) * Rule->MissileROTVar + Rule->MissileROTVar + 1.0) * (double)this_ptr->Class->ROT;
-    // long long v32 = (long long)v31;
-    // !!! despite (signed __int64) claim here for v32 by IDA, it seems like only a byte of it is ever used
-    v31 *= 100.0;
-    int v32 = (int)v31;
-    dirrr = v32;
-
-    // Calculate vector from target to us
-    Coord distance_coord = this_ptr->Center_Coord() - target_coord;
-
-    /**
-     *  #issue-19
-     *
-     *  Don't adjust this if we don't have a target.
-     */
-    if (distance_coord.Length() < 256 && this_ptr->TarCom) // was CoordStruct::Distance(distance_coord)
-    {
-        // LOBYTE(v32) = (signed __int64)((double)dirrr * 1.5); ?????
-        v32 = (int)((double)dirrr * 1.5);
-    }
-
-    bool is_targeting_aircraft = false;
-    if (this_ptr->TarCom && this_ptr->TarCom->RTTI == RTTI_AIRCRAFT)
-    {
-        is_targeting_aircraft = true;
-    }
-
-    fixed v39 = 0;
-    v39.Data.Composite.Fraction = 0;
-    v39.Data.Composite.Whole = this_ptr->field_A45 == false ? v32 : 0;
-
-    // LOWORD(dirrr) = v39;
-    // This is probably a bad way to hopefully achieve the same.
-    dirrr = v39;
-
-    TVelocity3D v149 = this_ptr->Fly; // should invoke copy constructor
-
-    // Back-up our coordinate prior to calling Projectile_Motion
-    Coord backup_coord = this_ptr->Position;
-
-    Coord our_coord = this_ptr->Position;
-    dirrr = Projectile_Motion(our_coord, v149, target_coord,
-        (DirType)dirrr,
-        is_targeting_aircraft,
-        this_ptr->Class->IsAirburst,
-        this_ptr->Class->IsVeryHigh);
-
-    CellClass& cell = Map[our_coord]; // this is actually used only in the bridge check, 
-                                      // but original compiled code had it here already
-
-    // Projectile_Motion fails when targeting something directly towards negative Y
-    if ((int)this_ptr->Fly.field_88 != 0 && this_ptr->Fly.field_90 < 0) {
-        this_ptr->Fly = v149;
-    }
-
-    bool is_forced_to_explode = false;
-    bool b_height_v139 = false;
-
-    /**
-     *  #issue-19
-     *
-     *  Don't force projectile to blow up here if we don't have a target.
-     *  Otherwise the projectile would explode where it was when the target
-     *  disappeared. Often it'd explode on our face, which we don't want to happen.
-     */
-    if ((this_ptr->TarCom && this_ptr->Fly.Length_3D() * 0.5 >= (double)dirrr) || this_ptr->Get_Height() <= 0)
-    {
-        is_forced_to_explode = true;
-        b_height_v139 = true;
-
-        if (this_ptr->Get_Height() > 0 && !this_ptr->Class->IsAirburst)
-        {
-            our_coord = target_coord;
-        }
-    }
-
-    // Calculate what our distance to the target was prior to calling Projectile_Motion?
-    distance_coord = backup_coord - target_coord;
-    int old_distance = distance_coord.Length();
-
-    distance_coord = our_coord - target_coord;
-    // Calculate how much distance we closed to the target
-    int distance_closed = old_distance - distance_coord.Length();
-
-    bool check_bridge = false;
-
-    if (this_ptr->field_A45)
-    {
-        check_bridge = true;
-    }
-    else if (this_ptr->field_B0 < 60)
-    {
-        this_ptr->field_B0++;
-        this_ptr->field_B8 = (double)distance_closed + this_ptr->field_B8;
-        check_bridge = true;
-    }
-    else
-    {
-        this_ptr->field_B8 = this_ptr->field_B8 * 0.9833333333333333 + (double)distance_closed;
-
-        // v53 is never assigned to?
-        /*if (v53)
-        {
-            goto LABEL_57;
-        }*/
-
-        if (this_ptr->field_B8 >= 60.0)
-        {
-            check_bridge = true;
-        }
-        else if (this_ptr->Class->IsAirburst || this_ptr->Class->IsVeryHigh)
-        {
-            check_bridge = true;
-        }
-    }
-
-    if (check_bridge)
-    {
-        // Check if the projectile is going to hit a high bridge?
-        // I probably don't have enough knowledge on this stuff to reimplement it
-        /*
-        if (!v139
-            && (*(_DWORD *)(v144[0] + 164) & 0x1000 || MapClass::operator[](&Map.sc.t.s.p.r.d.m, &a2)->Bits & 0x1000))
-        {
-            if ((v55 = BridgeCellHeight_7605C4 + MapClass_GetCoordFloorHeight(&Map.sc.t.s.p.r.d.m, &coord),
-                coord.Z > v55)
-                && a2.Z < v55
-                || coord.Z < v55 && a2.Z > v55)
-            {
-                v139 = 1;
-                coord.Z = v55;
-                forced = 1;
-            }
-        }*/
-    }
-    else
-    {
-        is_forced_to_explode = true;
-        b_height_v139 = true;
-    }
-
-    this_ptr->Mark();
-
-    /**
-     *  This code path would be relevant for a total reimplementation of the BulletClass::AI function,
-     *  but it's never hit for ROT > 0 projectiles (homing projectiles)
-     *
-     *  And yes, it means that b_height_v139 is not actually a bool originally code (or it was multiple
-     *  variables with memory space re-used by the compiler)
-     */
-     /*
-     if (b_height_v139 == 2)
-     {
-         delete this_ptr;
-     }
-     else
-     */
-
-     /*
-     **	See if the projectile ran out of fuel (reached its maximum range).
-     */
-    if (this_ptr->Class->IsFueled)
-    {
-        Coord difference = our_coord - this_ptr->Get_Coord();
-        this_ptr->Range = this_ptr->Range - (int)difference.Length();
-
-        if (this_ptr->Range <= 0)
-            is_forced_to_explode = true;
-    }
-
-    this_ptr->Set_Coord(our_coord);
-    CellClass& cell_at_new_coord = Map[our_coord];
-    BuildingClass* cell_building = cell_at_new_coord.Cell_Building();
-
-    /*
-    **	Check if the bullet hit a firestorm wall on its (potentially new) cell.
-    */
-    if (cell_building &&
-        cell_building->Class->IsFirestormWall &&
-        cell_building->House->IsFirestormActive &&
-        (this_ptr->Payback == nullptr || cell_building->House != this_ptr->Payback->House) &&
-        this_ptr->Class_Of() &&
-        !this_ptr->Class_Of()->IsIgnoresFirestorm)
-    {
-        // BuildingClass_Damage_via_FSWall(this, 0); not in TS++ yet?
-        delete this_ptr;
-    }
-    else
-    {
-        /*
-        **	See if the bullet should be forced to explode now in spite of what
-        **	the fuse would otherwise indicate. Maybe the bullet hit a wall?
-        */
-        if (!is_forced_to_explode)
-        {
-            Coord newcoord = this_ptr->Get_Coord();
-            is_forced_to_explode = this_ptr->Is_Forced_To_Explode(newcoord);
-            this_ptr->Set_Coord(newcoord); // why? :/
-        }
-
-        bool fuse_check = false;
-        if (this_ptr->Class->ROT > 0)
-        {
-            fuse_check = this_ptr->Fuse.Fuse_Checkup(our_coord);
-        }
-
-        /**
-         *  #issue-19
-         *
-         *  With our patch, sometimes a projectile might have no valid target.
-         *  This happens if a projectile's target dies before the projectile has hit it.
-         *  In this case, the projectile will continue flying straight until it runs out of fuel,
-         *  hits the ground or hits an enemy object.
-         *
-         *  Check if there's an enemy object on our cell. If one is found, then force the projectile
-         *  to explode.
-         */
-        if (this_ptr->TarCom == nullptr)
-        {
-            HouseClass* our_house = nullptr;
-            if (this_ptr->Payback)
-                our_house = this_ptr->Payback->House;
-
-            ObjectClass* cell_occupier = cell_at_new_coord.Cell_Occupier();
-            while (!is_forced_to_explode && cell_occupier != nullptr)
-            {
-                if (cell_occupier->Owner_HouseClass() != our_house && (our_house == nullptr || !our_house->Is_Ally(cell_occupier)))
-                    is_forced_to_explode = true;
-                else
-                    cell_occupier = cell_occupier->Next;
-            }
-        }
-
-        /*
-        **	If the bullet is not to explode, then perform normal flight
-        **	maintenance (usually nothing). Otherwise, explode and then
-        **	delete the bullet.
-        */
-        if (!is_forced_to_explode && (this_ptr->Class->IsDropping || !fuse_check))
-        {
-            /*
-            **	Certain projectiles lose strength when they travel.
-            */
-            /*
-             * Vanilla TS code
-            if (this_ptr->Class->IsDegenerate && this_ptr->Strength > 5) {
-                this_ptr->Strength--;
-            }*/
-            /*
-            **  #issue-234
-            **  DTA adjustment from CnCNet ts-patches
-            */
-            if (this_ptr->Class->IsDegenerate && this_ptr->Strength > 10) {
-                this_ptr->Strength = this_ptr->Strength - 2;
-            }
-        }
-        else
-        {
-            if (this_ptr->TarCom && (fuse_check == true /*|| v134 */) && !this_ptr->Class->IsAirburst)
-            {
-                // v125 = this->TarCom->r.m.o.a.vt->t.r.m.o.a.__some_coords__As_Coord(this->TarCom);
-                Coord newtargetcoord = this_ptr->TarCom->Center_Coord();
-
-                BulletTypeClassExtension* bullettypeext = Extension::Fetch(this_ptr->Class);
-
-                int distance = ::Distance(newtargetcoord, this_ptr->Center_Coord());
-                if (fuse_check && distance < bullettypeext->SnapDistance) {
-                    this_ptr->Set_Coord(newtargetcoord);
-                }
-
-                // Coord some_coord = Coord(our_coord.X - newtargetcoord.X,
-                //     our_coord.Y - newtargetcoord.Y,
-                //     ((newtargetcoord.Z + our_coord.Z) / 2) - newtargetcoord.Z);
-                // int some_coord_length = some_coord.Length();
-                // 
-                // /*
-                //  * This code path is only hit by ROF <= 0 projectiles
-                // if (v134)
-                // {
-                //     some_coord_length = some_coord_length / 3;
-                // }
-                // */
-                // 
-                // double limit = 128.0;
-                // double lengthtwice = this_ptr->Fly.Length_3D() * 2.0;
-                // if (lengthtwice >= limit)
-                // {
-                //     limit = lengthtwice;
-                // }
-                // 
-                // if (fuse_check || some_coord_length <= lengthtwice)
-                // {
-                //     this_ptr->Set_Coord(this_ptr->TarCom->Center_Coord());
-                // }
-            }
-
-            this_ptr->Bullet_Explodes(is_forced_to_explode);
-            delete this_ptr;
-        }
-    }
-}
-
-
-DEFINE_HOOK(0x00444A3E, _BulletClass_AI_Jump_To_Custom_Function_If_ROT_Over_Zero, 6)
-{
-    GET(BulletClass*, this_ptr, EBP);
-
-    if (!this_ptr->Class->IsVeryHigh && !this_ptr->Class->IsSplits && this_ptr->Class->ROT < 100 && this_ptr->Class->Arming != 1000) {
-        BulletClass_AI_Homing_Reimplementation(this_ptr);
-        return 0x00445B5A;
-    }
-
-    return 0;
-}
-
-
-/**
- *  Main function for DTA's custom implementation of BulletClass::AI,
- *  designed to be compatible with new floating point calculation mode
- *  and to work more similarly to Red Alert's.
- *
- *  @author: Rampastring (bits taken from Red Alert 1 source code by Electronic Arts)
- */
-void BulletClassExt::_BulletClass_AI_Replacement(void)
-{
     ObjectClass::AI();
-
     if (!IsActive) return;
 
-    // Ballistic objects are handled here.
-    bool forced = false;
-    if (Class->IsDropping && !IsFalling) {
-        forced = true;
-    }
+    const auto bullettypeext = Extension::Fetch(Class);
+    const bool homing = Class->ROT > 0;
+    const bool lost_target = homing && TarCom == nullptr;
+    bool forced = Class->IsDropping && !IsFalling;
+    bool collided = false;
 
-    // Refresh anim logic introduced in Tiberian Sun.
-    if (Class->AnimLow > 0 || Class->AnimHigh > 0) {
-        AnimFrameDelay--;
-
-        if (AnimFrameDelay == 0) {
-            AnimFrame++;
+    if (Class->AnimLow || Class->AnimHigh) {
+        if (--AnimFrameDelay == 0) {
             AnimFrameDelay = Class->AnimRate;
-
-            if (AnimFrame >= Class->AnimHigh) {
+            if (++AnimFrame > Class->AnimHigh) {
                 AnimFrame = Class->AnimLow;
             }
         }
     }
 
-    BulletTypeClassExtension *bullettypeext = Extension::Fetch(Class);
-
-    // Handle trailer anim logic introduced in Tiberian Sun.
-    if (Class->Trailer != nullptr) {
-        unsigned spawndelay = bullettypeext->SpawnDelay;
-
-        if (Frame % spawndelay == 0) {
-            new AnimClass(Class->Trailer, Get_Coord(), 1u, 1u, 1536u, 0);
-        }
+    const Coord previous_coord = PositionCoord;
+    Coord coord = previous_coord;
+    if (Class->Trailer != nullptr && bullettypeext->SpawnDelay > 0
+        && Frame % bullettypeext->SpawnDelay == 0) {
+        new AnimClass(Class->Trailer, coord, 1, 1);
     }
 
-    // Only process acceleration every second frame.
-    // The original game does something similar, but it's a bit weird.
-    if (Class->Acceleration > 0 && (Frame & 0x01)) {
+    ImpactType impact = IMPACT_NONE;
+    if (homing) {
         double speed = Fly.Length_3D();
-        speed += (double)Class->Acceleration;
-
-        if (speed > MaxSpeed) {
-            speed = (double)MaxSpeed;
+        if (MaxSpeed >= 40 || speed + 0.5 >= MaxSpeed) {
+            is_launching = false;
         }
 
-        double scalar = speed / Fly.Length_3D();
-        Fly.If_XYZ_0_Set_X_100(); // is there a point to this?
-        Fly.field_88 = Fly.field_88 * scalar;
-        Fly.field_90 = Fly.field_90 * scalar;
-        Fly.field_98 = Fly.field_98 * scalar;
+        const int acceleration = is_launching ? ((Frame % 2 == 0) ? 1 : 0) : Class->Acceleration;
+        if (speed < MaxSpeed || speed > MaxSpeed) {
+            if (speed < MaxSpeed) {
+                speed = std::min(speed + acceleration, static_cast<double>(MaxSpeed));
+            } else {
+                speed = std::max(speed - acceleration / 2, 0.0);
+            }
+
+            // Equivalent to TVelocity3D::Set_Speed; normalize only after the
+            // zero-vector check, so a projectile launched at rest can accelerate.
+            Fly.If_XYZ_0_Set_X_100();
+            const double scalar = speed / Fly.Length_3D();
+            Fly.field_88 *= scalar;
+            Fly.field_90 *= scalar;
+            Fly.field_98 *= scalar;
+        }
+
+        const Coord old_coord = coord;
+        if (lost_target) {
+            // #issue-19: no autopilot, proximity fuse, or closure detector after
+            // target loss. Preserve the flight direction, including its pitch.
+            coord += Coord(static_cast<int>(Fly.field_88), static_cast<int>(Fly.field_90), static_cast<int>(Fly.field_98));
+            if (coord.Z <= Map.Get_Height_GL(coord)) {
+                forced = true;
+                impact = IMPACT_NORMAL;
+            }
+        } else {
+            // entry_5C is AbstractClass::As_Coord in OpenTS. Unlike
+            // Center_Coord, a cell's implementation includes its bridge deck.
+            Coord target_coord = TarCom->entry_5C();
+            if (const auto target = dynamic_cast<ObjectClass*>(TarCom)) {
+                target_coord = target->Target_Coord();
+            }
+
+            const double phase = ((Frame + Fetch_ID()) % TICKS_PER_SECOND) * (1.0 / TICKS_PER_SECOND);
+            const double full_circle = 6.283185307179586;
+            int rot = static_cast<int>((FastMath::Sin(phase * full_circle) * Rule->MissileROTVar
+                + (Rule->MissileROTVar + 1.0)) * Class->ROT);
+            if (::Distance(Center_Coord(), target_coord) < CELL_LEPTON_W) {
+                rot = static_cast<int>(rot * 1.5);
+            }
+
+            // ROT is a 256-direction value, not a fixed-point number or raw
+            // 16-bit direction. This also preserves the original launch phase.
+            DirType turn_rate(static_cast<Dir256>(is_launching ? 0 : rot));
+            TVelocity3D velocity = Fly;
+            // Native FastMath::Atan2 overflows its table index when Y/X is
+            // enormous. Cos(pi/2) leaves a tiny X residue, so northbound
+            // missiles can abruptly turn east with DTA's 24-bit FPU precision.
+            // Treat this sub-resolution heading as exactly axial, while still
+            // accepting the autopilot's subsequent steering and pitch changes.
+            if (std::abs(velocity.field_88) <= std::abs(velocity.field_90) * 1e-6) {
+                velocity.field_88 = 0.0;
+            }
+            const int distance = Projectile_Motion(coord, velocity, target_coord, turn_rate,
+                TarCom->RTTI == RTTI_AIRCRAFT, Class->IsAirburst, Class->IsVeryHigh);
+            Fly = velocity;
+
+            if (distance <= Fly.Length_3D() * 0.5 || HeightAGL <= 0) {
+                forced = true;
+                impact = IMPACT_NORMAL;
+                // Snapping is handled below, after every explosion condition,
+                // so arrival cannot bypass SnapDistance or distort fuel usage.
+            }
+
+            const int delta = ::Distance(old_coord, target_coord) - ::Distance(coord, target_coord);
+            if (!is_launching) {
+                if (closure_samples < closure_limit) {
+                    ++closure_samples;
+                    smoothed_closure += delta;
+                } else {
+                    smoothed_closure = smoothed_closure * ((closure_limit - 1.0) / closure_limit) + delta;
+                    if (smoothed_closure >= 0 && smoothed_closure < closure_limit
+                        && !Class->IsAirburst && !Class->IsVeryHigh) {
+                        forced = true;
+                        impact = IMPACT_NORMAL;
+                    }
+                }
+            }
+        }
+
+        // Both guided and unguided missiles can strike either side of a bridge.
+        if (impact == IMPACT_NONE && (Map[coord].IsUnderBridge || Map[old_coord].IsUnderBridge)) {
+            const int bridge_height = Map.Get_Height_GL(coord) + BRIDGE_LEPTON_HEIGHT;
+            if ((coord.Z > bridge_height && old_coord.Z < bridge_height)
+                || (coord.Z < bridge_height && old_coord.Z > bridge_height)) {
+                coord.Z = bridge_height;
+                forced = true;
+                impact = IMPACT_NORMAL;
+            }
+        }
+
+        // Targetless missiles can now travel past their original destination.
+        if (!Map.In_Radar(coord)) {
+            impact = IMPACT_EDGE;
+        }
+    } else {
+        TVelocity3D velocity = Fly;
+        if (velocity.Length_3D() < 8) {
+            impact = IMPACT_NORMAL;
+        }
+
+        // Floaters use half gravity; retain double precision until the final
+        // coordinate conversion, as in the original ballistic flight model.
+        velocity.field_98 -= Class->IsFloater ? Rule->Gravity * 0.5 : Rule->Gravity;
+        TVelocity3D position = {
+            coord.X + velocity.field_88,
+            coord.Y + velocity.field_90,
+            coord.Z + velocity.field_98
+        };
+        const Coord old_coord = coord;
+        const Coord new_coord(static_cast<int>(position.field_88), static_cast<int>(position.field_90), static_cast<int>(position.field_98));
+        const int height = Map.Get_Height_GL(new_coord);
+        const int bridge_height = height + BRIDGE_LEPTON_HEIGHT;
+        CellClass& cell = Map[new_coord];
+
+        bool fell_through_bridge = false;
+        bool rose_through_bridge = false;
+        if (cell.IsUnderBridge || Map[old_coord].IsUnderBridge) {
+            if (new_coord.Z >= bridge_height) {
+                rose_through_bridge = old_coord.Z < bridge_height;
+            } else {
+                fell_through_bridge = old_coord.Z >= bridge_height;
+            }
+        }
+
+        bool hit_obstacle = false;
+        if (!fell_through_bridge && !rose_through_bridge && position.field_98 >= height
+            && position.field_98 - 150 < height) {
+            BuildingClass* building = cell.Cell_Building();
+            const bool has_wall = cell.Overlay != OVERLAY_NONE && OverlayTypes[cell.Overlay]->IsWall;
+            if (building != nullptr || has_wall) {
+                hit_obstacle = true;
+                if (building != nullptr && (building == Payback
+                    || (building->Class->IsLaserFence && building->LaserFenceFrame >= 8)
+                    || building->Considered_Vehicle()
+                    || (Payback != nullptr && Payback->House->Is_Ally(building)))) {
+                    hit_obstacle = false;
+                }
+            }
+        }
+
+        if (position.field_98 < height || fell_through_bridge || rose_through_bridge || hit_obstacle) {
+            if (fell_through_bridge) {
+                position.field_98 = bridge_height;
+            } else if (rose_through_bridge) {
+                position.field_98 = bridge_height - 20;
+            } else if (height - 100 < position.field_98) {
+                position.field_98 = height;
+            }
+
+            // Reflect in the ramp's local coordinate system, then transform
+            // back into world space. TS uses an inverted Y for these matrices.
+            Matrix3D slope = Get_Voxel_Ramp_Matrix(static_cast<TileRampType>(cell.Ramp));
+            Vector3 bounced(static_cast<float>(velocity.field_88), static_cast<float>(-velocity.field_90), static_cast<float>(velocity.field_98));
+            Matrix3D::Inverse_Rotate_Vector(slope, bounced, &bounced);
+            bounced *= static_cast<float>(Class->Elasticity);
+            bounced.Z = -bounced.Z;
+            bounced = slope.Rotate_Vector(bounced);
+            velocity.field_88 = bounced.X;
+            velocity.field_90 = -bounced.Y;
+            velocity.field_98 = bounced.Z;
+
+            const bool on_bridge = Map[coord].IsUnderBridge
+                && Map.Get_Height_GL(coord) + BRIDGE_LEPTON_HEIGHT <= position.field_98;
+            TechnoClass* techno = Map[coord].Cell_Techno(Point2D(0, 0), on_bridge);
+            if (Payback != nullptr && (coord.As_Cell() == Payback->Center_Coord().As_Cell()
+                || (techno != nullptr && Payback->House->Is_Ally(techno)))) {
+                techno = nullptr;
+            }
+            if (!Class->IsBouncy || (techno != nullptr && (Payback == nullptr || techno != Payback))) {
+                impact = IMPACT_NORMAL;
+                forced = true;
+                collided = true;
+            }
+            if (++bounce_count >= 3 && !forced) {
+                impact = IMPACT_NORMAL;
+                forced = true;
+            }
+        }
+
+        coord = Coord(static_cast<int>(position.field_88), static_cast<int>(position.field_90), static_cast<int>(position.field_98));
+        if (!forced) {
+            TechnoClass* techno = Map[coord].Cell_Techno();
+            if (techno != nullptr && techno != Payback
+                && (Payback == nullptr || !Payback->House->Is_Ally(techno))
+                && ::Distance(coord, techno->PositionCoord) < CELL_LEPTON_W / 2) {
+                forced = true;
+                impact = IMPACT_NORMAL;
+                coord = techno->PositionCoord;
+            }
+        }
+
+        if (!Map.In_Radar(coord)) {
+            coord = PositionCoord;
+            impact = IMPACT_EDGE;
+        }
+        Fly = velocity;
+        if (Fly.Length_3D() < 10 && HeightAGL < 10) {
+            forced = true;
+            impact = IMPACT_NORMAL;
+        }
     }
 
-    /*
-    **	Homing projectiles constantly change facing to face toward the target but
-    **	they only do so every other game frame (improves game speed and makes
-    **	missiles not so deadly).
-    */
-    // if ((Frame & 0x01) && Class->ROT != 0 && Target_Legal(TarCom)) {
-    //     PrimaryFacing.Set_Desired(Direction256(Coord, ::As_Coord(TarCom)));
-    // }
-
-    Coord our_coord = Center_Coord();
-    Coord target_coord;
-
-    if (TarCom != nullptr)
-    {
-        target_coord = TarCom->Center_Coord();
-    }
-    else
-    {
-        // original TS code
-        // fetch default invalid coords
-        // target_coord = Coord(0, 0, 0);
-
-        /**
-         *  #issue-19
-         *
-         *  Let's just continue flying straight instead of assigning invalid coords.
-         */
-        target_coord = Center_Coord() +
-            Coord(Fly.field_88, Fly.field_90, Fly.field_98);
+    Mark();
+    if (impact == IMPACT_EDGE) {
+        delete this;
+        return;
     }
 
-    // Calculate vector from target to us
-    Coord distancevector = our_coord - target_coord;
-
-    // This ROT handling is entirely custom. Let's see how it'll work out.
-    // The TS code is hard to make sense of.
-    int x1 = our_coord.X;
-    int x2 = 0;
-    int y1 = our_coord.Y;
-    int y2 = 0;
-
-    if (our_coord.X > target_coord.X) {
-
+    if (Class->IsFueled) {
+        Range -= ::Distance(coord, PositionCoord);
+        if (Range <= 0) {
+            forced = true;
+        }
     }
+    PositionCoord = coord;
+
+    CellClass& cell = Map[coord];
+    BuildingClass* building = cell.Cell_Building();
+    if (building != nullptr && building->Class->IsFirestormWall && building->House->IsFirestormActive
+        && (Payback == nullptr || building->House != Payback->House)
+        && Class_Of() != nullptr && !Class_Of()->IsIgnoresFirestorm) {
+        building->Crossing_Firestorm(this, false);
+        delete this;
+        return;
+    }
+
+    if (!forced) {
+        Coord impact_coord = PositionCoord;
+        forced = Is_Forced_To_Explode(impact_coord);
+        PositionCoord = impact_coord;
+    }
+
+    if (lost_target && !forced) {
+        // Preserve DTA's interception by enemy cell occupiers, using the bridge
+        // occupation list when the missile is above a bridge deck.
+        HouseClass* house = Payback != nullptr ? Payback->House : nullptr;
+        const bool on_bridge = cell.IsUnderBridge && coord.Z >= Map.Get_Height_GL(coord) + BRIDGE_LEPTON_HEIGHT;
+        for (ObjectClass* occupier = cell.Cell_Occupier(on_bridge); occupier != nullptr; occupier = occupier->Next) {
+            if (occupier != Payback && occupier->Owner_HouseClass() != house
+                && (house == nullptr || !house->Is_Ally(occupier))) {
+                forced = true;
+                break;
+            }
+        }
+    }
+
+    // The fuse remembers the original target coordinate. It must not kill a
+    // missile continuing past that coordinate after the target has disappeared.
+    FuseResultType fuse = !lost_target && Homes_In() ? Fuse.Fuse_Checkup(coord) : FUSE_DONT_IGNITE;
+
+    // An optional fuse against the current target, rather than the coordinate
+    // captured when the native fuse was armed. Physical impacts take precedence;
+    // arming delay, airbursts, dropping projectiles and target loss are respected.
+    const int proximity_radius = bullettypeext->ProximityFuseMaxTriggerDistance;
+    if (!forced && homing && TarCom != nullptr && !Class->IsAirburst && !Class->IsDropping
+        && proximity_radius > 0 && Fuse.Is_Armed()) {
+        Coord target_coord = TarCom->entry_5C();
+        if (const auto target = dynamic_cast<ObjectClass*>(TarCom)) {
+            target_coord = target->Target_Coord();
+        }
+
+        // Test the entire frame's flight segment, so even a fast projectile
+        // whose endpoints are both outside the radius can register a near miss.
+        const double dx = static_cast<double>(coord.X) - previous_coord.X;
+        const double dy = static_cast<double>(coord.Y) - previous_coord.Y;
+        const double dz = static_cast<double>(coord.Z) - previous_coord.Z;
+        const double tx = static_cast<double>(target_coord.X) - previous_coord.X;
+        const double ty = static_cast<double>(target_coord.Y) - previous_coord.Y;
+        const double tz = static_cast<double>(target_coord.Z) - previous_coord.Z;
+        const double length_squared = dx * dx + dy * dy + dz * dz;
+        const double fraction = length_squared > 0
+            ? std::clamp((tx * dx + ty * dy + tz * dz) / length_squared, 0.0, 1.0) : 0.0;
+        const double miss_x = tx - dx * fraction;
+        const double miss_y = ty - dy * fraction;
+        const double miss_z = tz - dz * fraction;
+        if (miss_x * miss_x + miss_y * miss_y + miss_z * miss_z
+            <= static_cast<double>(proximity_radius) * proximity_radius) {
+            fuse = FUSE_IGNITE;
+            PositionCoord = Coord(static_cast<int>(previous_coord.X + dx * fraction),
+                static_cast<int>(previous_coord.Y + dy * fraction),
+                static_cast<int>(previous_coord.Z + dz * fraction));
+            // The common detonation code below still applies SnapDistance.
+        }
+    }
+
+    if (!forced && (Class->IsDropping || fuse == FUSE_DONT_IGNITE)) {
+        // #issue-234: lose two strength per tick, with a true floor of ten
+        // (odd strengths must not fall to nine).
+        if (Class->IsDegenerate && Strength > 10) {
+            Strength = std::max(10, Strength - 2);
+        }
+        return;
+    }
+
+    // #issue-19: homing detonation paths share the same distance check. Use the
+    // same aim point as the homing code, including an object's target height.
+    // Airbursts must remain overhead; non-positive SnapDistance disables this
+    // additional snapping (Bullet_Explodes retains its native impact adjustments).
+    if (homing && TarCom != nullptr && !Class->IsAirburst && bullettypeext->SnapDistance > 0) {
+        Coord target_coord = TarCom->entry_5C();
+        if (const auto target = dynamic_cast<ObjectClass*>(TarCom)) {
+            target_coord = target->Target_Coord();
+        }
+        if (::Distance(PositionCoord, target_coord) <= bullettypeext->SnapDistance) {
+            PositionCoord = target_coord;
+        }
+    } else if (!homing && collided && TarCom != nullptr && !Class->IsAirburst) {
+        // Preserve vanilla ballistic collision snapping. Applying SnapDistance
+        // to every ballistic detonation would undo launch-time scatter, notably
+        // when an artillery shell bounces to a stop near its intended target.
+        Coord midpoint = coord;
+        const Coord target_coord = TarCom->entry_5C();
+        midpoint.Z = (midpoint.Z + target_coord.Z) / 2;
+        const int target_distance = ::Distance(midpoint, target_coord) / 3;
+        if (target_distance <= std::max(CELL_LEPTON_W / 2.0, Fly.Length_3D() * 2)) {
+            PositionCoord = TarCom->Center_Coord();
+        }
+    }
+    Bullet_Explodes(forced);
+    delete this;
 }
 
 
@@ -766,38 +595,12 @@ int BulletClassExt::_Shape_Number()
 }
 
 
-#if false
-static void _BulletClass_AI_Custom_Implementation(BulletClass* this_ptr)
-{
-    BulletClassExt* converted = reinterpret_cast<BulletClassExt*>(this_ptr);
-    converted->_BulletClass_AI_Replacement();
-}
-
-
-DECLARE_PATCH(0x00444702, _BulletClass_AI_Intercept, 0)
-{
-    GET(BulletClass*, this_ptr, ebp);
-
-    BulletTypeClassExtension* bullettypeext = Extension::Fetch(this_ptr->Class);
-
-    if (false /*bullettypeext->UseCustomProjectileLogic*/) {
-
-        _BulletClass_AI_Custom_Implementation(this_ptr);
-        // Jump to end of function
-        return 0x00445B5A; 
-    }
-
-    // Stolen bytes / code
-    this_ptr->ObjectClass::AI();
-    return 0x00444707; // Jump to IsActive check
-}
-#endif
-
 /**
  *  Main function for patching the hooks.
  */
 void BulletClassExtension_Hooks()
 {
+    Patch_Jump(0x004446F0, &BulletClassExt::_AI);
     Patch_Jump(0x004462C0, &BulletClassExt::_Is_Forced_To_Explode);
     Patch_Jump(0x00445B70, &BulletClassExt::_Shape_Number);
 }

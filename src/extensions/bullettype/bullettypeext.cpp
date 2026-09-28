@@ -15,6 +15,7 @@
 #include "ccini.h"
 #include "extension.h"
 #include "tibsun_globals.h"
+#include "wwcrc.h"
 
 
 /**
@@ -26,7 +27,8 @@ BulletTypeClassExtension::BulletTypeClassExtension(const BulletTypeClass *this_p
     ObjectTypeClassExtension(this_ptr),
     SpawnDelay(3),           // Default hardcoded value.
     IsTorpedo(false),
-    SnapDistance(CELL_LEPTON_W * 2)
+    SnapDistance(CELL_LEPTON_W * 2),
+    ProximityFuseMaxTriggerDistance(0)
 {
     BulletTypeExtensions.Add(this);
 }
@@ -125,6 +127,7 @@ int BulletTypeClassExtension::Get_Object_Size() const
  */
 void BulletTypeClassExtension::Object_CRC(CRCEngine &crc) const
 {
+    crc(ProximityFuseMaxTriggerDistance);
 }
 
 
@@ -148,6 +151,7 @@ bool BulletTypeClassExtension::Read_INI(CCINIClass &ini)
     
     IsTorpedo = ini.Get_Bool(ini_name, "Torpedo", IsTorpedo);
     SnapDistance = ini.Get_Int(ini_name, "SnapDistance", SnapDistance);
+    ProximityFuseMaxTriggerDistance = ini.Get_Int(ini_name, "ProximityFuseMaxTriggerDistance", ProximityFuseMaxTriggerDistance);
 
     //if (!ArtINI.Is_Present(graphic_name)) {
     //    return false;

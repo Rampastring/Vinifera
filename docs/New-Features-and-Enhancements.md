@@ -363,6 +363,34 @@ In `ART.INI`:
 SpawnDelay=3  ; unsigned integer, the number of frames between each of the spawned trailer animations.
 ```
 
+### Flight and detonation
+
+- Homing projectiles (`ROT > 0`) continue along their current direction when their target disappears. They retain fuel, ground, bridge, obstacle and enemy-occupier collision checks, and disappear at the map edge. Their former target's proximity fuse and circling detector no longer detonate them.
+- `Degenerates=yes` reduces damage by two per flight tick, stopping at ten. Damage initially below ten is unchanged.
+- `SnapDistance` controls the additional target snapping performed when homing projectile AI (`ROT > 0`) decides to detonate, including forced explosions and both proximity and overshoot fuse results. It never initiates an explosion by itself. Ballistic projectiles retain the original collision snapping rules, preserving their launch-time scatter.
+- The distance is measured in 3D leptons from the final impact position to the target's aim point (including object height or a targeted cell's bridge deck). A distance equal to the limit qualifies. Airburst projectiles do not use this snapping.
+- A non-positive value disables this additional snapping. The engine's existing close-impact adjustments in `Bullet_Explodes` still apply.
+
+In `RULES.INI`:
+```ini
+[SOMEBULLET]       ; BulletType
+SnapDistance=512  ; integer, maximum AI snapping distance in leptons (default: two cells).
+```
+
+### Proximity fuse against the current target
+
+- `ProximityFuseMaxTriggerDistance` adds an optional mid-flight trigger around a homing projectile's current target. The native fuse remains active; its stored target coordinate and hardcoded distance checks are unchanged.
+- The default is `0` (disabled). Positive values are a radius in 3D leptons, measured against the target's aim point. The whole frame's flight segment is checked, including the radius boundary, so fast projectiles cannot skip over the trigger radius between ticks.
+- The trigger respects the fuse's arming delay and requires a target. It does not apply to ballistic (`ROT=0`), dropping or airburst projectiles. Physical impacts and fuel exhaustion take precedence.
+- On a hit, the projectile detonates at the closest point on that frame's flight segment. `SnapDistance` then determines whether the explosion snaps onto the target. Set both distances to `256` for a one-cell proximity trigger that snaps onto its target.
+
+In `RULES.INI`:
+```ini
+[HJProj]
+ProximityFuseMaxTriggerDistance=256  ; integer, default 0; non-positive disables the extra trigger.
+SnapDistance=256                    ; existing setting, controls snapping after a trigger.
+```
+
 ### Torpedoes
 
 - Vinifera ports the Torpedo logic from Red Alert 1. Torpedoes can only be fired at targets on water. Additionally, torpedoes explode when they collide with land or an enemy unit.

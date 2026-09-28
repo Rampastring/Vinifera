@@ -54,7 +54,17 @@ BulletTypeClassExtension final : public ObjectTypeClassExtension
         bool IsTorpedo;
 
         /**
-         *  Defines how far a projectile can snap to reach its target.
+         *  Maximum 3D distance in leptons for AI detonation snapping to the
+         *  target's aim point. Applies to homing forced and fuse detonations,
+         *  except airbursts. Ballistic projectiles retain vanilla snapping.
+         *  Non-positive values disable this additional homing snapping.
          */
         int SnapDistance;
+
+        /**
+         *  Extra proximity fuse radius in 3D leptons around the current target.
+         *  Applies to armed homing projectiles, except dropping and airburst
+         *  projectiles. Non-positive values disable the extra trigger.
+         */
+        int ProximityFuseMaxTriggerDistance;
 };
