@@ -287,8 +287,10 @@ void BulletClassExt::_AI()
             if (std::abs(velocity.field_88) <= std::abs(velocity.field_90) * 1e-6) {
                 velocity.field_88 = 0.0;
             }
+
+            const bool direct_guidance = TarCom->RTTI == RTTI_AIRCRAFT || !bullettypeext->IsArcingHoming;
             const int distance = Projectile_Motion(coord, velocity, target_coord, turn_rate,
-                TarCom->RTTI == RTTI_AIRCRAFT, Class->IsAirburst, Class->IsVeryHigh);
+                direct_guidance, Class->IsAirburst, Class->IsVeryHigh);
             Fly = velocity;
 
             if (distance <= Fly.Length_3D() * 0.5 || HeightAGL <= 0) {

@@ -377,6 +377,18 @@ In `RULES.INI`:
 SnapDistance=512  ; integer, maximum AI snapping distance in leptons (default: two cells).
 ```
 
+### Homing missile arcs
+
+- `ArcingHoming=yes` (the default) preserves TS's terrain-following guidance: homing projectiles can climb to a cruising altitude at longer ranges before descending toward their target.
+- `ArcingHoming=no` disables that cruise climb and guides the projectile directly toward its target's aim point at any range. Normal turn rate, launch acceleration, target height and collision checks still apply, so missiles can climb to reach elevated or airborne targets. This does not force a fixed height above the ground.
+- This setting only affects homing projectiles (`ROT > 0`). It is separate from vanilla `Arcing`, which controls ballistic projectiles. Aircraft targets already use direct guidance in vanilla. With `ArcingHoming=no`, the cruise altitude requested by `VeryHigh` or `Airburst` is also bypassed; their other behavior is unchanged.
+
+In `RULES.INI`, on the projectile type (the Enforcer uses `DualHeatSeeker`):
+```ini
+[DualHeatSeeker]
+ArcingHoming=no  ; boolean, default yes.
+```
+
 ### Proximity fuse against the current target
 
 - `ProximityFuseMaxTriggerDistance` adds an optional mid-flight trigger around a homing projectile's current target. The native fuse remains active; its stored target coordinate and hardcoded distance checks are unchanged.

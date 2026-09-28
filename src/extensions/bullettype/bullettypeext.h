@@ -67,4 +67,10 @@ BulletTypeClassExtension final : public ObjectTypeClassExtension
          *  projectiles. Non-positive values disable the extra trigger.
          */
         int ProximityFuseMaxTriggerDistance;
+
+        /**
+         *  Use vanilla terrain-following cruise altitude for homing projectiles.
+         *  If false, steer directly toward the target at any range instead.
+         */
+        bool IsArcingHoming;
 };

@@ -28,7 +28,8 @@ BulletTypeClassExtension::BulletTypeClassExtension(const BulletTypeClass *this_p
     SpawnDelay(3),           // Default hardcoded value.
     IsTorpedo(false),
     SnapDistance(CELL_LEPTON_W * 2),
-    ProximityFuseMaxTriggerDistance(0)
+    ProximityFuseMaxTriggerDistance(0),
+    IsArcingHoming(true)
 {
     BulletTypeExtensions.Add(this);
 }
@@ -128,6 +129,7 @@ int BulletTypeClassExtension::Get_Object_Size() const
 void BulletTypeClassExtension::Object_CRC(CRCEngine &crc) const
 {
     crc(ProximityFuseMaxTriggerDistance);
+    crc(IsArcingHoming);
 }
 
 
@@ -152,6 +154,7 @@ bool BulletTypeClassExtension::Read_INI(CCINIClass &ini)
     IsTorpedo = ini.Get_Bool(ini_name, "Torpedo", IsTorpedo);
     SnapDistance = ini.Get_Int(ini_name, "SnapDistance", SnapDistance);
     ProximityFuseMaxTriggerDistance = ini.Get_Int(ini_name, "ProximityFuseMaxTriggerDistance", ProximityFuseMaxTriggerDistance);
+    IsArcingHoming = ini.Get_Bool(ini_name, "ArcingHoming", IsArcingHoming);
 
     //if (!ArtINI.Is_Present(graphic_name)) {
     //    return false;
