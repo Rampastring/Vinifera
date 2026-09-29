@@ -27,6 +27,7 @@
 #include "tibsun_inline.h"
 #include "vinifera_globals.h"
 #include "vinifera_saveload.h"
+#include "voc.h"
 #include "weapontype.h"
 #include "weapontypeext.h"
 
@@ -354,10 +355,12 @@ void SpawnManagerClass::AI()
                  */
                 SpawnTimer = SpawnRate;
 
+                WeaponSlotType weapon_slot = Extension::Fetch(Owner->Get_Weapon(WEAPON_SLOT_PRIMARY)->Weapon)->IsSpawner ? WEAPON_SLOT_PRIMARY : WEAPON_SLOT_SECONDARY;
+
                 /**
                  *  We can spawn 2 missiles using the burst logic.
                  */
-                const auto weapon = Owner->Get_Weapon(WEAPON_SLOT_PRIMARY)->Weapon;
+                const auto weapon = Owner->Get_Weapon(weapon_slot)->Weapon;
                 if (control->IsSpawnedMissile && weapon->Burst > 1 && i < weapon->Burst)
                     Owner->BurstIndex = i;
                 else
@@ -367,8 +370,6 @@ void SpawnManagerClass::AI()
                  *  Update our status.
                  */
                 control->Status = SpawnControlStatus::Preparing;
-
-                WeaponSlotType weapon_slot = Extension::Fetch(Owner->Get_Weapon(WEAPON_SLOT_PRIMARY)->Weapon)->IsSpawner ? WEAPON_SLOT_PRIMARY : WEAPON_SLOT_SECONDARY;
 
                 /**
                  *  Apply SecondSpawnOffset if this is the second missile in a burst.
@@ -392,6 +393,17 @@ void SpawnManagerClass::AI()
                  */
                 DirType dir = Owner->PrimaryFacing.Current();
                 spawnee->Unlimbo(spawn_coord, dir.Get_Dir());
+
+                /**
+                 *  If the spawn weapon has a sound, play it.
+                 */
+                const TypeList<VocType>& sounds = weapon->Sound;
+                if (sounds.Count() > 0) {
+                    int sound_index = 0;
+                    if (sounds.Count() > 1)
+                        sound_index = Scen->RandomNumber(0, sounds.Count() - 1);
+                    Static_Sound(sounds[sound_index], Owner->Center_Coord());
+                }
 
                 const auto rocket = RocketTypeClass::From_AircraftType(SpawnType);
 
