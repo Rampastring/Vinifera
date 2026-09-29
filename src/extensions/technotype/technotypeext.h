@@ -444,4 +444,9 @@ public:
      *  Specifies whether this object is available to be built by all players, only AI players, or only human players.
      */
     TechnoTypeBuildability Buildability;
+
+    /**
+     *  Radius in cells to reshroud for enemies. Zero disables gap generation.
+     */
+    int GapRadiusInCells;
 };

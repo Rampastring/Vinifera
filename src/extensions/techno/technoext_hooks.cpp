@@ -692,6 +692,8 @@ void TechnoClassExt::_Mission_AI()
         extension->SpawnManager->AI();
     }
 
+    extension->Gap_Generator_AI();
+
 
     /**
      *  Check if the unit has been promoted.

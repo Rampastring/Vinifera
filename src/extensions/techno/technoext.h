@@ -62,6 +62,7 @@ class TechnoClassExtension : public RadioClassExtension,
 
         bool Iron_Curtain_Me(bool forced);
         int Get_Sight_Range() const;
+        void Gap_Generator_AI();
 
     private:
         const TechnoTypeClass *Techno_Type_Class() const;
@@ -123,4 +124,9 @@ class TechnoClassExtension : public RadioClassExtension,
          *  The countdown until the object's Iron Curtain effect fades away.
          */
         CDTimerClass<FrameTimerClass> IronCurtainTimer;
+
+        /**
+         *  Countdown until the next gap generator pulse.
+         */
+        CDTimerClass<FrameTimerClass> GapTimer;
 };

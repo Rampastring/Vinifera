@@ -727,6 +727,27 @@ Vanilla actions are always present implicitly, but their properties **can** be o
 
 ## Technos
 
+### Gap Generators
+
+- `GapRadiusInCells` makes a techno periodically reapply shroud in a circular area around itself for enemy players. It defaults to `0` (disabled); negative values also disable it.
+- Nearby enemy technos immediately `Look` again after each pulse to preserve their sight. The scan includes aircraft, veteran sight bonuses, and shared allied sight.
+- Buildings stop generating gaps during construction, selling, EMP, manual power-off, and (with `Powered=yes`) low power. Mobile generators are also disabled by EMP. A generator pulses immediately on its first active update and when recovering from these disabled states.
+- `[General]->GapRegenInterval` controls the interval in minutes of game time, as in Red Alert 1. The default `0.1` is six seconds (90 simulation frames); the minimum is one frame.
+- Shroud already applied remains until explored again, even after the generator moves, loses power, changes owner, or is destroyed. Owners, allies, and observers are not reshrouded by subsequent pulses.
+
+In `RULES.INI`:
+```ini
+[General]
+GapRegenInterval=0.1 ; float, minutes between gap pulses
+
+[SOMETECHNOTYPE]
+GapRadiusInCells=0  ; integer, gap radius in cells; set above zero to enable
+
+[SOMEBUILDING]
+GapRadiusInCells=10
+Powered=yes        ; boolean, require sufficient house power for gap generation
+```
+
 ### Spawners
 
 - Vinifera ports the spawn manager, responsible for AircraftType missiles and aircraft carriers from Red Alert 2.

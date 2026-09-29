@@ -214,6 +214,11 @@ public:
     int BuildingFlameSpawnBlockFrames;
 
     /**
+     *  Delay between gap generator pulses, stored in frames (INI uses minutes).
+     */
+    int GapRegenInterval;
+
+    /**
      *  List of buildings that enable the AI to use the Iron Curtain.
      */
     TypeList<BuildingTypeClass*> IronCurtains;

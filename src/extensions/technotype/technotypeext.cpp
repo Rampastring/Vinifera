@@ -119,7 +119,8 @@ TechnoTypeClassExtension::TechnoTypeClassExtension(const TechnoTypeClass *this_p
     ScrapExplosion(),
     VeteranSightRange(-1),
     EliteSightRange(-1),
-    Buildability(TechnoTypeBuildability::BUILDABILITY_NORMAL)
+    Buildability(TechnoTypeBuildability::BUILDABILITY_NORMAL),
+    GapRadiusInCells(0)
 {
 }
 
@@ -303,6 +304,7 @@ void TechnoTypeClassExtension::Object_CRC(CRCEngine &crc) const
     crc(AbandonTargetEscortRange);
     crc(VeteranSightRange);
     crc(EliteSightRange);
+    crc(GapRadiusInCells);
 }
 
 
@@ -465,6 +467,7 @@ bool TechnoTypeClassExtension::Read_INI(CCINIClass &ini)
 
     VeteranSightRange = ini.Get_Int(ini_name, "VeteranSight", VeteranSightRange);
     EliteSightRange = ini.Get_Int(ini_name, "EliteSight", EliteSightRange);
+    GapRadiusInCells = std::clamp(ini.Get_Int(ini_name, "GapRadiusInCells", GapRadiusInCells), 0, MAP_CELL_W + MAP_CELL_H);
 
     char buffer[32];
     if (ini.Get_String(ini_name, "Buildability", "", buffer, std::size(buffer)) > 0) {

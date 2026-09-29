@@ -12,6 +12,7 @@
 #include "technoext.h"
 
 #include "anim.h"
+#include "building.h"
 #include "buildingtype.h"
 #include "debughandler.h"
 #include "ebolt.h"
@@ -19,9 +20,11 @@
 #include "extension_globals.h"
 #include "house.h"
 #include "houseext.h"
+#include "mouse.h"
 #include "rules.h"
 #include "rulesext.h"
 #include "saveload.h"
+#include "session.h"
 #include "spawnmanager.h"
 #include "storageext.h"
 #include "tactical.h"
@@ -33,6 +36,7 @@
 #include "tibsun_globals.h"
 #include "tibsun_inline.h"
 #include "unit.h"
+#include "vinifera_globals.h"
 #include "vinifera_saveload.h"
 #include "voc.h"
 #include "wwcrc.h"
@@ -59,7 +63,8 @@ TechnoClassExtension::TechnoClassExtension(const TechnoClass *this_ptr) :
     BurstResetTimer(),
     LastVeterancy(RANK_NONE),
     IdleWakeAnim(nullptr),
-    IronCurtainTimer()
+    IronCurtainTimer(),
+    GapTimer()
 {
     for (int i = 0; i < Tiberiums.Count(); i++)
     {
@@ -87,7 +92,8 @@ TechnoClassExtension::TechnoClassExtension(const NoInitClass &noinit) :
     Vinifera::Detach::Listener<TechnoClass>(noinit),
     Vinifera::Detach::Listener<AnimClass>(noinit),
     Storage(noinit),
-    BurstResetTimer(noinit)
+    BurstResetTimer(noinit),
+    GapTimer(noinit)
 {
 }
 
@@ -191,6 +197,8 @@ void TechnoClassExtension::On_Detach(AnimClass *target, bool all)
 void TechnoClassExtension::Object_CRC(CRCEngine &crc) const
 {
     RadioClassExtension::Object_CRC(crc);
+
+    crc(GapTimer.Value());
 
     if (SpawnOwner) {
         crc(SpawnOwner->Fetch_Heap_ID());
@@ -446,6 +454,119 @@ int TechnoClassExtension::Get_Sight_Range() const
     }
 
     return sight_range;
+}
+
+
+/**
+ *  Shroud cells use the same height projection as MapClass::Sight_From.
+ */
+static Cell Gap_Shroud_Cell(Coord coord)
+{
+    const int offset = Tactical::Z_Lepton_To_Pixel(coord.Z) / -CELL_PIXEL_W;
+    coord.X += offset * CELL_LEPTON_W;
+    coord.Y += offset * CELL_LEPTON_H;
+    return coord.As_Cell();
+}
+
+
+/**
+ *  Periodically reshrouds an enemy's view, then restores overlapping sight.
+ *  The timer advances on every client; only shroud changes are player-local.
+ */
+void TechnoClassExtension::Gap_Generator_AI()
+{
+    const auto techno = This();
+    const int radius = Techno_Type_Class_Ext()->GapRadiusInCells;
+    if (radius <= 0) {
+        return;
+    }
+
+    if (!techno->IsActive || techno->IsInLimbo || !techno->IsLocked ||
+        techno->Strength <= 0 || techno->IsSinking || techno->EMPFramesRemaining > 0 ||
+        (techno->RTTI == RTTI_UNIT && static_cast<UnitClass*>(techno)->DeathCounter >= 0)) {
+        GapTimer = 0;
+        return;
+    }
+
+    if (techno->RTTI == RTTI_BUILDING) {
+        const auto building = static_cast<BuildingClass*>(techno);
+        if (building->CurrentMission == MISSION_CONSTRUCTION ||
+            building->CurrentMission == MISSION_DECONSTRUCTION ||
+            !building->Is_Powered_On() ||
+            (building->Class->IsPowered && building->House->Power_Fraction() < 1.0f)) {
+            GapTimer = 0;
+            return;
+        }
+    }
+
+    if (!GapTimer.Expired()) {
+        return;
+    }
+    GapTimer = RuleExtension->GapRegenInterval;
+
+    // TS maintains shroud for PlayerPtr on each client, not for every house.
+    if (!PlayerPtr || techno->House->Is_Ally(PlayerPtr) ||
+        Extension::Fetch(PlayerPtr)->IsObserver || Session.ObiWan ||
+        Debug_Unshroud || Vinifera_Developer_Unshroud) {
+        return;
+    }
+
+    const Cell center = Gap_Shroud_Cell(techno->Center_Coord());
+    if (!Map.In_Radar(center)) {
+        return;
+    }
+
+    const int min_x = std::max(0, center.X - radius);
+    const int max_x = std::min(MAP_CELL_W - 1, center.X + radius);
+    const int min_y = std::max(0, center.Y - radius);
+    const int max_y = std::min(MAP_CELL_H - 1, center.Y + radius);
+    for (int y = min_y; y <= max_y; ++y) {
+        for (int x = min_x; x <= max_x; ++x) {
+            const int dx = x - center.X;
+            const int dy = y - center.Y;
+            Cell cell(x, y);
+            if (dx * dx + dy * dy <= radius * radius && Map.In_Radar(cell)) {
+                Map.Shroud_Cell(cell);
+            }
+        }
+    }
+
+    // Include flying units and shared sight. Look/Sight_From decide which
+    // houses can reveal this player's map (including allies and limpet sight).
+    for (int index = 0; index < Technos.Count(); ++index) {
+        const auto observer = Technos[index];
+        if (!observer->IsActive || observer->IsInLimbo || !observer->IsLocked ||
+            observer->Strength <= 0 || techno->House->Is_Ally(observer->House)) {
+            continue;
+        }
+
+        // Look refreshes SightIncrease, which participates in the techno CRC.
+        // Use its current height bonus for the range check, but preserve the
+        // synchronized value throughout this player-local reveal pass.
+        const auto previous_sight_increase = observer->SightIncrease;
+        observer->SightIncrease = 10 * (observer->Get_Coord().Z / Rule->LeptonsPerSightIncrease);
+        const int sight = Extension::Fetch(observer)->Get_Sight_Range();
+        observer->SightIncrease = previous_sight_increase;
+        if (sight <= 0) {
+            continue;
+        }
+
+        const Cell observer_cell = Gap_Shroud_Cell(observer->PositionCoord);
+        const double dx = observer_cell.X - center.X;
+        const double dy = observer_cell.Y - center.Y;
+        // Shroud_Cell also changes visibility on adjacent cells.
+        const double range = double(radius) + sight + 2;
+        if (dx * dx + dy * dy <= range * range) {
+            observer->Look();
+            observer->SightIncrease = previous_sight_increase;
+        }
+    }
+
+    // Shroud_Cell updates tactical visibility without invalidating radar pixels.
+    if (Map.RadarSurface) {
+        Map.Total_Radar_Refresh();
+    }
+    Map.Flag_To_Redraw(GS_REDRAW_TACTICAL);
 }
 
 

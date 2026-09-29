@@ -95,6 +95,7 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     SelfHealingStep(1),
     IsBeachIsCrush(false),
     BuildingFlameSpawnBlockFrames(0),
+    GapRegenInterval(6 * TICKS_PER_SECOND),
     IronCurtainDuration(675),
     IronCurtainRechargeTime(9900),
     IronCurtainFlashRate(8),
@@ -330,6 +331,7 @@ void RulesClassExtension::Object_CRC(CRCEngine &crc) const
     crc(AINavalYardAdjacency);
     crc(IsAIRepairBaseNodes);
     crc(BuildingFlameSpawnBlockFrames);
+    crc(GapRegenInterval);
     crc(IronCurtainDuration);
     crc(IronCurtainRechargeTime);
     crc(IronCurtains.Count());
@@ -796,6 +798,12 @@ bool RulesClassExtension::General(CCINIClass &ini)
     SelfHealingCap = ini.Get_Float(GENERAL, "SelfHealCap", SelfHealingCap);
     SelfHealingRate = ini.Get_Float(GENERAL, "SelfHealRate", SelfHealingRate);
     SelfHealingStep = ini.Get_Int(GENERAL, "SelfHealStep", SelfHealingStep);
+
+    const double gap_interval = ini.Get_Float(GENERAL, "GapRegenInterval", double(GapRegenInterval) / TICKS_PER_MINUTE);
+    if (std::isfinite(gap_interval)) {
+        GapRegenInterval = static_cast<int>(std::clamp(gap_interval * TICKS_PER_MINUTE, 1.0, double(std::numeric_limits<int>::max())));
+    }
+
     PausedRepairsFrame = ini.Get_Int(GENERAL, "PausedRepairsFrame", PausedRepairsFrame);
     EscortRange = ini.Get_Lepton(GENERAL, "EscortRange", EscortRange);
     AbandonTargetEscortRange = ini.Get_Lepton(GENERAL, "AbandonTargetEscortRange", AbandonTargetEscortRange);
