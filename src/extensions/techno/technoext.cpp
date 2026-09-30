@@ -15,6 +15,7 @@
 #include "building.h"
 #include "buildingtype.h"
 #include "debughandler.h"
+#include "dsurface.h"
 #include "ebolt.h"
 #include "extension.h"
 #include "extension_globals.h"
@@ -42,6 +43,7 @@
 #include "wwcrc.h"
 
 #include <algorithm>
+#include <cmath>
 
 
 /**
@@ -454,6 +456,108 @@ int TechnoClassExtension::Get_Sight_Range() const
     }
 
     return sight_range;
+}
+
+
+/**
+ *  Retain the native cloak/gap projection. Calculate in double precision
+ *  because squaring large gap radii in leptons can overflow an int.
+ */
+static int Radial_Cell_Radius_To_Pixels(int cells)
+{
+    const double leptons = double(cells) * CELL_LEPTON_W + CELL_LEPTON_W / 2;
+    const double xspan = std::sqrt(leptons * leptons * (16.0 / 17.0));
+    const double yspan = xspan * 0.25;
+    return int(std::sqrt(0.25 * (4.0 * yspan * yspan + xspan * xspan)) * 0.265625 - 34.0);
+}
+
+
+/**
+ *  Draw an ellipse with optional rotating spokes using the native indicator style.
+ *  The radius is the horizontal screen radius, in pixels.
+ */
+static void Draw_Radial_Indicator(const Coord& coord, int radius, const RGBClass& color, bool draw_scanline)
+{
+    if (radius <= 1) {
+        return;
+    }
+
+    Point2D center;
+    TacticalMap->Coord_To_Pixel(coord, center);
+    center += TacticalRect.TopLeft;
+    const Rect bounds(center - Point2D(radius, radius / 2), 2 * radius, radius);
+    if (!Intersect(bounds, TacticalRect).Is_Valid()) {
+        return;
+    }
+
+    LogicalSurface->Draw_Ellipse(center, radius, radius / 2, TacticalRect,
+        DSurface::Build_Hicolor_Pixel(color.Get_Red(), color.Get_Green(), color.Get_Blue()));
+
+    if (!draw_scanline) {
+        return;
+    }
+
+    static const float transparencies[] = { 0.05f, 0.2f, 0.4f, 1.0f };
+    const double radius_x = radius;
+    const double radius_y = radius / 2;
+    for (int i = 0; i < 4; ++i) {
+        const double angle = (double(Frame) + i) * 0.005;
+        const double dx = std::cos(angle);
+        const double dy = -std::sin(angle);
+        const double length = 1.0 / std::sqrt(dx * dx / (radius_x * radius_x) + dy * dy / (radius_y * radius_y));
+        const Point2D end = center + Point2D(int(dx * length), int(dy * length));
+
+        // This virtual entry is TS's depth-antialiased line renderer.
+        LogicalSurface->Draw_Line_entry_3C(TacticalRect, center - TacticalRect.TopLeft,
+            end - TacticalRect.TopLeft, color, -500, -500, false, false, true, false, transparencies[i]);
+    }
+}
+
+
+/**
+ *  Draw ranges for selected, player-owned technos or a pending building at
+ *  its placement center. Placement previews omit scanlines and also include
+ *  the native cloak/sensor range, which normally requires an active building.
+ *  Gap/cloak/sensor ranges opt in with HasRadialIndicator; armed buildings
+ *  always show their primary weapon range in their owner's remap color.
+ */
+void TechnoClassExtension::Draw_Radial_Indicators(const Coord* placement_center) const
+{
+    const auto techno = This_Const();
+    if (!PlayerPtr || techno->House != PlayerPtr || (!placement_center && !techno->IsSelected)) {
+        return;
+    }
+
+    const Coord center = placement_center ? *placement_center : techno->Center_Coord();
+    const int cells = Techno_Type_Class_Ext()->GapRadiusInCells;
+    if (cells > 0 && techno->TClass->IsHasRadialIndicator) {
+        Draw_Radial_Indicator(center, Radial_Cell_Radius_To_Pixels(cells),
+            RGBClass(techno->TClass->RadialColor), placement_center == nullptr);
+    }
+
+    if (techno->RTTI == RTTI_BUILDING) {
+        // The virtual lookup includes weapons supplied by building upgrades
+        // and returns zero when the primary slot has no weapon.
+        int range = techno->Weapon_Range(WEAPON_SLOT_PRIMARY);
+
+        // If the techno's guard range is lower than its weapon range, use guard range instead.
+        if (range > techno->TClass->ThreatRange && techno->TClass->ThreatRange > 0)
+            range = techno->TClass->ThreatRange;
+
+        if (range > 0) {
+            // Project a world-space circle through TS's isometric transform.
+            // Keep the range in leptons to preserve fractional-cell ranges.
+            const int radius = int(double(range) * CELL_PIXEL_W / (std::sqrt(2.0) * CELL_LEPTON_W));
+            Draw_Radial_Indicator(center, radius, techno->House->RemapColorRGB, false);
+        }
+
+        const auto type = static_cast<const BuildingClass*>(techno)->Class;
+        if (placement_center && type->IsHasRadialIndicator && type->CloakRadiusInCells > 0 &&
+            (type->IsCloakGenerator || type->IsSensorArray)) {
+            Draw_Radial_Indicator(center, Radial_Cell_Radius_To_Pixels(type->CloakRadiusInCells),
+                RGBClass(type->RadialColor), false);
+        }
+    }
 }
 
 

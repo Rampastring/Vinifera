@@ -35,6 +35,7 @@
 #include "tactical.h"
 #include "tacticalext.h"
 #include "tacticalext_init.h"
+#include "technoext.h"
 #include "technotype.h"
 #include "technotypeext.h"
 #include "tibsun_globals.h"
@@ -956,6 +957,58 @@ void TacticalExt::_Draw_Screen_Text(char const* text)
             static_cast<SDLSurface*>(CompositeSurface)->ReleaseDC(hdc);
         }
     }
+}
+
+
+/**
+ *  Both Tactical::Render and Tactical::Draw_Radial_Indicators iterate the
+ *  selection here, before checking HasRadialIndicator. Armed buildings show
+ *  their range regardless of that flag; gap ranges still opt in. Retain the
+ *  original flag check and cloak/sensor draw after adding our indicators.
+ *  ESI holds the selected object at both sites; the displaced load is 6 bytes.
+ */
+DEFINE_HOOK(0x00611B2A, _Tactical_Draw_Radial_Indicators_Patch, 6)
+{
+    GET(ObjectClass*, object, ESI);
+
+    if (object->Is_Techno()) {
+        Extension::Fetch(static_cast<TechnoClass*>(object))->Draw_Radial_Indicators();
+    }
+
+    return 0;
+}
+DEFINE_HOOK_AGAIN(0x00617FCD, _Tactical_Draw_Radial_Indicators_Patch, 6)
+
+
+/**
+ *  Tactical::Draw_Placement has checked the pending type and mouse bounds.
+ *  Draw only in its foreground (drawtrans) pass, after the map objects, and
+ *  allow invalid placement cells so the player can compare potential ranges.
+ *  ESP + 0x5C holds drawtrans here (0x48 locals, four saved registers, return).
+ */
+DEFINE_HOOK(0x00611E4D, _Tactical_Draw_Placement_Radial_Indicators_Patch, 6)
+{
+    GET_STACK(bool, drawtrans, 0x5C);
+
+    if (!drawtrans || Debug_Map || !Map.PendingObjectPtr || Map.PendingObjectPtr->RTTI != RTTI_BUILDING) {
+        return 0;
+    }
+
+    const Cell cell = Map.ZoneCell + Map.ZoneOffset;
+    if (!Map.In_Radar(cell)) {
+        return 0;
+    }
+
+    const auto building = static_cast<BuildingClass*>(Map.PendingObjectPtr);
+    Coord center = cell.As_Coord();
+    center = building->Class->Coord_Fixup(&center);
+    // Match BuildingClass::Center_Coord, including the foundation dimensions
+    // and terrain height, without changing the pending object's coordinates.
+    center.X += (building->Class->Width() - 1) * (CELL_LEPTON_W / 2);
+    center.Y += (building->Class->Height() - 1) * (CELL_LEPTON_H / 2);
+    Extension::Fetch(static_cast<TechnoClass*>(building))->Draw_Radial_Indicators(&center);
+
+    return 0;
 }
 
 
