@@ -518,8 +518,9 @@ static void Draw_Radial_Indicator(const Coord& coord, int radius, const RGBClass
  *  Draw ranges for selected, player-owned technos or a pending building at
  *  its placement center. Placement previews omit scanlines and also include
  *  the native cloak/sensor range, which normally requires an active building.
- *  Gap/cloak/sensor ranges opt in with HasRadialIndicator; armed buildings
- *  always show their primary weapon range in their owner's remap color.
+ *  Gap and CloakRadiusInCells ranges opt in with HasRadialIndicator; armed buildings
+ *  show their primary weapon range in their owner's remap color when placed
+ *  or selected alone.
  */
 void TechnoClassExtension::Draw_Radial_Indicators(const Coord* placement_center) const
 {
@@ -528,32 +529,47 @@ void TechnoClassExtension::Draw_Radial_Indicators(const Coord* placement_center)
         return;
     }
 
+    const auto building = techno->RTTI == RTTI_BUILDING ? reinterpret_cast<const BuildingClass*>(techno) : nullptr;
+    const bool native_indicator = building && (building->Class->IsCloakGenerator || building->Class->IsSensorArray);
     const Coord center = placement_center ? *placement_center : techno->Center_Coord();
-    const int cells = Techno_Type_Class_Ext()->GapRadiusInCells;
+
+    int cells = Techno_Type_Class_Ext()->GapRadiusInCells;
+    // Use the standalone radius only when there is no gap or native indicator.
+    // This also avoids an extra circle from the default CloakRadiusInCells=20.
+    if (cells <= 0 && building && !native_indicator) {
+        if (placement_center || building->IsOn) {
+            cells = building->Class->CloakRadiusInCells;
+        }
+    }
     if (cells > 0 && techno->TClass->IsHasRadialIndicator) {
         Draw_Radial_Indicator(center, Radial_Cell_Radius_To_Pixels(cells),
             RGBClass(techno->TClass->RadialColor), placement_center == nullptr);
     }
 
-    if (techno->RTTI == RTTI_BUILDING) {
-        // The virtual lookup includes weapons supplied by building upgrades
-        // and returns zero when the primary slot has no weapon.
-        int range = techno->Weapon_Range(WEAPON_SLOT_PRIMARY);
+    if (building) {
+        // Only show weapon ranges for a single selection, but always preview
+        // the pending building's range while placing it.
+        if (placement_center || CurrentObjects.Count() == 1) {
+            // The virtual lookup includes weapons supplied by building upgrades
+            // and returns zero when the primary slot has no weapon.
+            int range = techno->Weapon_Range(WEAPON_SLOT_PRIMARY);
 
-        // If the techno's guard range is lower than its weapon range, use guard range instead.
-        if (range > techno->TClass->ThreatRange && techno->TClass->ThreatRange > 0)
-            range = techno->TClass->ThreatRange;
+            // If the techno's guard range is lower than its weapon range, use guard range instead.
+            if (range > techno->TClass->ThreatRange && techno->TClass->ThreatRange > 0)
+                range = techno->TClass->ThreatRange;
 
-        if (range > 0) {
-            // Project a world-space circle through TS's isometric transform.
-            // Keep the range in leptons to preserve fractional-cell ranges.
-            const int radius = int(double(range) * CELL_PIXEL_W / (std::sqrt(2.0) * CELL_LEPTON_W));
-            Draw_Radial_Indicator(center, radius, techno->House->RemapColorRGB, false);
+            if (range > 0) {
+                // Project a world-space circle through TS's isometric transform.
+                // Keep the range in leptons to preserve fractional-cell ranges.
+                const int radius = int(double(range) * CELL_PIXEL_W / (std::sqrt(2.0) * CELL_LEPTON_W));
+                Draw_Radial_Indicator(center, radius, techno->House->RemapColorRGB, false);
+            }
         }
 
-        const auto type = static_cast<const BuildingClass*>(techno)->Class;
-        if (placement_center && type->IsHasRadialIndicator && type->CloakRadiusInCells > 0 &&
-            (type->IsCloakGenerator || type->IsSensorArray)) {
+        // Native cloak/sensor selection indicators are drawn by the engine.
+        // Their placement preview can coexist with a gap radius.
+        const auto type = building->Class;
+        if (placement_center && native_indicator && type->IsHasRadialIndicator && type->CloakRadiusInCells > 0) {
             Draw_Radial_Indicator(center, Radial_Cell_Radius_To_Pixels(type->CloakRadiusInCells),
                 RGBClass(type->RadialColor), false);
         }
