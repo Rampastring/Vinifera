@@ -449,4 +449,9 @@ public:
      *  Radius in cells to reshroud for enemies. Zero disables gap generation.
      */
     int GapRadiusInCells;
+
+    /**
+     *  Weapon to detonate at this object's position when combat damage kills it.
+     */
+    const WeaponTypeClass* DeathWeapon;
 };

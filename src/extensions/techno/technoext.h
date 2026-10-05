@@ -55,6 +55,7 @@ class TechnoClassExtension : public RadioClassExtension,
         virtual Coord Fire_Coord(WeaponSlotType which, TPoint3D<int> offset = TPoint3D<int>(0, 0, 0)) const;
 
         void Put_Storage_Pointers();
+        void Fire_Death_Weapon();
 
         int Time_To_Build() const;
         bool Can_Opportunity_Fire() const;
@@ -130,4 +131,9 @@ class TechnoClassExtension : public RadioClassExtension,
          *  Countdown until the next gap generator pulse.
          */
         CDTimerClass<FrameTimerClass> GapTimer;
+
+        /**
+         *  Prevent repeated death detonations during nested damage or death animations.
+         */
+        bool HasFiredDeathWeapon;
 };

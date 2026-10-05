@@ -2463,6 +2463,21 @@ DEFINE_HOOK(0x0062C5D5, _TechnoClass_Draw_Health_Bars_Unit_Draw_Pos_Patch, 0)
 }
 
 
+/**
+ *  The RESULT_DESTROYED case in TechnoClass::Take_Damage, after ObjectClass has
+ *  applied armor, immunity and cyborg survival logic. Delete_Me and Captured do
+ *  not enter this path. Keep the native death effects after our detonation.
+ */
+DEFINE_HOOK(0x006329C8, _TechnoClass_Take_Damage_Death_Weapon_Patch, 10)
+{
+    GET(TechnoClass*, this_ptr, ESI);
+
+    Extension::Fetch(this_ptr)->Fire_Death_Weapon();
+
+    return 0;
+}
+
+
 static bool Should_Take_Damage(TechnoClass* this_ptr, TechnoClass* source, const WarheadTypeClass* warhead, int damage)
 {
     /**

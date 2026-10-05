@@ -14,6 +14,7 @@
 #include "anim.h"
 #include "building.h"
 #include "buildingtype.h"
+#include "bullet.h"
 #include "debughandler.h"
 #include "dsurface.h"
 #include "ebolt.h"
@@ -40,6 +41,7 @@
 #include "vinifera_globals.h"
 #include "vinifera_saveload.h"
 #include "voc.h"
+#include "weapontype.h"
 #include "wwcrc.h"
 
 #include <algorithm>
@@ -66,7 +68,8 @@ TechnoClassExtension::TechnoClassExtension(const TechnoClass *this_ptr) :
     LastVeterancy(RANK_NONE),
     IdleWakeAnim(nullptr),
     IronCurtainTimer(),
-    GapTimer()
+    GapTimer(),
+    HasFiredDeathWeapon(false)
 {
     for (int i = 0; i < Tiberiums.Count(); i++)
     {
@@ -201,10 +204,49 @@ void TechnoClassExtension::Object_CRC(CRCEngine &crc) const
     RadioClassExtension::Object_CRC(crc);
 
     crc(GapTimer.Value());
+    crc(HasFiredDeathWeapon);
 
     if (SpawnOwner) {
         crc(SpawnOwner->Fetch_Heap_ID());
     }
+}
+
+
+/**
+ *  Detonates the configured death weapon after combat damage has killed this object.
+ *  Called only from the RESULT_DESTROYED branch of TechnoClass::Take_Damage.
+ */
+void TechnoClassExtension::Fire_Death_Weapon()
+{
+    TechnoClass* techno = This();
+    if (HasFiredDeathWeapon || !techno->IsActive || techno->IsInLimbo || techno->Strength > 0) {
+        return;
+    }
+
+    const WeaponTypeClass* weapon = Techno_Type_Class_Ext()->DeathWeapon;
+    if (!weapon || !weapon->Bullet || !weapon->WarheadPtr) {
+        return;
+    }
+
+    // Set this before detonating: the explosion can cause nested damage and deaths.
+    HasFiredDeathWeapon = true;
+    const Coord coord = techno->Center_Coord();
+    BulletClass* bullet = BulletClass::Create_Bullet(weapon->Bullet, nullptr, techno,
+        weapon->Attack, weapon->WarheadPtr, weapon->MaxSpeed, weapon->ProjectileRange, weapon->IsBright);
+
+    if (!bullet) {
+        return;
+    }
+
+    if (weapon->Sound.Count() > 0) {
+        Static_Sound(weapon->Sound[Sim_Random_Pick(0, weapon->Sound.Count() - 1)], coord);
+    }
+
+    // Detonate in place without entering projectile AI or the normal firing checks.
+    // The forced flag keeps Bullet_Explodes from moving the blast to the fuse target.
+    bullet->Set_Coord(coord);
+    bullet->Bullet_Explodes(true);
+    delete bullet;
 }
 
 

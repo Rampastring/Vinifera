@@ -120,7 +120,8 @@ TechnoTypeClassExtension::TechnoTypeClassExtension(const TechnoTypeClass *this_p
     VeteranSightRange(-1),
     EliteSightRange(-1),
     Buildability(TechnoTypeBuildability::BUILDABILITY_NORMAL),
-    GapRadiusInCells(0)
+    GapRadiusInCells(0),
+    DeathWeapon(nullptr)
 {
 }
 
@@ -184,6 +185,7 @@ HRESULT TechnoTypeClassExtension::Load(IStream *pStm)
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP(Spawns, "Spawns");
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP(WakeAnim, "WakeAnim");
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP(IdleWakeAnim, "IdleWakeAnim");
+    VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP(DeathWeapon, "DeathWeapon");
 
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(BuiltAt, "BuiltAt");
     VINIFERA_SWIZZLE_REQUEST_POINTER_REMAP_LIST(ScrapExplosion, "ScrapExplosion");
@@ -305,6 +307,7 @@ void TechnoTypeClassExtension::Object_CRC(CRCEngine &crc) const
     crc(VeteranSightRange);
     crc(EliteSightRange);
     crc(GapRadiusInCells);
+    crc(DeathWeapon ? DeathWeapon->Fetch_Heap_ID() : -1);
 }
 
 
@@ -455,6 +458,8 @@ bool TechnoTypeClassExtension::Read_INI(CCINIClass &ini)
 
     EscortRange = ini.Get_Lepton(ini_name, "EscortRange", EscortRange);
     AbandonTargetEscortRange = ini.Get_Lepton(ini_name, "AbandonTargetEscortRange", AbandonTargetEscortRange);
+
+    DeathWeapon = TGet_Class(ini, ini_name, "DeathWeapon", DeathWeapon);
 
     ScrapExplosion = TGet_TypeList(ini, ini_name, "ScrapExplosion", ScrapExplosion);
 
