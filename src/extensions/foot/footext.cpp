@@ -18,6 +18,7 @@
  *  @author: CCHyper
  */
 FootClassExtension::FootClassExtension(const FootClass *this_ptr) :
+    LastFlightCell(CELL_NONE),
     WFStuckFrame(0),
     TechnoClassExtension(this_ptr)
 {
