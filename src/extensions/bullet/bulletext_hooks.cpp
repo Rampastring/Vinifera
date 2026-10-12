@@ -410,7 +410,7 @@ void BulletClassExt::_AI()
                 forced = true;
                 collided = true;
             }
-            if (++bounce_count >= 3 && !forced) {
+            if (++bounce_count >= 127 && !forced) { // Changed bounce limit in DTA, used to be 3 in Tiberian Sun
                 impact = IMPACT_NORMAL;
                 forced = true;
             }
