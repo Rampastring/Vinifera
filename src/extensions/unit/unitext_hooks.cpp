@@ -308,13 +308,20 @@ void UnitClassExt::_Rotation_AI()
         } else {
 
             /*
-            **  Non turret equipped vehicles will rotate their body to face the target only
-            **  if the vehicle isn't currently moving or facing the correct direction. This
-            **  applies only to tracked vehicles. Wheeled vehicles never rotate to face the
-            **  target, since they aren't maneuverable enough.
+            **  Body tracking applies only to stationary tracked vehicles without a
+            **  navigation target. AlwaysTrackTarget allows them to follow their target
+            **  even while reloading; otherwise, retain the original facing check.
             */
-            if (Class->Speed == SPEED_TRACK && NavCom == nullptr && !Locomotion->Is_Moving() && PrimaryFacing.Current() == dir) {
-                PrimaryFacing.Set_Desired(dir);
+            if (Class->Speed == SPEED_TRACK && NavCom == nullptr && !Locomotion->Is_Moving()) {
+                const auto typeext = Extension::Fetch(Class);
+                if (typeext->IsAlwaysTrackTarget) {
+                    WeaponTypeClass* primary = PrimaryWeapon;
+                    if (primary != nullptr && !Extension::Fetch(primary)->IsOmniFire) {
+                        PrimaryFacing.Set_Desired(dir);
+                    }
+                } else if (PrimaryFacing.Current() == dir) {
+                    PrimaryFacing.Set_Desired(dir);
+                }
             }
         }
     }

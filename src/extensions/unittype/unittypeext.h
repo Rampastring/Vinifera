@@ -82,4 +82,10 @@ UnitTypeClassExtension final : public TechnoTypeClassExtension
          *  If set for a shape-based unit, the unit's turret will recoil when the unit fires.
          */
         bool IsTurretRecoil;
+
+        /**
+         *  Keep a stationary, turretless tracked vehicle facing its target,
+         *  including while its weapon is reloading.
+         */
+        bool IsAlwaysTrackTarget;
 };
