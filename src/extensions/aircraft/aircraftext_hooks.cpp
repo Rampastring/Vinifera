@@ -18,6 +18,7 @@
 #include "aircrafttypeext.h"
 #include "asserthandler.h"
 #include "building.h"
+#include "cell.h"
 #include "extension.h"
 #include "hooker.h"
 #include "house.h"
@@ -27,6 +28,8 @@
 #include "rules.h"
 #include "rulesext.h"
 #include "syringe.h"
+#include "tactical.h"
+#include "tibsun_functions.h"
 #include "tibsun_globals.h"
 #include "team.h"
 #include "technotype.h"
@@ -59,6 +62,7 @@ public:
     int _Mission_Retreat();
     bool _Enter_Idle_Mode(bool initial, bool a2);
     int _Do_MISSION_GUARD();
+    void _Draw_Shadow(Point2D shadow, Rect& cliprect) const;
 };
 
 
@@ -1495,6 +1499,91 @@ DEFINE_HOOK(0x0040E565, _Aircraft_Class_Look_Sight_Range_Patch, 6)
 }
 
 
+namespace
+{
+/*
+ *  Supplies shadow height and depth to native rendering callbacks without changing aircraft state.
+ *  Previous restores the enclosing context after nested draws.
+ *
+ *  @author: Rampastring
+ */
+struct AircraftShadowContext {
+    const AircraftClass* Aircraft;
+    int HeightAGL;
+    int ZAdjustment;
+    const AircraftShadowContext* Previous;
+
+    static thread_local const AircraftShadowContext* Current;
+
+    AircraftShadowContext(const AircraftClass* aircraft, int height, int z_adjustment) : Aircraft(aircraft), HeightAGL(height), ZAdjustment(z_adjustment), Previous(Current) { Current = this; }
+
+    ~AircraftShadowContext() { Current = Previous; }
+
+    AircraftShadowContext(const AircraftShadowContext&) = delete;
+    AircraftShadowContext& operator=(const AircraftShadowContext&) = delete;
+};
+
+thread_local const AircraftShadowContext* AircraftShadowContext::Current = nullptr;
+
+int __fastcall Aircraft_Shadow_Z_Adjustment(const TechnoClass* techno, void*)
+{
+    const auto context = AircraftShadowContext::Current;
+    return context && context->Aircraft == techno ? context->ZAdjustment : techno->Get_Z_Adjustment();
+}
+
+int __fastcall Aircraft_Shadow_Height_AGL(const FootClass* foot, void*)
+{
+    const auto context = AircraftShadowContext::Current;
+    return context && context->Aircraft == foot ? context->HeightAGL : foot->HeightAGL;
+}
+} // namespace
+
+
+/**
+ *  Draws the voxel shadow using a render height without changing map occupation.
+ *
+ *  @author: Rampastring
+ */
+void AircraftClassExt::_Draw_Shadow(Point2D shadow, Rect& cliprect) const
+{
+    const int height = HeightAGL;
+    const CellClass& cell = Map[Get_Coord()];
+    int shadow_height = 0;
+
+    if (!((IsOnBridge || height < BRIDGE_LEPTON_HEIGHT) && (!IsOnBridge || height < 0)) && 
+        cell.IsUnderBridge &&
+        ((cell.IsBridgeEastWest && cell.Adjacent_Cell(FACING_N).IsUnderBridge) || (!cell.IsBridgeEastWest && cell.Adjacent_Cell(FACING_W).IsUnderBridge)))
+    {
+        shadow_height = BRIDGE_LEPTON_HEIGHT;
+        shadow.Y -= Tactical::Z_Lepton_To_Pixel(BRIDGE_LEPTON_HEIGHT);
+    }
+
+    const int shadow_z = Map.Get_Height_GL(PositionCoord) + shadow_height + (IsOnBridge ? BRIDGE_LEPTON_HEIGHT : 0);
+    const int z_adjustment = Get_Z_Adjustment() + Tactical::Z_Lepton_To_Pixel(Get_Height()) - Tactical::Z_Lepton_To_Pixel(shadow_z);
+
+    int key = 0;
+    Matrix3D matrix = Get_Voxel_Draw_Matrix() * Locomotion->Shadow_Matrix(&key);
+    const AircraftShadowContext context(this, shadow_height, z_adjustment);
+    Draw_Voxel_Shadow(Class->Voxel, 0, key, &Class->ShadowVoxelIndex, cliprect, shadow, matrix, true);
+}
+
+
+DEFINE_HOOK(0x00408CE7, _AircraftClass_Draw_It_Shadow_Patch, 8)
+{
+    GET(AircraftClassExt*, this_ptr, EBP);
+    GET_STACK(Rect*, cliprect, 0xD8);
+    LEA_STACK(Point2D*, shadow, 0x20);
+    GET_STACK(Point2D, drawpoint, 0x18);
+
+    this_ptr->_Draw_Shadow(*shadow, *cliprect);
+
+    // Preserve the mouse-selection registration in the native code this hook skips.
+    TacticalMap->Add_To_Selectables(this_ptr, drawpoint);
+
+    return 0x00408E6E;
+}
+
+
 /**
  *  Main function for patching the hooks.
  */
@@ -1523,4 +1612,12 @@ void AircraftClassExtension_Hooks()
     Patch_Jump(0x00409910, &AircraftClassExt::_Mission_Retreat);
     Patch_Jump(0x0040B310, &AircraftClassExt::_Enter_Idle_Mode);
     Patch_Jump(0x0040DD10, &AircraftClassExt::_Do_MISSION_GUARD);
+
+    // Each five-byte direct call replaces a six-byte virtual call; NOP the remaining byte.
+    Patch_Call(0x00635F2E, &Aircraft_Shadow_Z_Adjustment); // Uncached voxel shadow blit.
+    Patch_Byte(0x00635F33, 0x90);
+    Patch_Call(0x0063622E, &Aircraft_Shadow_Z_Adjustment); // Cached voxel blit.
+    Patch_Byte(0x00636233, 0x90);
+    Patch_Call(0x005063FC, &Aircraft_Shadow_Height_AGL);   // Base locomotor shadow offset.
+    Patch_Byte(0x00506401, 0x90);
 }
