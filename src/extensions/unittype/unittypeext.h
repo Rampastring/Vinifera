@@ -88,4 +88,10 @@ UnitTypeClassExtension final : public TechnoTypeClassExtension
          *  including while its weapon is reloading.
          */
         bool IsAlwaysTrackTarget;
+
+        /**
+         *  Does the unit retry blocked shots in a two-burst primary weapon that uses
+         *  FiringSyncFrame, provided it has no secondary weapon?
+         */
+        bool IsFiringSyncRetry;
 };

@@ -15,6 +15,16 @@
 #include "unit.h"
 
 
+enum class FiringSyncState
+{
+    Inactive,
+    WaitingForFirstShot,
+    WaitingForSecondShot,
+    FinishingAnimation,
+    Reloading
+};
+
+
 class DECLSPEC_UUID(UUID_UNIT_EXTENSION)
 UnitClassExtension final : public FootClassExtension,
                            public Vinifera::Detach::Listener<BuildingClass>
@@ -41,6 +51,12 @@ UnitClassExtension final : public FootClassExtension,
 
         void On_Detach(BuildingClass *target, bool all) override;
 
+        bool Uses_Firing_Sync_Retry(const WeaponTypeClass* weapon) const;
+        void Begin_Firing_Sync(const WeaponTypeClass* weapon);
+        void Update_Firing_Sync();
+        void Record_Firing_Sync_Shot(const WeaponTypeClass* weapon);
+        bool Cancel_Firing_Sync();
+
         virtual UnitClass *This() const override { return reinterpret_cast<UnitClass *>(FootClassExtension::This()); }
         virtual const UnitClass *This_Const() const override { return reinterpret_cast<const UnitClass *>(FootClassExtension::This_Const()); }
         virtual RTTIType Fetch_RTTI() const override { return RTTI_UNIT; }
@@ -54,4 +70,9 @@ UnitClassExtension final : public FootClassExtension,
         *  when picking a tiberium cell to harvest from.
         */
         BuildingClass *LastDockedBuilding;
+
+        FiringSyncState FiringSync;
+        const WeaponTypeClass* FiringSyncWeapon;
+        CDTimerClass<FrameTimerClass> FiringSyncRetryTimer;
+        CDTimerClass<FrameTimerClass> FiringSyncReloadTimer;
 };

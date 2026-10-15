@@ -35,7 +35,8 @@ UnitTypeClassExtension::UnitTypeClassExtension(const UnitTypeClass *this_ptr) :
     TransformsInto(nullptr),
     IsTransformRequiresFullCharge(false),
     IsTurretRecoil(false),
-    IsAlwaysTrackTarget(false)
+    IsAlwaysTrackTarget(false),
+    IsFiringSyncRetry(true)
 {
     UnitTypeExtensions.Add(this);
 }
@@ -137,6 +138,7 @@ int UnitTypeClassExtension::Get_Object_Size() const
 void UnitTypeClassExtension::Object_CRC(CRCEngine &crc) const
 {
     crc(IsAlwaysTrackTarget);
+    crc(IsFiringSyncRetry);
 }
 
 
@@ -160,6 +162,7 @@ bool UnitTypeClassExtension::Read_INI(CCINIClass &ini)
 
     IsTotable = ini.Get_Bool(ini_name, "Totable", IsTotable);
     IsAlwaysTrackTarget = ini.Get_Bool(ini_name, "AlwaysTrackTarget", IsAlwaysTrackTarget);
+    IsFiringSyncRetry = ini.Get_Bool(ini_name, "FiringSyncRetry", IsFiringSyncRetry);
     TransformsInto = TGet_Class(ini, ini_name, "TransformsInto", TransformsInto);
     IsTransformRequiresFullCharge = ini.Get_Bool(ini_name, "TransformRequiresFullCharge", IsTransformRequiresFullCharge);
 

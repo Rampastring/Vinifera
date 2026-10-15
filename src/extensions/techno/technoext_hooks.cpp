@@ -62,6 +62,7 @@
 #include "tibsun_inline.h"
 #include "uicontrol.h"
 #include "unit.h"
+#include "unitext.h"
 #include "unittype.h"
 #include "unittypeext.h"
 #include "utracker.h"
@@ -741,7 +742,7 @@ void TechnoClassExt::_Mission_AI()
  *
  *  @author: 12/23/1994 JLB - Created.
  *           ZivDero - Adjustments for Tiberian Sun.
- *           Rampastring - Added support for torpedoes.
+ *           Rampastring - Added support for torpedoes and the firing sync logic replacement.
  */
 FireErrorType TechnoClassExt::_Can_Fire(AbstractClass * target, WeaponSlotType which)
 {
@@ -879,16 +880,50 @@ FireErrorType TechnoClassExt::_Can_Fire(AbstractClass * target, WeaponSlotType w
     if (which != WEAPON_SLOT_SECONDARY && RTTI == RTTI_UNIT)
     {
         const auto unit = reinterpret_cast<UnitClass*>(this);
-        const int burst = BurstIndex % weapon->Burst;
-        if (burst < 2)
+        const auto unitext = Extension::Fetch(unit);
+        if (unitext->Uses_Firing_Sync_Retry(weapon))
         {
-            if (unit->Class->FiringSyncFrame[burst] != -1
-                && unit->FiringSyncDelay != -1)
+            switch (unitext->FiringSync)
             {
-                if (unit->FiringSyncDelay != unit->Class->FiringSyncFrame[burst])
+            case FiringSyncState::WaitingForFirstShot:
+            case FiringSyncState::WaitingForSecondShot:
+            {
+                const int shot = unitext->FiringSync == FiringSyncState::WaitingForFirstShot ? 0 : 1;
+                if (unitext->FiringSyncWeapon != weapon || unit->BurstIndex != shot
+                    || unitext->FiringSyncRetryTimer == 0
+                    || unit->FiringSyncDelay > unit->Class->FiringSyncFrame[shot]) {
                     return FIRE_REARM;
-                
+                }
                 check_rearm = false;
+                break;
+            }
+            case FiringSyncState::FinishingAnimation:
+            case FiringSyncState::Reloading:
+                return FIRE_REARM;
+            case FiringSyncState::Inactive:
+                // Let an unmanaged weapon's animation finish before starting
+                // a fresh managed sequence on the shared burst counter.
+                if (unit->FiringSyncDelay >= 0) {
+                    return FIRE_REARM;
+                }
+                break;
+            default:
+                break;
+            }
+        }
+        else
+        {
+            const int burst = BurstIndex % weapon->Burst;
+            if (burst < 2)
+            {
+                if (unit->Class->FiringSyncFrame[burst] != -1
+                    && unit->FiringSyncDelay != -1)
+                {
+                    if (unit->FiringSyncDelay != unit->Class->FiringSyncFrame[burst])
+                        return FIRE_REARM;
+
+                    check_rearm = false;
+                }
             }
         }
     }
@@ -1685,6 +1720,11 @@ void TechnoClassExt::_Assign_Target(AbstractClass* target)
     */
     TarCom = target;
 
+    bool cancelled_sync = false;
+    if (target == nullptr && old_target != target && RTTI == RTTI_UNIT) {
+        cancelled_sync = Extension::Fetch(reinterpret_cast<UnitClass*>(this))->Cancel_Firing_Sync();
+    }
+
     if (target == nullptr) {
 
         /*
@@ -1692,6 +1732,10 @@ void TechnoClassExt::_Assign_Target(AbstractClass* target)
         */
         if (extension->SpawnManager) {
             extension->SpawnManager->Queue_Target(nullptr);
+        }
+
+        if (cancelled_sync) {
+            return;
         }
 
         /*

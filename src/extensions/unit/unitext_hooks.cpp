@@ -18,6 +18,7 @@
 #include "drawshape.h"
 #include "extension.h"
 #include "findmake.h"
+#include "firingsyncscope.h"
 #include "hooker.h"
 #include "house.h"
 #include "housetype.h"
@@ -75,6 +76,7 @@ DECLARE_EXTENDING_CLASS_AND_PAIR(UnitClass)
 {
 public:
     void _Firing_AI();
+    const BulletClass* _Fire_At(AbstractClass* target, WeaponSlotType which);
     void _Draw_Voxel(unsigned int frame, int key, Rect& rect, Point2D& point, const Matrix3D& other_matrix, int color, int flags);
     int _Do_MISSION_HUNT();
     void _Rotation_AI();
@@ -89,9 +91,13 @@ public:
  *
  *  @author: 07/30/1996 JLB - Created
  *           ZivDero - Adjustments for Tiberian Sun
+ *           Rampastring - Adjustments for improved FiringSyncFrame logic
  */
 void UnitClassExt::_Firing_AI()
 {
+    const auto firing_ext = Extension::Fetch(this);
+    firing_ext->Update_Firing_Sync();
+
     if (TarCom != nullptr && Get_Weapon(WEAPON_SLOT_PRIMARY)->Weapon)
     {
         /**
@@ -99,7 +105,9 @@ void UnitClassExt::_Firing_AI()
          *  cannot fire, then check any secondary weapon. If neither weapon can fire, then the
          *  failure code returned is that from the primary weapon.
          */
-        WeaponSlotType primary = What_Weapon_Should_I_Use(TarCom);
+        const bool pending_sync = firing_ext->FiringSync == FiringSyncState::WaitingForFirstShot
+            || firing_ext->FiringSync == FiringSyncState::WaitingForSecondShot;
+        WeaponSlotType primary = pending_sync ? WEAPON_SLOT_PRIMARY : What_Weapon_Should_I_Use(TarCom);
         FireErrorType ok = Can_Fire(TarCom, primary);
         const WeaponTypeClass* weapon = Get_Weapon(primary)->Weapon;
 
@@ -135,7 +143,8 @@ void UnitClassExt::_Firing_AI()
                 Set_Rate(5);
             }
 
-            if (primary != WEAPON_SLOT_SECONDARY && weapon)
+            if (primary != WEAPON_SLOT_SECONDARY && weapon
+                && !firing_ext->Uses_Firing_Sync_Retry(weapon))
             {
                 const int firing_sync = BurstIndex % weapon->Burst;
                 if (firing_sync < 2 && Class->FiringSyncFrame[firing_sync] != -1)
@@ -196,6 +205,76 @@ void UnitClassExt::_Firing_AI()
             return;
         }
     }
+}
+
+
+/**
+ *  UnitClass::Fire_At replacement that uses our new FiringSyncFrame logic.
+ *  Rest of the logic is vanilla.
+ *
+ *  @author: Rampastring
+ */
+const BulletClass* UnitClassExt::_Fire_At(AbstractClass* target, WeaponSlotType which)
+{
+    const WeaponTypeClass* weapon = Get_Weapon(which)->Weapon;
+    if (weapon == nullptr) {
+        return nullptr;
+    }
+
+    const auto ext = Extension::Fetch(this);
+    if (FiringSyncShotScope::Is_Active(ext)) {
+        return nullptr;
+    }
+    ext->Update_Firing_Sync();
+    const bool managed = which == WEAPON_SLOT_PRIMARY && ext->Uses_Firing_Sync_Retry(weapon);
+    if (!managed) {
+        ext->Cancel_Firing_Sync();
+    } else if (ext->FiringSync == FiringSyncState::Inactive) {
+        if (Can_Fire(target, which) != FIRE_OK) {
+            return nullptr;
+        }
+        ext->Begin_Firing_Sync(weapon);
+    }
+
+    bool sync = false;
+    if (which != WEAPON_SLOT_SECONDARY) {
+        const int burst = BurstIndex % weapon->Burst;
+        const int frame = burst < 2 ? Class->FiringSyncFrame[burst] : -1;
+        sync = FiringSyncDelay != -1 && frame != -1;
+    }
+
+    if (Can_Fire(target, which) != FIRE_OK) {
+        return nullptr;
+    }
+
+    const FiringSyncState shot_state = ext->FiringSync;
+    const int old_burst = BurstIndex;
+    const BulletClass* bullet;
+    {
+        FiringSyncShotScope firing_scope(managed ? ext : nullptr);
+        bullet = TechnoClass::Fire_At(target, which);
+    }
+    const bool cancelled = managed && ext->FiringSync == FiringSyncState::Reloading;
+
+    if (managed) {
+        ext->FiringSync = shot_state;
+        if (BurstIndex == (old_burst + 1) % weapon->Burst) {
+            ext->Record_Firing_Sync_Shot(weapon);
+        }
+        if (cancelled || TarCom == nullptr || !ext->Uses_Firing_Sync_Retry(weapon)) {
+            ext->Cancel_Firing_Sync();
+        }
+    }
+
+    if (bullet != nullptr) {
+        if (Class->MaxAmmo > 0 && !Class->IsManualReload && Reload == 0) {
+            Reload = TICKS_PER_SECOND * 30;
+        }
+        if (!sync && Class->FiringFrames > 0) {
+            FiringSyncDelay = 2 * Class->FiringFrames - 1;
+        }
+    }
+    return bullet;
 }
 
 
@@ -2063,6 +2142,7 @@ void UnitClassExtension_Hooks()
     Patch_Jump(0x006571E0, &UnitClassExt::_Approach_Target);
     Patch_Jump(0x006585C0, &UnitClassExt::_Read_INI);
     Patch_Jump(0x00653090, &UnitClassExt::_Draw_Shape);
+    Patch_Jump(0x00657070, &UnitClassExt::_Fire_At);
 
     Patch_Byte(0x00658961, 0xEB); // Allow pre-placed units to have missions in multiplayer, change JZ to JMP
 
