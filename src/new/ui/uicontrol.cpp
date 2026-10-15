@@ -24,9 +24,9 @@ UIControlsClass* UIControls = nullptr;
 
 
 const UIControlsClass::LoadingScreenSize UIControlsClass::DefaultLoadingScreenSizes[] = {
-    {{640, 400}, {436, 155}, {566, 152}},
-    {{640, 480}, {436, 186}, {566, 177}},
-    {{800, 600}, {546, 233}, {711, 227}},
+    {{640, 400}, {436, 161}, {566, 158}},
+    {{640, 480}, {436, 192}, {566, 183}},
+    {{800, 600}, {546, 239}, {711, 233}},
 };
 
 
