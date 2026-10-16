@@ -452,7 +452,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
 
     // If we have no power plants yet, then build one
     if (house->ActiveBQuantity.Value(our_basic_power) == 0) {
-        DEBUG_INFO("AdvAI: Making AI build %s because it has 0 basic power plants\n", BuildingTypes[our_basic_power]->IniName.c_str());
+        DEBUG_INFO("AdvAI: Making AI build {} because it has 0 basic power plants\n", BuildingTypes[our_basic_power]->IniName.c_str());
         return BuildingTypes[our_basic_power];
     }
 
@@ -465,7 +465,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
                 int barrackscount = house->ActiveBQuantity.Value((StructType)barracks->Fetch_Heap_ID());
                 if (barrackscount < 1) {
 
-                    DEBUG_INFO("AdvAI: Making AI build %s because it does not have a Barracks at all.\n", barracks->IniName.c_str());
+                    DEBUG_INFO("AdvAI: Making AI build {} because it does not have a Barracks at all.\n", barracks->IniName.c_str());
 
                     return barracks;
                 }
@@ -485,7 +485,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
 
     // Build a refinery if we have 0 left
     if (our_refinery != STRUCT_NONE && house->ActiveBQuantity.Value(our_refinery) == 0) {
-        DEBUG_INFO("AdvAI: Making AI build %s because it has 0 refineries\n", BuildingTypes[our_refinery]->IniName.c_str());
+        DEBUG_INFO("AdvAI: Making AI build {} because it has 0 refineries\n", BuildingTypes[our_refinery]->IniName.c_str());
         return BuildingTypes[our_refinery];
     }
 
@@ -504,7 +504,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
             int barrackscount = house->ActiveBQuantity.Value((StructType)barracks->Fetch_Heap_ID());
             if (barrackscount < optimal_barracks_count) {
 
-                DEBUG_INFO("AdvAI: Making AI build %s because it does not have enough Barracks. Wanted: %d, current: %d\n",
+                DEBUG_INFO("AdvAI: Making AI build {} because it does not have enough Barracks. Wanted: {}, current: {}\n",
                     barracks->IniName.c_str(), optimal_barracks_count, barrackscount);
 
                 return barracks;
@@ -681,7 +681,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
                     int wfcount = house->ActiveBQuantity.Value((StructType)weaponsfactory->Fetch_Heap_ID());
                     if (wfcount < optimal_wf_count) {
 
-                        DEBUG_INFO("AdvAI: Making AI build %s because it does not have enough Weapons Factories. Wanted: %d, current: %d\n",
+                        DEBUG_INFO("AdvAI: Making AI build {} because it does not have enough Weapons Factories. Wanted: {}, current: {}\n",
                             weaponsfactory->IniName.c_str(), optimal_wf_count, wfcount);
 
                         return weaponsfactory;
@@ -696,13 +696,13 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
         if (our_refinery != STRUCT_NONE && house->ActiveBQuantity.Value(our_refinery) < minimum_ref_count) {
             houseext->ArchivedExpansionPointLocation = houseext->NextExpansionPointLocation;
             houseext->NextExpansionPointLocation = Cell(0, 0);
-            DEBUG_INFO("AdvAI: Making AI build %s because it only has too few refineries\n", BuildingTypes[our_refinery]->IniName.c_str());
+            DEBUG_INFO("AdvAI: Making AI build {} because it has too few refineries\n", BuildingTypes[our_refinery]->IniName.c_str());
             return BuildingTypes[our_refinery];
         }
     }
 
     if (expansion) {
-        DEBUG_INFO("AdvAI: Making AI build %s because it has reached an expansion point\n", BuildingTypes[our_refinery]->IniName.c_str());
+        DEBUG_INFO("AdvAI: Making AI build {} because it has reached an expansion point\n", BuildingTypes[our_refinery]->IniName.c_str());
         return BuildingTypes[our_refinery];
     }
 
@@ -718,7 +718,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
         if (AdvAI_Can_Build_Building(house, navalyard, true)) {
             int navalyardcount = house->ActiveBQuantity.Value((StructType)navalyard->Fetch_Heap_ID());
             if (navalyardcount < optimal_naval_count) {
-                DEBUG_INFO("AdvAI: Making AI build %s because it does not have enough Naval Yards. Wanted: %d, current: %d\n",
+                DEBUG_INFO("AdvAI: Making AI build %s because it does not have enough Naval Yards. Wanted: {}, current: {}\n",
                     navalyard->IniName.c_str(), optimal_naval_count, navalyardcount);
 
                 return navalyard;
@@ -735,14 +735,14 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
     }
 
     if (anti_inf_deficiency > 0 && anti_inf_deficiency > anti_vehicle_deficiency && anti_inf_deficiency > anti_air_deficiency) {
-        DEBUG_INFO("AdvAI: Making AI build %s because it does not have enough anti-inf defenses. Wanted: %d, deficiency: %d\n",
+        DEBUG_INFO("AdvAI: Making AI build {} because it does not have enough anti-inf defenses. Wanted: {}, deficiency: {}\n",
             BuildingTypes[our_anti_infantry_defense]->IniName.c_str(), optimal_defense_count, anti_inf_deficiency);
 
         return BuildingTypes[our_anti_infantry_defense];
     }
 
     if (anti_vehicle_deficiency > 0 && anti_vehicle_deficiency >= anti_air_deficiency) {
-        DEBUG_INFO("AdvAI: Making AI build %s because it does not have enough anti-vehicle defenses. Wanted: %d, deficiency: %d\n",
+        DEBUG_INFO("AdvAI: Making AI build {} because it does not have enough anti-vehicle defenses. Wanted: {}, deficiency: {}\n",
             BuildingTypes[our_anti_vehicle_defense]->IniName.c_str(), optimal_defense_count, anti_vehicle_deficiency);
 
         return BuildingTypes[our_anti_vehicle_defense];
@@ -753,7 +753,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
         // If we actually can't build AA yet, then we need to tech up first.
 
         if (our_anti_air_defense != STRUCT_NONE) {
-            DEBUG_INFO("AdvAI: Making AI build %s because it does not have enough anti-air defenses. Deficiency: %d\n",
+            DEBUG_INFO("AdvAI: Making AI build {} because it does not have enough anti-air defenses. Deficiency: {}\n",
                 BuildingTypes[our_anti_air_defense]->IniName.c_str(), anti_air_deficiency);
 
             return BuildingTypes[our_anti_air_defense];
@@ -769,7 +769,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
             int radarcount = house->ActiveBQuantity.Value((StructType)radar->Fetch_Heap_ID());
 
             if (radarcount < 1) {
-                DEBUG_INFO("AdvAI: Making AI build %s because it does not have enough radars. Current count: %d\n",
+                DEBUG_INFO("AdvAI: Making AI build {} because it does not have enough radars. Current count: {}\n",
                     radar->IniName.c_str(), radarcount);
 
                 return radar;
@@ -790,7 +790,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
                 int helipadcount = house->ActiveBQuantity.Value((StructType)helipad->Fetch_Heap_ID());
 
                 if (helipadcount < optimal_helipad_count) {
-                    DEBUG_INFO("AdvAI: Making AI build %s because it does not have enough helipads. Wanted: %d, current: %d\n",
+                    DEBUG_INFO("AdvAI: Making AI build {} because it does not have enough helipads. Wanted: {}, current: {}\n",
                         helipad->IniName.c_str(), optimal_helipad_count, helipadcount);
 
                     return helipad;
@@ -805,7 +805,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
                 BuildingTypeClass* techcenter = Rule->BuildTech[i];
                 if (AdvAI_Can_Build_Building(house, techcenter, true)) {
                     if (house->ActiveBQuantity.Value((StructType)techcenter->Fetch_Heap_ID()) < 1) {
-                        DEBUG_INFO("AdvAI: Making AI build %s because it does not have a tech center.\n",
+                        DEBUG_INFO("AdvAI: Making AI build {} because it does not have a tech center.\n",
                             techcenter->IniName.c_str());
 
                         houseext->AdvAIFunValue = 1;
@@ -835,7 +835,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
         int advdefensecount = house->ActiveBQuantity.Value(our_adv_defense);
 
         if (advdefensecount < optimal_adv_defense_count) {
-            DEBUG_INFO("AdvAI: Making AI build %s because it does not have enough. Wanted: %d, current: %d.\n",
+            DEBUG_INFO("AdvAI: Making AI build {} because it does not have enough. Wanted: {}, current: {}.\n",
                 BuildingTypes[our_adv_defense]->IniName.c_str(), optimal_adv_defense_count, advdefensecount);
 
             return BuildingTypes[our_adv_defense];
@@ -853,7 +853,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
 
             if (BuildingTypes[i]->CanAIBuildThis && i != our_anti_infantry_defense && i != our_anti_vehicle_defense && i != our_anti_air_defense) {
                 if (house->ActiveBQuantity.Value((StructType)i) < 1 && AdvAI_Can_Build_Building(house, BuildingTypes[i], true)) {
-                    DEBUG_INFO("AdvAI: Making AI build %s because it has AIBuildThis=yes and the AI has none.\n",
+                    DEBUG_INFO("AdvAI: Making AI build {} because it has AIBuildThis=yes and the AI has none.\n",
                         BuildingTypes[i]->IniName.c_str());
                     return BuildingTypes[i];
                 }
@@ -864,7 +864,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
     // Build power if we have somewhere to expand towards, and nothing else to expand with.
     if (houseext->NextExpansionPointLocation.X != 0 && houseext->NextExpansionPointLocation.Y != 0) {
         if (our_basic_power != STRUCT_NONE) {
-            DEBUG_INFO("AdvAI: Making AI build %s because the AI is expanding.\n",
+            DEBUG_INFO("AdvAI: Making AI build {} because the AI is expanding.\n",
                 BuildingTypes[our_basic_power]->IniName.c_str());
             return BuildingTypes[our_basic_power];
         }
@@ -873,12 +873,12 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
     // Build surplus power if we don't have some.
     if (!is_under_threat && /*Frame > 5000 &&*/ house->Power - house->Drain < 100) {
         if (our_advanced_power != STRUCT_NONE && (Frame > 2000 || our_basic_power == STRUCT_NONE)) {
-            DEBUG_INFO("AdvAI: Making AI build %s because it is out of power and can build an adv. power plant\n", BuildingTypes[our_advanced_power]->IniName.c_str());
+            DEBUG_INFO("AdvAI: Making AI build {} because it is out of power and can build an adv. power plant\n", BuildingTypes[our_advanced_power]->IniName.c_str());
             return BuildingTypes[our_advanced_power];
         }
 
         if (our_basic_power != STRUCT_NONE) {
-            DEBUG_INFO("AdvAI: Making AI build %s because it is out of power and can only build a basic power plant\n", BuildingTypes[our_basic_power]->IniName.c_str());
+            DEBUG_INFO("AdvAI: Making AI build {} because it is out of power and can only build a basic power plant\n", BuildingTypes[our_basic_power]->IniName.c_str());
             return BuildingTypes[our_basic_power];
         }
     }
@@ -1157,7 +1157,7 @@ int Vinifera_HouseClass_AI_Building(HouseClass* this_ptr)
             return TICKS_PER_SECOND * 5;
         }
 
-        DEBUG_INFO("AI %d selected building %s to build. Frame: %d\n", this_ptr->Fetch_Heap_ID(), tobuild->IniName.c_str(), Frame);
+        DEBUG_INFO("AI {} selected building {} to build. Frame: {}\n", this_ptr->Fetch_Heap_ID(), tobuild->IniName.c_str(), Frame);
 
         this_ptr->BuildStructure = (StructType)(tobuild->Fetch_Heap_ID());
 
