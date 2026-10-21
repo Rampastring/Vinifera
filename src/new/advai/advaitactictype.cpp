@@ -1746,6 +1746,7 @@ bool AdvancedAITacticTypeClass::Read_INI(CCINIClass& ini)
     SetTacticalValueIndex = ini.Get_Int(IniName, "SetTacticalValueIndex", SetTacticalValueIndex);
     SetTacticalValueMin = ini.Get_Int(IniName, "SetTacticalValueMin", SetTacticalValueMin);
     SetTacticalValueMax = ini.Get_Int(IniName, "SetTacticalValueMax", SetTacticalValueMax);
+    SetTacticalValueChance = ini.Get_Int(IniName, "SetTacticalValueChance", SetTacticalValueChance);
     FrameBasedDurationIncrease = ini.Get_Int(IniName, "FrameBasedDurationIncrease", FrameBasedDurationIncrease);
     FrameBasedDurationTimeStep = ini.Get_Int(IniName, "FrameBasedDurationTimeStep", FrameBasedDurationTimeStep);
     FrameBasedDurationIncreaseMax = ini.Get_Int(IniName, "FrameBasedDurationIncreaseMax", FrameBasedDurationIncreaseMax);
