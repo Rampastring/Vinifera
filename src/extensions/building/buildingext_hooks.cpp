@@ -3235,7 +3235,7 @@ int Refinery_Placement_Cell_Value(Cell cell, BuildingClass* building)
 // ZivDero enjoys duplicate code
 Point2D Rectangle_Center_Point(Rect rect)
 {
-    return Point2D(Map.LocalRect.X + (Map.LocalRect.Width / 2), Map.LocalRect.Y + (Map.LocalRect.Y / 2));
+    return Point2D(rect.X + (rect.Width / 2), rect.Y + (rect.Y / 2));
 }
 
 /**
