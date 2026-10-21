@@ -729,7 +729,8 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
     // If the enemy has much more armor than infantry, then prioritize anti-armor defense.
     if (house->Enemy != HOUSE_NONE) {
         if (anti_vehicle_deficiency > 0 && houseext->EnemyHeavyStrength > houseext->EnemyNoneStrength) {
-            int multi = houseext->EnemyHeavyStrength / houseext->EnemyNoneStrength;
+            int nonestrength = std::max(houseext->EnemyNoneStrength, 1);
+            int multi = houseext->EnemyHeavyStrength / nonestrength;
             anti_vehicle_deficiency = anti_vehicle_deficiency * multi;
         }
     }
