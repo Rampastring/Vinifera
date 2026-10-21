@@ -128,7 +128,7 @@ RulesClassExtension::RulesClassExtension(const RulesClass* this_ptr) :
     AdvancedAIFieldOccupyMaximumDistance(20),
     AdvancedAIExpansionDistanceComparisonRandomness(20),
     AdvancedAIVulnerableBuildingMaxThreat(50),
-    AdvancedAILightlyDefendedBuildingMaxThreat(300),
+    AdvancedAILightlyDefendedBuildingMaxThreat(500),
     AdvancedAISameUnitAntiBias(0.1),
     AdvancedAIOverweightedArmorTypeAntiBias(5.0),
     AdvancedAIOffensiveWeaponValueMultiplier(50),

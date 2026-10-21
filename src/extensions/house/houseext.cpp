@@ -2005,13 +2005,13 @@ bool HouseClassExtension::Enemy_Building_Scan(DynamicVectorClass<BuildingTypeCla
 
 bool HouseClassExtension::AdvAI_Enemy_Has_Vulnerable_Buildings(DynamicVectorClass<BuildingTypeClass*>& list) const
 {
-    return Enemy_Building_Scan(list, 50);
+    return Enemy_Building_Scan(list, RuleExtension->AdvancedAIVulnerableBuildingMaxThreat);
 }
 
 
 bool HouseClassExtension::AdvAI_Enemy_Has_Lightly_Defended_Buildings(DynamicVectorClass<BuildingTypeClass*>& list) const
 {
-    return Enemy_Building_Scan(list, 500);
+    return Enemy_Building_Scan(list, RuleExtension->AdvancedAILightlyDefendedBuildingMaxThreat);
 }
 
 void HouseClassExtension::AdvAI_Bias_Team_Strength_Ratios_By_Enemy_Strength(TeamClass* team) const
