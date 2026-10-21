@@ -711,7 +711,7 @@ const BuildingTypeClass* AdvAI_Evaluate_Get_Best_Building(HouseClass* house)
     // If we don't have enough naval yards, then build one.
     int optimal_naval_count = 1 + ((house->ActiveBQuantity.Value(our_refinery) - 1) / 6);
     if (houseext->IsNavalOnly == AdvancedAINavalOnlyState::NAVAL_ONLY) {
-        int optimal_naval_count = 1 + ((house->ActiveBQuantity.Value(our_refinery) - 1) / 5);
+        optimal_naval_count = 1 + ((house->ActiveBQuantity.Value(our_refinery) - 1) / 5);
     }
 
     for (int i = 0; i < RuleExtension->BuildNavalYard.Count(); i++) {
