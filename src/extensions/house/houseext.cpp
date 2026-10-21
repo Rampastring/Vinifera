@@ -2024,6 +2024,10 @@ void HouseClassExtension::AdvAI_Bias_Team_Strength_Ratios_By_Enemy_Strength(Team
     int enemytotal = houseext->EnemyBaseDefenseStrength + houseext->EnemyHeavyStrength +
         houseext->EnemyLightStrength + houseext->EnemyNoneStrength + houseext->EnemyArtilleryStrength;
 
+    if (enemytotal <= 0) {
+        return;
+    }
+
     double enemyBaseDefenses = houseext->EnemyBaseDefenseStrength / (double)enemytotal;
     double enemyHeavy = houseext->EnemyHeavyStrength / (double)enemytotal;
     double enemyLight = houseext->EnemyLightStrength / (double)enemytotal;
