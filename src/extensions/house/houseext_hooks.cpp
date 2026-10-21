@@ -327,6 +327,8 @@ bool AdvAI_Is_Under_Start_Rush_Threat(HouseClass* house)
         if (inf->House->Fetch_Heap_ID() >= std::size(house_infantry_strength)) {
             continue;
         }
+
+        house_infantry_strength[house->Fetch_Heap_ID()] += inf->Class->Points;
     }
 
     int our_infantry_strength = house_infantry_strength[house->Fetch_Heap_ID()];
