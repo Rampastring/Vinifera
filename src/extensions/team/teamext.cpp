@@ -242,6 +242,10 @@ void TeamClassExtension::AdvAI_Team_Recruit_AI()
             continue;
         }
 
+        if (ProdFlags == PRODFLAG_NAVAL && !Extension::Fetch(foot->TClass)->IsNaval) {
+            continue;
+        }
+
         if (!foot->Is_Weapon_Equipped()) {
             continue;
         }
