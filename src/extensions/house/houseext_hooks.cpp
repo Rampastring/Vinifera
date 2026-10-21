@@ -1270,6 +1270,7 @@ void AdvAI_Calculate_Enemy_Strength(HouseClass* house)
 
     houseext->EnemyHarvesterCount = 0;
     houseext->EnemyRefineryCount = 0;
+    houseext->EnemyHasSensors = false;
 
     for (int i = 0; i < Technos.Count(); i++)
     {
