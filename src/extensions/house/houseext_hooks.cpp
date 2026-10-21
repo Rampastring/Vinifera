@@ -382,7 +382,7 @@ bool AdvAI_Is_Nod_Enemy_Present(HouseClass* house)
         if (house->Is_Ally(other))
             continue;
 
-        if (house->Class->HeapID == HOUSE_NOD && !house->IsDefeated)
+        if (other->Class->HeapID == HOUSE_NOD && !other->IsDefeated)
             return true;
     }
 
