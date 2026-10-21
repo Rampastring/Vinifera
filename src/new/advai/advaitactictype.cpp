@@ -953,7 +953,7 @@ TeamClass* AdvAI_Create_Team(HouseClass* house, AdvancedAITacticTypeClass* tacti
     teamext->IsAdvAITeam = true;
     teamext->AdvAITactic = tactic;
     teamext->AdvAIGroundTacticType = forcedtactictype != TACTIC_NONE ? forcedtactictype : Extension::Fetch(house)->AdvAIGroundTactic.Tactic;
-    Extension::Fetch(house)->AdvAI_Set_Ground_Team_Desired_Ratios(team);
+    Extension::Fetch(house)->AdvAI_Set_Ground_Team_Desired_Ratios(team, forcedtactictype);
 
     if (maxcost > 0)
         teamext->MaxCost = maxcost;
