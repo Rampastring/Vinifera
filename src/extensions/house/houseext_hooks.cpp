@@ -1302,6 +1302,7 @@ void AdvAI_Calculate_Enemy_Strength(HouseClass* house)
 
             if (techno->Is_Weapon_Equipped()) {
                 houseext->EnemyBaseDefenseStrength += technotype->Cost;
+                houseext->EnemyAntiAirStrength.Add_Techno_Type_AntiAir(technotypeext);
 
                 if (!Extension::Fetch(building->Class)->IsNaval) {
                     houseext->EnemyAntiGroundStrength.Add_Techno_Type_Half_Weight(technotypeext);
@@ -1323,13 +1324,14 @@ void AdvAI_Calculate_Enemy_Strength(HouseClass* house)
             continue;
         }
 
+        houseext->EnemyAntiAirStrength.Add_Techno_Type_AntiAir(technotypeext);
+
         if (technotypeext->IsNaval) {
             houseext->EnemyNavalStrength += technotype->Cost;
             houseext->EnemyAntiNavalStrength.Add_Techno_Type(technotypeext);
             continue;
         }
 
-        houseext->EnemyAntiAirStrength.Add_Techno_Type_AntiAir(technotypeext);
         houseext->EnemyAntiGroundStrength.Add_Techno_Type(technotypeext);
 
         if (technotype->Armor == ARMOR_NONE) {
