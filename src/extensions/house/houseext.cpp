@@ -2039,7 +2039,7 @@ void HouseClassExtension::AdvAI_Bias_Team_Strength_Ratios_By_Enemy_Strength(Team
     }
 
     if (teamext->DesiredAntiLightRatio > 0.0) {
-        teamext->DesiredAntiNoneRatio = (teamext->DesiredAntiLightRatio + enemyLight * 2) / 3.0;
+        teamext->DesiredAntiLightRatio = (teamext->DesiredAntiLightRatio + enemyLight * 2) / 3.0;
     }
 
     if (teamext->DesiredAntiHeavyRatio > 0.0) {
