@@ -1709,11 +1709,6 @@ void AdvAI_Tactic_Selection_AI(HouseClass* house)
 
     HouseClassExtension* houseext = Extension::Fetch(house);
 
-    // If we have no ground based factories, there is nothing to do.
-    if (!houseext->Has_Barracks() && !houseext->Has_War_Factory()) {
-        return;
-    }
-
     AdvAI_Calculate_Enemy_Strength(house);
 
     AdvAI_Commence_Current_Tactic(house);
