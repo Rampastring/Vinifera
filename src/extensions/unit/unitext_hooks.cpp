@@ -12,6 +12,7 @@
 #include "unitext_hooks.h"
 
 #include "asserthandler.h"
+#include "building.h"
 #include "bullettype.h"
 #include "ccini.h"
 #include "debughandler.h"
@@ -2094,6 +2095,12 @@ void UnitClassExt::_Read_INI(CCINIClass& ini)
 
 
 /**
+ *  Handles AI base nodes and tag persistence after a unit successfully deploys into a building.
+ *  In campaign, an unfulfilled first Construction Yard node is moved to the deployed yard's origin,
+ *  provided the node requests the same building type. Otherwise, an offset deployment can make the AI
+ *  try to build a duplicate yard and prevent it from reaching the remaining base nodes.
+ *  This only updates the node; campaign production still starts through the usual triggers or IQ.
+ *
  *  Patches UnitClass::Try_To_Deploy at the very end of the process, after the new building to be deployed into has been created.
  *  Typically, the unit is first stunned, which removes all associations it has with the game. If the unit belongs to an AI house,
  *  then this includes the unit's tag; otherwise, the tag persists. Then, the unit is checked for a tag to be assigned to the new building.
@@ -2102,14 +2109,24 @@ void UnitClassExt::_Read_INI(CCINIClass& ini)
  *  This swaps the order of operations: first, check the tag and assign it to the new building, and only then stun the unit,
  *  removing the tag from it. Once done, jump to the next statement.
  * 
- *  Only applies if the new PersistTagsOnAIDeploy key is set, for backwards compatibility.
+ *  Tag persistence is only changed if PersistTagsOnAIDeploy is set, for backwards compatibility.
  * 
  *  @author: JoyfulShush
  */
-DEFINE_HOOK(0x00651122, Unit_Class_Try_To_Deploy_AI_Persist_Tag_Patch, 10)
+DEFINE_HOOK(0x00651122, _UnitClass_Try_To_Deploy_AI_Base_Node_And_Persist_Tag_Patch, 10)
 {
     GET(UnitClass*, this_ptr, ESI);
-    GET(ObjectClass*, new_building, EDI);
+    GET(BuildingClass*, new_building, EDI);
+
+    HouseClass* house = this_ptr->House;
+    if (Session.Type == GAME_NORMAL && !house->Is_Human_Player() &&
+        Rule->BuildConst.Is_Present(new_building->Class) && house->Base.Nodes.Count() > 0) {
+
+        BaseNodeClass& node = house->Base.Nodes[0];
+        if (node.Type == new_building->Class->HeapID && !house->Base.Is_Built(0)) {
+            node.CellID = new_building->PositionCell;
+        }
+    }
 
     if (!RuleExtension->PersistTagsOnAIDeploy) {
         return 0;
